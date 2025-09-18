@@ -25,17 +25,17 @@ export function NavigationMenuDemo() {
         </NavigationMenuItem>
         <NavigationMenuItem>
           <NavigationMenuLink variant="outline" asChild className={navigationMenuTriggerStyle()}>
-            <Link href="/custom-demos">Custom Demos</Link>
+            <Link href="/pages/custom-demos">Custom Demos</Link>
           </NavigationMenuLink>
         </NavigationMenuItem>
         <NavigationMenuItem>
           <NavigationMenuLink variant="outline" asChild className={navigationMenuTriggerStyle()}>
-            <Link href="/feature-requests">Feature Requests</Link>
+            <Link href="/pages/feature-requests">Feature Requests</Link>
           </NavigationMenuLink>
         </NavigationMenuItem>
         <NavigationMenuItem>
           <NavigationMenuLink variant="outline" asChild className={navigationMenuTriggerStyle()}>
-            <Link href="/video-library">Video Library</Link>
+            <Link href="/pages/video-library">Video Library</Link>
           </NavigationMenuLink>
         </NavigationMenuItem>
       </NavigationMenuList>

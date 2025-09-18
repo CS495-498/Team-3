@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import Stack, { onEntryChange } from "@/lib/cstack";
+import { NavigationMenuDemo } from "@/components/menu"
+import { ModeToggle } from "@/components/mode-toggle";
 
 export default  function Page({ params }){
      const [entry, setEntry] = useState({});
@@ -28,6 +30,12 @@ export default  function Page({ params }){
 
     return(
         <div>
+            <div className="absolute top-3 right-3">
+                <ModeToggle/>
+            </div>
+            <div className="relative max-w-7xl mx-auto p-4 flex flex-col items-center">
+              <NavigationMenuDemo />
+            </div>            
             <p>{entry?.test_field}</p>
         </div>
     )
