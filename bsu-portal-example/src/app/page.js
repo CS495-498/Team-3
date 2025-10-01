@@ -18,8 +18,7 @@ export default function Home() {
 			"homepage",
 			"en-us",
 
-			["header"
-
+			[
 			]
 		);
 		console.log("homepage", entry[0][0]);

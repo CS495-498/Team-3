@@ -67,6 +67,7 @@ return (
 	<Separator/>
 
 
+
   <Card className="mx-10 my-10 w-full max-w-sm">
     
   <CardHeader>
@@ -74,15 +75,16 @@ return (
     <CardDescription>{entry?.video_card?.[0]?.test_video?.video_description}</CardDescription>
   </CardHeader>
   <CardContent className="mx-auto my-auto">
-    <Link href="/videos/test-video">
-      <Image
-        className="rounded-md hover:opacity-80" 
-        src={entry?.video_card?.[0]?.test_video?.thumbnail?.url}
-        width={300}
-        height={200}
-        alt="Thumbnail description" 
+    <video width="320" height="240" controls preload="none">
+      <source src={entry?.video_card?.[0]?.test_video?.video_file?.url} type="video/mp4" />
+      <track
+        src={entry?.video_card?.[0]?.test_video?.video_file?.url}
+        kind="subtitles"
+        srcLang="en"
+        label="English"
       />
-    </Link>
+      Your browser does not support the video tag.
+    </video>
       
   </CardContent>
   <CardFooter>
