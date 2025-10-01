@@ -5,7 +5,9 @@ import { NavigationMenuDemo } from "@/components/menu"
 import { Separator} from "@/components/ui/separator"
 import { ModeToggle } from "@/components/mode-toggle";
 import { TableDemo } from "@/components/notification-table";
+
 import Link from "next/link";
+
 
 export default function Home() {
   const [entry, setEntry] = useState({});
@@ -15,7 +17,9 @@ export default function Home() {
 		const entry = await Stack.getElementByTypeWithRefs(
 			"homepage",
 			"en-us",
+
 			["header"
+
 			]
 		);
 		console.log("homepage", entry[0][0]);
@@ -49,7 +53,9 @@ return (
             </Link>
           ))}
         </nav>
-    </div>	<Separator/>
+    </div>
+  <Separator/>
+
 	<div className="flex">
   <div className="relative w-1/4 p-4 items-center justify-center">
     <TableDemo />
