@@ -14,8 +14,9 @@ import {
 
 
 export function AppSidebar({ content }) {
+  let side_of_screen = content.side_of_screen
   return (
-    <Sidebar side="left">
+    <Sidebar side= {side_of_screen}>
       <SidebarHeader><img className="w-30 h-10 p-2" src={content.logo?.url} /></SidebarHeader>
       <SidebarContent>
         <SidebarGroup>

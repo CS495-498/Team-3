@@ -34,29 +34,24 @@ export default function Home() {
 
   if (isLoading) return <div></div>
 
-  return (
-    
-    <SidebarProvider>
-      <AppSidebar content={entry?.header?.[0]}/>
-      <main>
-        <SidebarTrigger />
-        
-        <div className="flex h-screen">
-          <div className="absolute top-3 right-3">
-            <ModeToggle />
-          </div>
-          <div className="flex flex-col w-3/4 p-4">
-            <h1 className="text-3xl font-bold underline mt-8">{entry?.headline}</h1>
-            <div className="relative">
-              <TableDemo />
-            </div>
-          </div>
+return (
+  <SidebarProvider >
+    <AppSidebar style={{
+    "--sidebar-width": "110rem",
+    "--sidebar-width-mobile": "20rem",
+  }} content={entry?.header?.[0]}/>
+    <main className="flex h-screen">
+      <SidebarTrigger />
+      <div className="flex flex-col w-full p-4 justify-center items-center"> {/* Centering the content */}
+        <div className="absolute top-3 right-3">
+          <ModeToggle />
         </div>
-        
-      </main>
-
-    </SidebarProvider>
-
-  );
-
+        <h1 className="text-3xl font-bold underline mt-8">{entry?.headline}</h1>
+        <div className="relative">
+          <TableDemo />
+        </div>
+      </div>
+    </main>
+  </SidebarProvider>
+);
 }
