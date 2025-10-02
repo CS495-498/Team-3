@@ -7,6 +7,9 @@ import { ModeToggle } from "@/components/mode-toggle";
 import { TableDemo } from "@/components/notification-table";
 import Link from "next/link";
 import Image from "next/image";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
+
 
 import {
   Card,
@@ -28,7 +31,7 @@ export default function Home() {
 		const entry = await Stack.getElementByTypeWithRefs(
 			"video_library",
 			"en-us",
-			["header", "video_card"
+			["header", "videos"
 			]
 		);
 		console.log("homepage", entry[0][0]);
@@ -44,39 +47,20 @@ export default function Home() {
 
 return (
   <div className="relative max-w-7xl mx-auto p-4">
-    <div className="absolute top-3 left-3">
-      <img className="w-30 h-10" src={entry?.header?.[0]?.logo?.url} />
-    </div>
-	<div className="absolute top-3 right-3">
-		<ModeToggle/>
-    </div>
-    <div className="mt-8 flex flex-col items-center">
-        <nav>
-          {entry?.header?.[0]?.navigation_menu?.map((item) => (
-            <Link
-              key={item.call_to_action.href}
-              href={item.call_to_action.href}
-              className="px-3 py-1 hover:text-blue-500"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-    </div>
-
-	<Separator/>
-
-
-
+  <SidebarProvider >
+    <AppSidebar content={entry?.header?.[0]}/>
+    <main className="flex h-screen">
+      <SidebarTrigger />
+    </main>
+  <div className="flex flex-col w-full justify-center items-center"> {/* Centering the content */}
   <Card className="mx-10 my-10 w-full max-w-sm">
-    
   <CardHeader>
-    <CardTitle>{entry?.video_card?.[0]?.test_video?.video_title}</CardTitle>
-    <CardDescription>{entry?.video_card?.[0]?.test_video?.video_description}</CardDescription>
+    <CardTitle>{entry?.videos?.[0]?.title}</CardTitle>
+    <CardDescription>{entry?.videos?.[0]?.description}</CardDescription>
   </CardHeader>
   <CardContent className="mx-auto my-auto">
     <video width="320" height="240" controls preload="none">
-      <source src={entry?.video_card?.[0]?.test_video?.video_file?.url} type="video/mp4" />
+      <source src={entry?.videos?.[0]?.video_file?.url} type="video/mp4" />
       <track
         src={entry?.video_card?.[0]?.test_video?.video_file?.url}
         kind="subtitles"
@@ -91,6 +75,11 @@ return (
     <p>{entry?.video_card?.[0]?.test_video?.date_posted}</p>
   </CardFooter>
   </Card>
+  </div>
+
+
+  </SidebarProvider>
+
 
   </div>
 );
