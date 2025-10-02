@@ -14,34 +14,23 @@ import {
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu"
 
-export function NavigationMenuDemo() {
+export function NavigationMenuDemo({ content }) {
+  console.log(content)
   return (
     <NavigationMenu viewport={false}>
-      <NavigationMenuList>
-        <NavigationMenuItem>
-          <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-            <Link href="/">Home</Link>
-          </NavigationMenuLink>
-        </NavigationMenuItem>
-        <NavigationMenuItem>
-          <NavigationMenuLink variant="outline" asChild className={navigationMenuTriggerStyle()}>
-            <Link href="/custom-demos">Custom Demos</Link>
-          </NavigationMenuLink>
-        </NavigationMenuItem>
-        <NavigationMenuItem>
-          <NavigationMenuLink variant="outline" asChild className={navigationMenuTriggerStyle()}>
-            <Link href="/feature-requests">Feature Requests</Link>
-          </NavigationMenuLink>
-        </NavigationMenuItem>
-        <NavigationMenuItem>
-          <NavigationMenuLink variant="outline" asChild className={navigationMenuTriggerStyle()}>
-            <Link href="/video-library">Video Library</Link>
-          </NavigationMenuLink>
-        </NavigationMenuItem>
+      <NavigationMenuList className="flex flex-col gap-2">
+        {content.navigation_menu.map((item, index) => (
+          <NavigationMenuItem key={index}>
+            <NavigationMenuLink variant="outline" asChild className={navigationMenuTriggerStyle()}>
+              <Link href={item.call_to_action.href}>{item.call_to_action.title}</Link>
+            </NavigationMenuLink>
+          </NavigationMenuItem>
+        ))}
       </NavigationMenuList>
     </NavigationMenu>
-  )
+  );
 }
+
 
 function ListItem({
   title,

@@ -2,6 +2,9 @@
 const nextConfig = {
     reactStrictMode: false,
     devIndicators: false,
+    images: {
+    domains: ["images.contentstack.io"],
+  },
     env:{
         CONTENTSTACK_API_KEY: process.env.CONTENTSTACK_API_KEY,
         CONTENTSTACK_DELIVERY_TOKEN: process.env.CONTENTSTACK_DELIVERY_TOKEN,
