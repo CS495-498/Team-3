@@ -39,13 +39,13 @@ return (
     <AppSidebar content={entry?.header?.[0]}/>
     <main className="flex h-screen">
       <SidebarTrigger />
-      <div className="flex flex-col w-full p-4 justify-center items-center"> {/* Centering the content */}
+    </main>
+      <div className="flex flex-col w-full mx-10 justify-center items-center"> {/* Centering the content */}
         <h1 className="text-3xl font-bold underline mt-8">{entry?.headline}</h1>
         <div className="relative">
           <TableDemo />
         </div>
       </div>
-    </main>
   </SidebarProvider>
 );
 }
