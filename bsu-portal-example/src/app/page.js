@@ -36,10 +36,7 @@ export default function Home() {
 
 return (
   <SidebarProvider >
-    <AppSidebar style={{
-    "--sidebar-width": "110rem",
-    "--sidebar-width-mobile": "20rem",
-  }} content={entry?.header?.[0]}/>
+    <AppSidebar content={entry?.header?.[0]}/>
     <main className="flex h-screen">
       <SidebarTrigger />
       <div className="flex flex-col w-full p-4 justify-center items-center"> {/* Centering the content */}
