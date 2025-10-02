@@ -3,6 +3,7 @@ import { Calendar, Home, Inbox, Search, Settings, TvMinimalPlay } from "lucide-r
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -11,6 +12,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { ModeToggle } from "./mode-toggle"
 
 
 export function AppSidebar({ content }) {
@@ -18,6 +20,7 @@ export function AppSidebar({ content }) {
   return (
     <Sidebar side= {side_of_screen}>
       <SidebarHeader><img className="w-30 h-10 p-2" src={content.logo?.url} /></SidebarHeader>
+      
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Contentstack Portal</SidebarGroupLabel>
@@ -36,7 +39,9 @@ export function AppSidebar({ content }) {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        
       </SidebarContent>
+      <SidebarFooter><ModeToggle/></SidebarFooter>
     </Sidebar>
   )
 }

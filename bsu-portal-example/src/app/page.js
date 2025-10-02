@@ -40,9 +40,6 @@ return (
     <main className="flex h-screen">
       <SidebarTrigger />
       <div className="flex flex-col w-full p-4 justify-center items-center"> {/* Centering the content */}
-        <div className="absolute top-3 right-3">
-          <ModeToggle />
-        </div>
         <h1 className="text-3xl font-bold underline mt-8">{entry?.headline}</h1>
         <div className="relative">
           <TableDemo />
