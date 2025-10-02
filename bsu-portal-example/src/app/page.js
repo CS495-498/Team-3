@@ -22,8 +22,10 @@ export default function Home() {
 			]
 		);
 		console.log("homepage", entry[0][0]);
+
 		setEntry(entry[0][0]);
 		setIsLoading(false);
+    console.log(entry[0][0]?.header?.[0])
 	};
 
 	useEffect(() => {
@@ -40,19 +42,10 @@ return (
 	<div className="absolute top-3 right-3">
 		<ModeToggle/>
     </div>
-    <div className="mt-8 flex flex-col items-center">
-        <nav>
-          {entry?.header?.[0]?.navigation_menu?.map((item) => (
-            <Link
-              key={item.call_to_action.href}
-              href={item.call_to_action.href}
-              className="px-3 py-1 hover:text-blue-500"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-    </div>
+   <div className="mt-8 flex flex-col items-center">
+    <NavigationMenuDemo content={entry?.header?.[0]?.navigation_menu} />
+</div>
+
   <Separator/>
 
 	<div className="flex">
