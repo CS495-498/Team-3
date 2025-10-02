@@ -1,4 +1,5 @@
 import { Calendar, Home, Inbox, Search, Settings, TvMinimalPlay } from "lucide-react"
+import Link from "next/link";
 
 import {
   Sidebar,
@@ -29,10 +30,10 @@ export function AppSidebar({ content }) {
               {content.navigation_menu.map((item, index) => (
                 <SidebarMenuItem key={index}>
                   <SidebarMenuButton asChild>
-                    <a href={item.call_to_action.href}>
+                    <Link href={item.call_to_action.href}>
                       <Search />
                       <span>{item.call_to_action.title}</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
