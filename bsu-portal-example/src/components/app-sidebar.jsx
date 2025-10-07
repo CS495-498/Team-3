@@ -25,6 +25,31 @@ import React from "react";
 import { useState, useEffect } from "react";
 import Stack, { onEntryChange } from "@/lib/cstack";
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    // Update state so the next render shows the fallback UI.
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    // You can also log the error to an error reporting service
+    console.error(error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <NavProjectsSkeleton />; // Fallback UI
+    }
+
+    return this.props.children; 
+  }
+}
+
 function NavProjectsSkeleton() {
   return (
     <SidebarMenu>
@@ -36,7 +61,7 @@ function NavProjectsSkeleton() {
     </SidebarMenu>
   )
 }
-function NavProjects(){
+function NavProjects() {
   const [entry, setEntry] = useState({});
   const [isLoading, setIsLoading] = useState(true);
 
@@ -44,11 +69,9 @@ function NavProjects(){
     const entry = await Stack.getElementByTypeWithRefs(
       "homepage",
       "en-us",
-      ["header","alerts",
+      ["header",
       ]
     );
-    console.log("homepage", entry[0][0]);
-    console.log("alerts", entry[0][0]?.alerts);
     setEntry(entry[0][0]);
     setIsLoading(false);
   };
@@ -58,44 +81,32 @@ function NavProjects(){
   }, []);
 
   if (isLoading) return (<SidebarMenu>
-        {Array.from({ length: 5 }).map((_, index) => (
-          <SidebarMenuItem key={index}>
-            <SidebarMenuSkeleton showIcon />
-          </SidebarMenuItem>
-        ))}
-      </SidebarMenu>)
+    {Array.from({ length: 5 }).map((_, index) => (
+      <SidebarMenuItem key={index}>
+        <SidebarMenuSkeleton showIcon />
+      </SidebarMenuItem>
+    ))}
+  </SidebarMenu>)
 
-console.log(entry)
-   return (
-    <SidebarMenu>
-      {entry?.header?.[0]?.navigation_menu.map((item, index) => (
-        <SidebarMenuItem key={index}>
-          <SidebarMenuButton asChild>
-            <Link href={item.call_to_action.href}>
-              <Search />
-              <span>{item.call_to_action.title}</span>
-            </Link>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      ))}
-    </SidebarMenu>
-  );    
-}
-
-export function AppSidebar() {
   return (
-    <Sidebar  collapsible="offcanvas">
-      <SidebarHeader>/</SidebarHeader>
-
+    <Sidebar side={entry?.header?.[0].side_of_screen}>
+      <SidebarHeader><img className="w-30 h-10 p-2" src={entry?.header?.[0].logo?.url} /></SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Contentstack Portal</SidebarGroupLabel>
           <SidebarGroupContent>
-
-              <React.Suspense fallback={<NavProjectsSkeleton />}>
-              <NavProjects />
-            </React.Suspense>
-
+            <SidebarMenu>
+              {entry?.header?.[0]?.navigation_menu.map((item, index) => (
+                <SidebarMenuItem key={index}>
+                  <SidebarMenuButton asChild>
+                    <Link href={item.call_to_action.href}>
+                      <Search />
+                      <span>{item.call_to_action.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
@@ -124,5 +135,16 @@ export function AppSidebar() {
         </SidebarMenuItem>
       </SidebarMenu></SidebarFooter>
     </Sidebar>
-  )
+  );
+}
+
+export function AppSidebar({ children }) {
+  return (
+    <ErrorBoundary>
+      <React.Suspense fallback={<NavProjectsSkeleton />}>
+        <NavProjects />
+        {children}
+      </React.Suspense>
+    </ErrorBoundary>
+  );
 }
