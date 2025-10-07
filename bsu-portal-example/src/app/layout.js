@@ -23,12 +23,9 @@ export const metadata = {
 
 
 export default function RootLayout({ children }) {
-  console.log(children); // Should not be undefined
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}> 
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -37,12 +34,13 @@ export default function RootLayout({ children }) {
           themes={['light', 'dark']}
         >
           <SidebarProvider>
-            <AppSidebar>
-              <main>
-                  <SidebarTrigger/>
-                  {children}
-                </main>
-            </AppSidebar>
+            <div style={{ display: 'flex', minHeight: '100vh', width: '100vw' }}>
+              <AppSidebar />
+              
+              <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+                {children}
+              </main>
+            </div>
           </SidebarProvider>
         </ThemeProvider>
       </body>

@@ -29,9 +29,8 @@ export default function Home() {
   if (isLoading) return <div></div>
 
 return (
+
   
-    
-    
     <main className="flex h-screen">
       <div className="flex flex-col w-full mx-10 justify-center items-center"> 
         <h1 className="text-3xl font-bold underline mt-8">{entry?.headline}</h1>

@@ -89,7 +89,7 @@ function NavProjects() {
   </SidebarMenu>)
 
   return (
-    <Sidebar side={entry?.header?.[0].side_of_screen}>
+    <Sidebar side={entry?.header?.[0].side_of_screen} collapsible="none">
       <SidebarHeader><img className="w-30 h-10 p-2" src={entry?.header?.[0].logo?.url} /></SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
