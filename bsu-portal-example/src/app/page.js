@@ -9,6 +9,7 @@ import { TableDemo } from "@/components/notification-table";
 import Link from "next/link";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { AlertDemo } from "@/components/alert";
 
 
 export default function Home() {
@@ -19,11 +20,11 @@ export default function Home() {
     const entry = await Stack.getElementByTypeWithRefs(
       "homepage",
       "en-us",
-      ["header"
+      ["header","alerts",
       ]
     );
     console.log("homepage", entry[0][0]);
-
+    console.log("alerts", entry[0][0]?.alerts);
     setEntry(entry[0][0]);
     setIsLoading(false);
   };
@@ -35,17 +36,23 @@ export default function Home() {
   if (isLoading) return <div></div>
 
 return (
-  <SidebarProvider >
-    <AppSidebar content={entry?.header?.[0]}/>
+  
+  <SidebarProvider>
+    <AppSidebar content={entry?.header?.[0]} />
+    
     <main className="flex h-screen">
-      <SidebarTrigger />
-    </main>
-      <div className="flex flex-col w-full mx-10 justify-center items-center"> {/* Centering the content */}
+      
+        <SidebarTrigger />
+      
+      <div className="flex flex-col w-full mx-10 justify-center items-center"> 
         <h1 className="text-3xl font-bold underline mt-8">{entry?.headline}</h1>
         <div className="relative">
-          <TableDemo />
+          <AlertDemo content={entry?.alerts} />
         </div>
       </div>
+    </main>
   </SidebarProvider>
+  
 );
+
 }
