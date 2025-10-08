@@ -25,6 +25,10 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <title>Contentstack Portal</title>
+        <meta name="description" content="Contentstack Portal" />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}> 
         <ThemeProvider
           attribute="class"
