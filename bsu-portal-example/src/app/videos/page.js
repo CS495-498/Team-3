@@ -44,71 +44,63 @@ export default function VideoLibrary() {
 
   return (
     <div className="relative max-w-7xl mx-auto p-4">
-      <SidebarProvider>
-        {/* Left Sidebar Navigation */}
-        <AppSidebar content={entry?.header?.[0]} />
+      {/* Page Content */}
+      <div className="flex flex-col w-full items-start pl-[120px] pr-8">
+        <h1 className="text-4xl font-bold mt-8 mb-6 text-center">
+          {entry?.title || "Video Library"}
+        </h1>
 
-        <main className="flex h-screen">
-          <SidebarTrigger />
-        </main>
+        {/* Videos Grid */}
+        {entry?.videos?.length ? (
+          <div className="grid gap-8 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 w-full px-4">
+            {entry.videos.map((video, index) => (
+              <Card
+                key={index}
+                className="w-full max-w-[250px] mx-auto transition hover:shadow-lg hover:scale-[1.02] duration-200"
+              >
+                <CardHeader>
+                  <CardTitle>{video.title}</CardTitle>
+                  {video.description && (
+                    <CardDescription>{video.description}</CardDescription>
+                  )}
+                </CardHeader>
 
-        {/* Page Content */}
-        <div className="flex flex-col w-full items-start pl-[120px] pr-8">
-          <h1 className="text-4xl font-bold mt-8 mb-6 text-center">
-            {entry?.title || "Video Library"}
-          </h1>
+                <CardContent>
+                  {video?.video_file?.url ? (
+                    <video
+                      className="w-full rounded-md"
+                      controls
+                      preload="none"
+                      poster={video?.thumbnail?.url || ""}
+                    >
+                      <source src={video.video_file.url} type="video/mp4" />
+                      Your browser does not support the video tag.
+                    </video>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      No video file available.
+                    </p>
+                  )}
+                </CardContent>
 
-          {/* Videos Grid */}
-          {entry?.videos?.length ? (
-            <div className="grid gap-8 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 w-full px-4">
-              {entry.videos.map((video, index) => (
-                <Card
-                  key={index}
-                  className="w-full max-w-[250px] mx-auto transition hover:shadow-lg hover:scale-[1.02] duration-200"
-                >
-                  <CardHeader>
-                    <CardTitle>{video.title}</CardTitle>
-                    {video.description && (
-                      <CardDescription>{video.description}</CardDescription>
-                    )}
-                  </CardHeader>
+                <CardFooter>
+                  {video.date_posted && (
+                    <p className="text-xs text-muted-foreground">
+                      Posted on{" "}
+                      {new Date(video.date_posted).toLocaleDateString()}
+                    </p>
+                  )}
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground mt-10">
+            No videos found in the library.
+          </p>
+        )}
+      </div>
 
-                  <CardContent>
-                    {video?.video_file?.url ? (
-                      <video
-                        className="w-full rounded-md"
-                        controls
-                        preload="none"
-                        poster={video?.thumbnail?.url || ""}
-                      >
-                        <source src={video.video_file.url} type="video/mp4" />
-                        Your browser does not support the video tag.
-                      </video>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        No video file available.
-                      </p>
-                    )}
-                  </CardContent>
-
-                  <CardFooter>
-                    {video.date_posted && (
-                      <p className="text-xs text-muted-foreground">
-                        Posted on{" "}
-                        {new Date(video.date_posted).toLocaleDateString()}
-                      </p>
-                    )}
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <p className="text-muted-foreground mt-10">
-              No videos found in the library.
-            </p>
-          )}
-        </div>
-      </SidebarProvider>
     </div>
   );
 }
