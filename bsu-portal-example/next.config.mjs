@@ -4,6 +4,7 @@ const nextConfig = {
     devIndicators: false,
     images: {
     domains: ["images.contentstack.io"],
+    qualities: [75, 100],
   },
     env:{
         CONTENTSTACK_API_KEY: process.env.CONTENTSTACK_API_KEY,

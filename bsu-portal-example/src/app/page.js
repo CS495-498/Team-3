@@ -2,7 +2,8 @@
 import { useState, useEffect } from "react";
 import Stack, { onEntryChange } from "@/lib/cstack";
 import { AlertDemo } from "@/components/alert";
-
+import backGroundImage from '../../public/background.png';
+import Image from "next/image";
 
 export default function Home() {
   const [entry, setEntry] = useState({});
@@ -29,17 +30,23 @@ export default function Home() {
   if (isLoading) return <div></div>
 
 return (
-
-  
-    <main className="flex h-screen">
-      <div className="flex flex-col w-full mx-10 justify-center items-center"> 
-        <h1 className="text-3xl font-bold underline mt-8">{entry?.headline}</h1>
-        <div className="relative">
-          <AlertDemo content={entry?.alerts} />
-        </div>
+  <main className="relative w-full h-screen overflow-hidden">
+    <Image
+      src={backGroundImage}
+      alt="Descriptive text for screen readers"
+      fill // Use fill to cover the entire parent div
+      style={{ objectFit: 'cover' }} // Set object fit using style prop
+      quality={100} // Specify the desired quality if using Next.js 16 or later
+      className="z-0" // Adjust z-index if necessary
+    />
+    <div className="flex flex-col w-full max-w-screen mx-auto justify-center items-center relative z-10">
+      <h1 className="text-3xl font-bold underline mt-8">{entry?.headline}</h1>
+      <div className="relative">
+        <AlertDemo content={entry?.alerts} />
       </div>
-    </main>
-  
+    </div>
+  </main>
 );
+
 
 }

@@ -4,6 +4,8 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import backgroundImage from '../../public/background.png';
+import Image from "next/image";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,6 +39,15 @@ export default function RootLayout({ children }) {
           disableTransitionOnChange
           themes={['light', 'dark']}
         >
+          <div className="absolute">
+                  <Image
+                  alt="Background Image"
+                      src={backgroundImage}
+                      layout="fill"
+                      objectFit="cover"
+                      quality={100}
+                  />
+              </div>
           <SidebarProvider>
             <div style={{ display: 'flex', minHeight: '100vh', width: '100vw' }}>
               <AppSidebar />
