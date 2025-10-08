@@ -9,68 +9,39 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
-const notifications = [
-  {
-    type: "Demo",
-    description: "1 The Red Panda Demo site will be under construction from 10:00-10:30 UTC",
-    status: "Pending",
-  },
-  {
-    type: "TEST",
-    description: "2 The Red Panda Demo site will be under construction from 10:00-10:30 UTC",
-    status: "Pending",
-  },
-  {
-    type: "TEST",
-    description: "3 The Red Panda Demo site will be under construction from 10:00-10:30 UTC",
-    status: "Pending",
-  },
-  {
-    type: "TEST",
-    description: "4 The Red Panda Demo site will be under construction from 10:00-10:30 UTC",
-    status: "Pending",
-  },
-  {
-    type: "TEST",
-    description: "5 The Red Panda Demo site will be under construction from 10:00-10:30 UTC",
-    status: "Pending",
-  },
-  {
-    type: "TEST",
-    description: "6 The Red Panda Demo site will be under construction from 10:00-10:30 UTC",
-    status: "Pending",
-  },
-  {
-    type: "TEST",
-    description: "7 The Red Panda Demo site will be under construction from 10:00-10:30 UTC",
-    status: "Pending",
-  },
-]
-
-export function TableDemo() {
+export function TableDemo({ content }) {
   return (
     <Table>
-      <TableCaption>Recent Notifications.</TableCaption>
+      <TableCaption>Feature Requests.</TableCaption>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[100px]">Notification Type</TableHead>
+          <TableHead className="w-[200px]">Feature Title</TableHead>
           <TableHead>Description</TableHead>
-          <TableHead>Status</TableHead>
+          <TableHead>Author</TableHead>
+          <TableHead>Date</TableHead>
         </TableRow>
       </TableHeader>
+
       <TableBody>
-        {notifications.map((notification) => (
-          <TableRow key={notification.description}>
-            <TableCell className="font-medium">{notification.type}</TableCell>
-            <TableCell>{notification.description}</TableCell>
-            <TableCell>{notification.status}</TableCell>
-          </TableRow>
-        ))}
+        {content.map((item, index) => {
+          console.log("request:", item)
+          return (
+            <TableRow key={item.request._metadata?.uid || index}>
+              <TableCell className="font-medium">
+                {item.request.feature_title}
+              </TableCell>
+              <TableCell>{item.request.feature_description}</TableCell>
+              <TableCell>{item.request.author}</TableCell>
+              <TableCell>{item.request.date || "—"}</TableCell>
+            </TableRow>
+          )
+        })}
       </TableBody>
+
       <TableFooter>
         <TableRow>
-          <TableCell colSpan={2}>Total</TableCell>
-          <TableCell className="text-right">7</TableCell>
+          <TableCell colSpan={3}>Total</TableCell>
+          <TableCell className="text-right">{content.length}</TableCell>
         </TableRow>
       </TableFooter>
     </Table>
