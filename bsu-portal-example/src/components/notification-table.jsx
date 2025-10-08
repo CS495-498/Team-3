@@ -8,6 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { AlertDemo } from "./alert"
 
 const notifications = [
   {
@@ -53,14 +54,13 @@ export function TableDemo() {
       <TableCaption>Recent Notifications.</TableCaption>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[100px]">Notification Type</TableHead>
-          <TableHead>Description</TableHead>
-          <TableHead>Status</TableHead>
+
         </TableRow>
       </TableHeader>
       <TableBody>
         {notifications.map((notification) => (
           <TableRow key={notification.description}>
+            <AlertDemo/>
             <TableCell className="font-medium">{notification.type}</TableCell>
             <TableCell>{notification.description}</TableCell>
             <TableCell>{notification.status}</TableCell>

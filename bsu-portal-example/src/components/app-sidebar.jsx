@@ -1,4 +1,4 @@
-import { Calendar, Home, Inbox, Search, Settings, TvMinimalPlay } from "lucide-react"
+import { Calendar, ChevronUp, Home, Inbox, Search, Settings, TvMinimalPlay, User2 } from "lucide-react"
 import Link from "next/link";
 
 import {
@@ -12,22 +12,91 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSkeleton,
 } from "@/components/ui/sidebar"
 import { ModeToggle } from "./mode-toggle"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import React from "react";
+import { useState, useEffect } from "react";
+import Stack, { onEntryChange } from "@/lib/cstack";
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
 
-export function AppSidebar({ content }) {
-  let side_of_screen = content.side_of_screen
+  static getDerivedStateFromError(error) {
+    // Update state so the next render shows the fallback UI.
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    // You can also log the error to an error reporting service
+    console.error(error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <NavProjectsSkeleton />; // Fallback UI
+    }
+
+    return this.props.children; 
+  }
+}
+
+function NavProjectsSkeleton() {
   return (
-    <Sidebar side= {side_of_screen}>
-      <SidebarHeader><img className="w-30 h-10 p-2" src={content.logo?.url} /></SidebarHeader>
-      
+    <SidebarMenu>
+      {Array.from({ length: 5 }).map((_, index) => (
+        <SidebarMenuItem key={index}>
+          <SidebarMenuSkeleton showIcon />
+        </SidebarMenuItem>
+      ))}
+    </SidebarMenu>
+  )
+}
+function NavProjects() {
+  const [entry, setEntry] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
+
+  const getContent = async () => {
+    const entry = await Stack.getElementByTypeWithRefs(
+      "homepage",
+      "en-us",
+      ["header",
+      ]
+    );
+    setEntry(entry[0][0]);
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    onEntryChange(getContent);
+  }, []);
+
+  if (isLoading) return (<SidebarMenu>
+    {Array.from({ length: 5 }).map((_, index) => (
+      <SidebarMenuItem key={index}>
+        <SidebarMenuSkeleton showIcon />
+      </SidebarMenuItem>
+    ))}
+  </SidebarMenu>)
+
+  return (
+    <Sidebar side={entry?.header?.[0].side_of_screen} collapsible="none">
+      <SidebarHeader><img className="w-30 h-10 p-2" src={entry?.header?.[0].logo?.url} /></SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Contentstack Portal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {content.navigation_menu.map((item, index) => (
+              {entry?.header?.[0]?.navigation_menu.map((item, index) => (
                 <SidebarMenuItem key={index}>
                   <SidebarMenuButton asChild>
                     <Link href={item.call_to_action.href}>
@@ -40,9 +109,42 @@ export function AppSidebar({ content }) {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        
+
       </SidebarContent>
-      <SidebarFooter><ModeToggle/></SidebarFooter>
+      <SidebarFooter><ModeToggle /><SidebarMenu>
+        <SidebarMenuItem>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <SidebarMenuButton>
+                <User2 /> Username
+                <ChevronUp className="ml-auto" />
+              </SidebarMenuButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              side="top"
+              className="w-[--radix-popper-anchor-width]"
+            >
+              <DropdownMenuItem>
+                <span>Account</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <span>Sign out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </SidebarMenuItem>
+      </SidebarMenu></SidebarFooter>
     </Sidebar>
-  )
+  );
+}
+
+export function AppSidebar({ children }) {
+  return (
+    <ErrorBoundary>
+      <React.Suspense fallback={<NavProjectsSkeleton />}>
+        <NavProjects />
+        {children}
+      </React.Suspense>
+    </ErrorBoundary>
+  );
 }
