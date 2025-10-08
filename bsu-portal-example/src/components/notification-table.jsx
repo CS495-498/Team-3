@@ -16,19 +16,15 @@ export function TableDemo({ content }) {
       <TableCaption>Feature Requests.</TableCaption>
       <TableHeader>
         <TableRow>
-<<<<<<< HEAD
           <TableHead className="w-[200px]">Feature Title</TableHead>
           <TableHead>Description</TableHead>
           <TableHead>Author</TableHead>
           <TableHead>Date</TableHead>
-=======
 
->>>>>>> main
         </TableRow>
       </TableHeader>
 
       <TableBody>
-<<<<<<< HEAD
         {content.map((item, index) => {
           console.log("request:", item)
           return (
@@ -42,16 +38,6 @@ export function TableDemo({ content }) {
             </TableRow>
           )
         })}
-=======
-        {notifications.map((notification) => (
-          <TableRow key={notification.description}>
-            <AlertDemo/>
-            <TableCell className="font-medium">{notification.type}</TableCell>
-            <TableCell>{notification.description}</TableCell>
-            <TableCell>{notification.status}</TableCell>
-          </TableRow>
-        ))}
->>>>>>> main
       </TableBody>
 
       <TableFooter>

@@ -26,7 +26,7 @@ export default function Home() {
   if(isLoading) return <div></div>
 
 return (
-    <main className="flex h-screen">   
+    <main className="flex h-screen w-sceen overflow-hidden justify-center items-center">   
     <TableDemo content={entry?.requests}/>
     </main>
 
