@@ -5,6 +5,7 @@ import {
     AlertDescription,
     AlertTitle,
 } from "@/components/ui/alert"
+import { Card } from "@/components/ui/card";
 
 export function AlertDemo({ content }) {
    const now = new Date();
@@ -25,16 +26,18 @@ export function AlertDemo({ content }) {
     });
 
     return (
-        <div className="grid w-full max-w-xl items-start gap-2">
-            {sortedContent.map((item, index) => (
-                <Alert key={index} variant={item.is_critical ? "destructive" : "default"}>
-                    <AlertCircleIcon />
-                    <AlertTitle>{item.alert_title}</AlertTitle>
-                    <AlertDescription>
-                        {item.alert_description}
-                    </AlertDescription>
-                </Alert>
-            ))}
-        </div>
-    )
+        <Card className="flex flex-col p-6 mt-4 mb-4 max-h-[98%] overflow-y-auto">
+            <div className="mt-4 flex-1 max-h-[98%] overflow-y-auto">
+                {sortedContent.map((item, index) => (
+                    <Alert key={index} variant={item.is_critical ? "destructive" : "default"} className="mb-2"> {/* Padding for alerts */}
+                        <AlertCircleIcon />
+                        <AlertTitle>{item.alert_title}</AlertTitle>
+                        <AlertDescription>
+                            {item.alert_description}
+                        </AlertDescription>
+                    </Alert>
+                ))}
+            </div>
+        </Card>
+    );
 }

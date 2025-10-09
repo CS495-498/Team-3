@@ -1,4 +1,4 @@
-import { Calendar, ChevronUp, Home, Inbox, Search, Settings, TvMinimalPlay, User2 } from "lucide-react"
+import { Calendar, ChevronUp, Home, Inbox, Search, Settings, TvMinimalPlay, User2, ChevronsLeftRightEllipsis, Construction } from "lucide-react"
 import Link from "next/link";
 
 import {
@@ -24,6 +24,19 @@ import {
 import React from "react";
 import { useState, useEffect } from "react";
 import Stack, { onEntryChange } from "@/lib/cstack";
+
+const iconMapper = {
+  Home: <Home />,
+  Inbox: <Inbox />,
+  Calendar: <Calendar />,
+  Settings: <Settings />,
+  TvMinimalPlay: <TvMinimalPlay />,
+  Search: <Search />,
+  User2: <User2 />,
+  ChevronUp: <ChevronUp />,
+  ChevronsLeftRightEllipsis: <ChevronsLeftRightEllipsis />,
+  Construction: <Construction />,
+}
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -100,7 +113,7 @@ function NavProjects() {
                 <SidebarMenuItem key={index}>
                   <SidebarMenuButton asChild>
                     <Link href={item.call_to_action.href}>
-                      <Search />
+                      {iconMapper[item.icon] || <Search />}
                       <span>{item.call_to_action.title}</span>
                     </Link>
                   </SidebarMenuButton>
