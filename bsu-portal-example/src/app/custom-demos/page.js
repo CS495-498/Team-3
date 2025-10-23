@@ -1,14 +1,8 @@
 "use client";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Stack, { onEntryChange } from "@/lib/cstack";
-import { NavigationMenuDemo } from "@/components/menu"
-import { Separator} from "@/components/ui/separator"
-import { ModeToggle } from "@/components/mode-toggle";
-import { TableDemo } from "@/components/notification-table";
 import Link from "next/link";
 import Image from "next/image";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
 
 
 import {
@@ -48,13 +42,44 @@ export default function Demos() {
     if(isLoading) return <div></div>
 
     return (
-        <main className="pl-64 p-6">
-            <div className="flex items-center mb-8">
-                <h1 className="text-3xl font-bold ml-4">Custom Demos</h1>
-            </div>
+        <div className="pl-10 pt-6 min-h-screen flex flex-col">
+            <div className="flex justify-between items-center mb-6 pt-6">
+                <h1 className="text-4xl font-bold ml-4">
+                    {entry?.title}
+                </h1>
+                <div className="flex items-center gap-2 mr-4">
+                    <button
+                        type="button"
+                        className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
+                    >
+                        + Demos
+                    </button>
 
-            <section className="mt-10">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    <div className="relative w-full max-w-sm">
+                        <input
+                            type="text"
+                            placeholder="Search demos..."
+                            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 pl-10 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
+                        />
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth="1.5"
+                            stroke="currentColor"
+                            className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 18a7.5 7.5 0 006.15-3.35z"
+                            />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            <div className="flex-1">
+                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6 me-10">
                     {entry?.demos?.map((demo, idx) => (
                         <Link key={idx} target={'_blank'} href={demo?.link?.href || "#"} className="group">
                             <Card className="h-full shadow-md hover:shadow-lg transition-shadow duration-200">
@@ -76,7 +101,7 @@ export default function Demos() {
                         </Link>
                     ))}
                 </div>
-            </section>
-        </main>
+            </div>
+        </div>
     );
 }

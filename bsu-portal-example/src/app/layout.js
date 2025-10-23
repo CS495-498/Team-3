@@ -52,7 +52,7 @@ export default function RootLayout({ children }) {
             <div style={{ display: 'flex', minHeight: '100vh', width: '100vw' }}>
               <AppSidebar />
               
-              <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+              <main style={{ flex: 1, display: 'flex', minHeight: '100vh' }}>
                 {children}
               </main>
             </div>
