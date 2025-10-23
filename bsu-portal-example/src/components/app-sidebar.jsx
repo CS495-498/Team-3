@@ -103,11 +103,10 @@ function NavProjects() {
 
   return (
     <Sidebar side={entry?.header?.[0].side_of_screen} collapsible="none">
-      <SidebarHeader><img className="w-30 h-10 p-2" src={entry?.header?.[0].logo?.url} /></SidebarHeader>
+      <SidebarHeader className="p-0 mb-0"><img className="w-15 h-13 p-3" src={entry?.header?.[0].logo?.url} /></SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Contentstack Portal</SidebarGroupLabel>
-          <SidebarGroupContent>
+          <SidebarGroupContent className="mt-4">
             <SidebarMenu>
               {entry?.header?.[0]?.navigation_menu.map((item, index) => (
                 <SidebarMenuItem key={index}>
