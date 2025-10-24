@@ -17,7 +17,7 @@ export default function Home() {
     const entry = await Stack.getElementByTypeWithRefs(
       "homepage",
       "en-us",
-      ["header","alerts",
+      ["alerts",
       ]
     );
     console.log("homepage", entry[0][0]);

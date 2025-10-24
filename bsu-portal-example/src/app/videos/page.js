@@ -24,7 +24,7 @@ export default function VideoLibrary() {
       const entry = await Stack.getElementByTypeWithRefs(
         "video_library",
         "en-us",
-        ["header", "videos"]
+        ["videos"]
       );
 
       console.log("Video Library Entry:", entry[0][0]);
