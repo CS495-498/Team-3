@@ -38,12 +38,12 @@ return (
     <main className="relative w-full h-screen overflow-hidden">
         <div className="flex flex-col w-full max-w-6xl mx-auto justify-start items-start relative z-10 h-full p-8">
 
-            <div className="relative w-full mb-10">
+            <div className="flex flex-wrap items-start justify-between w-full mb-10">
                 <h1 className="text-4xl font-bold mt-10">Contentstack Portal</h1>
 
                 <button
                     type="button"
-                    className="absolute top-10 right-0 text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition"
+                    className="mt-10 text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition"
                 >
                     + Notification
                 </button>

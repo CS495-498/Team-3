@@ -61,7 +61,7 @@ export default function VideoLibrary() {
                       <input
                           type="text"
                           placeholder="Search videos..."
-                          className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 pl-10 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
+                          className="w-full rounded-lg border text-black border-gray-300 bg-white px-4 py-2 pl-10 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
                       />
                       <svg
                           xmlns="http://www.w3.org/2000/svg"

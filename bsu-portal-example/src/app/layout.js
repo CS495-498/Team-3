@@ -49,7 +49,7 @@ export default function RootLayout({ children }) {
                   />
               </div>
           <SidebarProvider>
-            <div style={{ display: 'flex', minHeight: '100vh', width: '100vw' }}>
+            <div style={{ display: 'flex', minHeight: '100vh', width: '100vw'}}>
               <AppSidebar />
               
               <main style={{ flex: 1, display: 'flex', minHeight: '100vh' }}>

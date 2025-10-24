@@ -1,5 +1,6 @@
 import { Calendar, ChevronUp, Home, Inbox, Search, Settings, TvMinimalPlay, User2, ChevronsLeftRightEllipsis, Construction } from "lucide-react"
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import {
   Sidebar,
@@ -75,80 +76,102 @@ function NavProjectsSkeleton() {
   )
 }
 function NavProjects() {
-  const [entry, setEntry] = useState({});
-  const [isLoading, setIsLoading] = useState(true);
+    const [entry, setEntry] = useState({});
+    const [isLoading, setIsLoading] = useState(true);
+    const pathname = usePathname(); // ✅ Get current path
 
-  const getContent = async () => {
-    const entry = await Stack.getElementByTypeWithRefs(
-      "header",
-      "en-us",
-      [
-      ]
-    );
-    setEntry(entry[0][0]);
-    console.log('Sidebar Entry:', entry);
-    setIsLoading(false);
-  };
+    const getContent = async () => {
+        const entry = await Stack.getElementByTypeWithRefs("header", "en-us", []);
+        setEntry(entry[0][0]);
+        console.log("Sidebar Entry:", entry);
+        setIsLoading(false);
+    };
 
-  useEffect(() => {
-    onEntryChange(getContent);
-  }, []);
+    useEffect(() => {
+        onEntryChange(getContent);
+    }, []);
 
-  if (isLoading) return (<SidebarMenu>
-    {Array.from({ length: 5 }).map((_, index) => (
-      <SidebarMenuItem key={index}>
-        <SidebarMenuSkeleton showIcon />
-      </SidebarMenuItem>
-    ))}
-  </SidebarMenu>)
-
-  return (
-    <Sidebar side={entry?.side_of_screen} collapsible="none">
-      <SidebarHeader className="p-0 mb-0"><img className="w-15 h-13 p-3" src={entry?.logo?.url} /></SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent className="mt-4">
+    if (isLoading)
+        return (
             <SidebarMenu>
-              {entry?.navigation_menu.map((item, index) => (
-                <SidebarMenuItem key={index}>
-                  <SidebarMenuButton asChild>
-                    <Link href={item.call_to_action.href}>
-                      {iconMapper[item.icon] || <Search />}
-                      <span>{item.call_to_action.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+                {Array.from({ length: 5 }).map((_, index) => (
+                    <SidebarMenuItem key={index}>
+                        <SidebarMenuSkeleton showIcon />
+                    </SidebarMenuItem>
+                ))}
             </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        );
 
-      </SidebarContent>
-      <SidebarFooter><ModeToggle /><SidebarMenu>
-        <SidebarMenuItem>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <SidebarMenuButton>
-                <User2 /> Username
-                <ChevronUp className="ml-auto" />
-              </SidebarMenuButton>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              side="top"
-              className="w-[--radix-popper-anchor-width]"
-            >
-              <DropdownMenuItem>
-                <span>Account</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <span>Sign out</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </SidebarMenuItem>
-      </SidebarMenu></SidebarFooter>
-    </Sidebar>
-  );
+    return (
+        <Sidebar side={entry?.side_of_screen} collapsible="none">
+            {/* Header */}
+            <SidebarHeader className="p-0 mb-0">
+                <img
+                    className="w-15 h-13 p-3"
+                    src={entry?.logo?.url}
+                    alt="Logo"
+                />
+            </SidebarHeader>
+
+            {/* Sidebar content */}
+            <SidebarContent>
+                <SidebarGroup>
+                    <SidebarGroupContent className="mt-4">
+                        <SidebarMenu>
+                            {entry?.navigation_menu.map((item, index) => {
+                                const isActive = pathname === item.call_to_action.href; // ✅ Highlight active
+
+                                return (
+                                    <SidebarMenuItem key={index}>
+                                        <SidebarMenuButton
+                                            asChild
+                                            className={`dark:text-white dark:hover:bg-white dark:hover:text-black transition-colors duration-200 flex items-center gap-2 ${
+                                                isActive
+                                                    ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800"
+                                                    : "text-gray-800 hover:bg-gray-100"
+                                            }`}
+                                        >
+                                            <Link href={item.call_to_action.href}>
+                                                {iconMapper[item.icon] || <Search />}
+                                                <span>{item.call_to_action.title}</span>
+                                            </Link>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                );
+                            })}
+                        </SidebarMenu>
+                    </SidebarGroupContent>
+                </SidebarGroup>
+            </SidebarContent>
+
+            <SidebarFooter>
+                <ModeToggle />
+                <SidebarMenu>
+                    <SidebarMenuItem>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <SidebarMenuButton>
+                                    <User2 /> Username
+                                    <ChevronUp className="ml-auto" />
+                                </SidebarMenuButton>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                                side="top"
+                                className="w-[--radix-popper-anchor-width]"
+                            >
+                                <DropdownMenuItem>
+                                    <span>Account</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem>
+                                    <span>Sign out</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </SidebarMenuItem>
+                </SidebarMenu>
+            </SidebarFooter>
+        </Sidebar>
+    );
 }
 
 export function AppSidebar({ children }) {
