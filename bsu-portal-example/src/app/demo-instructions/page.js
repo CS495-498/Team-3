@@ -42,7 +42,7 @@ export default function DemoInstructions() {
     if(isLoading) return <div></div>
 
     return (
-        <div className="pl-10 pt-6 min-h-screen flex flex-col">
+        <div className="pl-10 pt-6 min-h-screen flex flex-col w-full">
             <div className="flex justify-between items-center mb-6 pt-6">
                 <h1 className="text-4xl font-bold ml-4">
                     {entry?.title}
