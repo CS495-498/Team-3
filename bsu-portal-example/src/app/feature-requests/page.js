@@ -11,7 +11,7 @@ export default function Home() {
         const entry = await Stack.getElementByTypeWithRefs(
             "feature_requests",
             "en-us",
-            ["header", "requests"
+            ["requests"
             ]
         );
         console.log("homepage", entry[0][0]);
