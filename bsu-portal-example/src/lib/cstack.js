@@ -50,6 +50,10 @@ ContentstackLivePreview.init({
     branch: process.env.CONTENTSTACK_BRANCH ? process.env.CONTENTSTACK_BRANCH : 'main',
     locale: "en-us"
 },
+editInVisualBuilderButton: {
+      enable: false,
+      position: "bottom-right"
+    }
 });
 
 Stack.setHost("cdn.contentstack.io")
