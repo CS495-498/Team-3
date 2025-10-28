@@ -1,9 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import Stack, { onEntryChange } from "@/lib/cstack";
-import { AlertDemo } from "@/components/alert";
-import backGroundImage from '../../public/background.png';
-import Image from "next/image";
 import {Card, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
 import { CircleAlert } from 'lucide-react';
 
