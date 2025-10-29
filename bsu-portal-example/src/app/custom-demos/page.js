@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, {useState, useEffect, Fragment} from "react";
 import Stack, { onEntryChange } from "@/lib/cstack";
 import Link from "next/link";
 import Image from "next/image";
@@ -7,13 +7,11 @@ import Image from "next/image";
 
 import {
     Card,
-    CardAction,
-    CardContent,
     CardDescription,
-    CardFooter,
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
+import {Dialog, Transition} from "@headlessui/react";
 
 
 
@@ -39,6 +37,24 @@ export default function Demos() {
         onEntryChange(getContent);
     }, []);
 
+    const handleSubmit = (e) => {
+        e.preventDefault();
+
+        const form = e.target;
+        const data = new FormData(form);
+
+        const json = Object.fromEntries(data.entries());
+
+        if (data.get("image")) {
+            json.thumbnailFile = data.get("image").name;
+        }
+
+        console.log("JSON to send:", JSON.stringify(json, null, 2));
+    }
+
+    let [isOpen, setIsOpen] = useState(false)
+
+
     if(isLoading) return <div></div>
 
     return (
@@ -50,6 +66,7 @@ export default function Demos() {
                 <div className="flex items-center gap-2 mr-4">
                     <button
                         type="button"
+                        onClick={() => setIsOpen(true)}
                         className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
                     >
                         + Demos
@@ -76,6 +93,106 @@ export default function Demos() {
                             />
                         </svg>
                     </div>
+                    <Transition appear show={isOpen} as={Fragment}>
+                        <Dialog as="div" className="relative z-50" onClose={() => setIsOpen(false)}>
+                            <Transition.Child
+                                as={Fragment}
+                                enter="ease-out duration-300"
+                                enterFrom="opacity-0"
+                                enterTo="opacity-100"
+                                leave="ease-in duration-200"
+                                leaveFrom="opacity-100"
+                                leaveTo="opacity-0"
+                            >
+                                <div className="fixed inset-0 bg-black/50" aria-hidden="true" />
+                            </Transition.Child>
+                            <div className="fixed inset-0 flex items-center justify-center p-4">
+                                <Transition.Child
+                                    as={Fragment}
+                                    enter="ease-out duration-300"
+                                    enterFrom="opacity-0 scale-95"
+                                    enterTo="opacity-100 scale-100"
+                                    leave="ease-in duration-200"
+                                    leaveFrom="opacity-100 scale-100"
+                                    leaveTo="opacity-0 scale-95"
+                                >
+                                    <Dialog.Panel className="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-700 shadow-2xl p-8 transition-all">
+                                        <h4 className="font-bold text-2xl mb-4">Add A Demo</h4>
+                                        <form onSubmit={handleSubmit} className="space-y-5">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                                    Title
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Enter video title"
+                                                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                                    Demo Description
+                                                </label>
+                                                <textarea
+                                                    rows="3"
+                                                    placeholder="Describe the video..."
+                                                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition resize-none"
+                                                ></textarea>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                                    Link
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Enter Demo URL"
+                                                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                                    Image
+                                                </label>
+                                                <input
+                                                    type="file"
+                                                    name="image"
+                                                    accept="image/*"
+                                                    className="w-full text-sm text-gray-700 dark:text-gray-200
+                                                             file:mr-4 file:py-2 file:px-4
+                                                             file:rounded-lg file:border-0
+                                                             file:text-sm file:font-medium
+                                                             file:bg-gray-400 file:text-white
+                                                             hover:file:bg-gray-500
+                                                             bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700
+                                                             rounded-lg px-2 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500
+                                                             outline-none transition"
+                                                />
+                                            </div>
+
+                                            <div className="flex justify-end gap-3 pt-4">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setIsOpen(false)}
+                                                    className="px-5 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    type="submit"
+                                                    onClick={() => setIsOpen(false)}
+                                                    className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
+                                                >
+                                                    Save Demo
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </Dialog.Panel>
+                                </Transition.Child>
+                            </div>
+                        </Dialog>
+                    </Transition>
                 </div>
             </div>
             <div className="flex-1">
