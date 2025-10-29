@@ -91,16 +91,18 @@ function NavProjects() {
         onEntryChange(getContent);
     }, []);
 
+
     if (isLoading)
         return (
             <SidebarMenu>
-                {Array.from({ length: 5 }).map((_, index) => (
+                {Array.from({length: 5}).map((_, index) => (
                     <SidebarMenuItem key={index}>
-                        <SidebarMenuSkeleton showIcon />
+                        <SidebarMenuSkeleton showIcon/>
                     </SidebarMenuItem>
                 ))}
             </SidebarMenu>
         );
+
 
     return (
         <Sidebar side={entry?.side_of_screen} collapsible="none">
@@ -132,7 +134,7 @@ function NavProjects() {
                                             }`}
                                         >
                                             <Link href={item.call_to_action.href}>
-                                                {iconMapper[item.icon] || <Search />}
+                                                {iconMapper[item.icon] || <Search/>}
                                                 <span>{item.call_to_action.title}</span>
                                             </Link>
                                         </SidebarMenuButton>
@@ -145,14 +147,14 @@ function NavProjects() {
             </SidebarContent>
 
             <SidebarFooter>
-                <ModeToggle />
+                <ModeToggle/>
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <SidebarMenuButton>
-                                    <User2 /> Username
-                                    <ChevronUp className="ml-auto" />
+                                    <User2/> Username
+                                    <ChevronUp className="ml-auto"/>
                                 </SidebarMenuButton>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent
