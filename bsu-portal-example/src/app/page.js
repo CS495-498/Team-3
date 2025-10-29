@@ -64,9 +64,6 @@ export default function Home() {
 
 
     return (
-        <main className="relative w-full h-screen overflow-hidden">
-            <div className="flex flex-col w-full max-w-6xl mx-auto justify-start items-start relative z-10 h-full p-8">
-    return (
     <main className="relative w-full h-screen overflow-hidden">
         <div className="flex flex-col w-full max-w-6xl mx-auto justify-start items-start relative z-10 h-full p-8">
 
