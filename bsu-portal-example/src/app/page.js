@@ -11,23 +11,23 @@ export default function Home() {
     const [formData, setFormData] = useState({});
     const [isLoading, setIsLoading] = useState(true);
 
-  const getContent = async () => {
-    console.log("Fetching content...");
-    const entry = await Stack.getElementByTypeWithRefs(
-      "homepage",
-      "en-us",
-      ["alerts",
-      ]
-    );
-    console.log("homepage", entry[0][0]);
-    console.log("alerts", entry[0][0]?.alerts);
-    setEntry(entry[0][0]);
-    setIsLoading(false);
-  };
+    const getContent = async () => {
+        console.log("Fetching content...");
+        const entry = await Stack.getElementByTypeWithRefs(
+            "homepage",
+            "en-us",
+            ["alerts",
+            ]
+        );
+        console.log("homepage", entry[0][0]);
+        console.log("alerts", entry[0][0]?.alerts);
+        setEntry(entry[0][0]);
+        setIsLoading(false);
+    };
 
-  useEffect(() => {
-    onEntryChange(getContent);
-  }, []);
+    useEffect(() => {
+        onEntryChange(getContent);
+    }, []);
 
     const getBgColor = (critical) => {
         switch (critical) {
@@ -59,16 +59,19 @@ export default function Home() {
 
   let [isOpen, setIsOpen] = useState(false)
 
-  if (isLoading) return <div></div>
+    if (isLoading) return <div></div>
 
 
 
     return (
+        <main className="relative w-full h-screen overflow-hidden">
+            <div className="flex flex-col w-full max-w-6xl mx-auto justify-start items-start relative z-10 h-full p-8">
+    return (
     <main className="relative w-full h-screen overflow-hidden">
         <div className="flex flex-col w-full max-w-6xl mx-auto justify-start items-start relative z-10 h-full p-8">
 
-            <div className="flex flex-wrap items-start justify-between w-full mb-10">
-                <h1 className="text-4xl font-bold mt-10">Contentstack Portal</h1>
+                <div className="flex flex-wrap items-start justify-between w-full mb-10">
+                    <h1 className="text-4xl font-bold mt-10">Contentstack Portal</h1>
 
                 <button
                     type="button"
