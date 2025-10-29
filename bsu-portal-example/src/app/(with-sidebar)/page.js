@@ -181,7 +181,7 @@ export default function Home() {
                     </Dialog>
                 </Transition>
             </div>
-            <div className="flex justify-between w-full my-8">
+            <div className="flex justify-between w-full my-1">
                 <div>
                     <div className="text-2xl font-medium">Notifications</div>
                     <span className="font-light italic text-[13px]">
@@ -208,13 +208,13 @@ export default function Home() {
                         return (
                             <div
                                 key={idx}
-                                className={`relative w-full overflow-hidden rounded-xl border ${bgColor} p-4 mb-3 transition-transform duration-200 hover:scale-[1.02]`}
+                                className={`relative w-full  rounded-xl border ${bgColor} p-4 mb-3 transition-transform duration-200 hover:scale-[1.02]`}
                             >
                                 <div className="flex items-start gap-3">
                                     <CircleAlert className="mt-1 shrink-0"/>
                                     <div>
                                         <div
-                                            className="font-semibold text-lg">{note?.alert_title || "Untitled Notification"}</div>
+                                            className="font-semibold text-sm">{note?.alert_title || "Untitled Notification"}</div>
                                         {note?.alert_description && (
                                             <div className="text-sm opacity-90 mt-1">{note.alert_description}</div>
                                         )}
