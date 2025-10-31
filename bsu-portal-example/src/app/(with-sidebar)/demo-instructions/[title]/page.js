@@ -1,41 +1,127 @@
 "use client";
-import { useState, useEffect } from "react";
+
 import Stack, { onEntryChange } from "@/lib/cstack";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+
+import { LexicalComposer } from "@lexical/react/LexicalComposer";
+import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
+import { ContentEditable } from "@lexical/react/LexicalContentEditable";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+
+import { $generateNodesFromDOM } from "@lexical/html";
+import { $getRoot } from "lexical";
 import DOMPurify from "isomorphic-dompurify";
 
+// Component to load HTML into Lexical editor
+function HtmlEditor({ html }) {
+  const [editor] = useLexicalComposerContext();
 
-export default function Page({ params }) {
-    const [entry, setEntry] = useState({});
+  useEffect(() => {
+    if (!editor) return;
 
-    const getContent = async () => {
-        const { title } = await params;
-        console.log("title", title);
-        const entry = await Stack.getElementByUrlWithRefs(
-            "demo_instruction",
-            "/demo-instructions/" + title,
-            "en-us",
-            [
-            ]
-        );
-        setEntry(entry);
-        console.log(entry);
-    };
+    const parser = new DOMParser();
+    const dom = parser.parseFromString(html, "text/html");
 
-    useEffect(() => {
-        onEntryChange(getContent);
-    }, []);
+    editor.update(() => {
+      const nodes = $generateNodesFromDOM(editor, dom.body);
+      $getRoot().clear();
+      $getRoot().append(...nodes);
+    });
+  }, [editor, html]);
 
-const safeHTML = DOMPurify.sanitize(entry?.blog_content || "<p>No content available</p>");
-return (
-    <div className="flex flex-col min-h-screen">
-        <div className="p-6 flex-grow"> {/* Adjust the padding here if needed */}
-            <div 
-                className="rich-text [&_ol]:list-decimal"
-                dangerouslySetInnerHTML={{ __html: safeHTML }}
-            />
-        </div>
+  return (
+    <RichTextPlugin
+      contentEditable={
+        <ContentEditable className="border p-2 rounded min-h-[200px]" />
+      }
+      placeholder="Start typing..."
+    />
+  );
+}
+
+export default function ArticleWithEditor({ params }) {
+  const [entry, setEntry] = useState({});
+  const [open, setOpen] = useState(false);
+
+  const getContent = async () => {
+    const { title } = await params;
+    const entry = await Stack.getElementByUrlWithRefs(
+      "demo_instruction",
+      "/demo-instructions/" + title,
+      "en-us",
+      []
+    );
+    setEntry(entry);
+  };
+
+  useEffect(() => {
+    onEntryChange(getContent); // optional: subscribe to changes
+    getContent(); // initial fetch
+  }, []);
+
+  const safeHTML = DOMPurify.sanitize(
+    entry?.blog_content || "<p>No content available</p>"
+  );
+
+  const initialConfig = {
+    namespace: "ArticleEditor",
+    nodes: [], // add Lexical nodes if needed
+    onError: (error) => console.error(error),
+    theme: {}, // optional theme
+  };
+
+  return (
+    <div className="p-6">
+      {/* Header */}
+      <header className="max-w-4xl mx-auto mb-6 text-center">
+        <h1 className="text-3xl font-bold mb-2">{entry?.title}</h1>
+        <p className="text-sm text-gray-500">
+          By {entry?.author_name} • Last edited{" "}
+          {new Date(entry?.updated_at).toLocaleDateString()}
+        </p>
+      </header>
+
+      {/* Article content */}
+      <article className="prose prose-stone dark:prose-invert mx-auto my-0 max-w-4xl">
+        <div dangerouslySetInnerHTML={{ __html: safeHTML }} />
+      </article>
+
+      {/* Floating Edit Button */}
+      <Button
+        className="fixed bottom-6 right-6 z-50"
+        onClick={() => setOpen(true)}
+      >
+        Edit
+      </Button>
+
+      {/* Dialog with Lexical Editor */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Edit Content</DialogTitle>
+            <DialogDescription>
+              Modify the content in the rich text editor below.
+            </DialogDescription>
+          </DialogHeader>
+
+          <LexicalComposer initialConfig={initialConfig}>
+            <HtmlEditor html={safeHTML} />
+          </LexicalComposer>
+
+          <DialogFooter>
+            <Button onClick={() => setOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
-);
-
-
+  );
 }
