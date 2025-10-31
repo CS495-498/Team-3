@@ -36,8 +36,7 @@ export default function DemoInstructions() {
         onEntryChange(getContent);
     }, []);
 
-    if (isLoading) return <div className="loader"></div>;
-
+    if(isLoading) return <div>Loading...</div>
 
     return (
         <div className="pl-10 pt-6 min-h-screen flex flex-col w-full">

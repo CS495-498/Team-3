@@ -12,6 +12,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import DOMPurify from "isomorphic-dompurify";
+import Tiptap from "@/components/Tiptap";
+import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor";
 
 export default function ArticleWithEditor({ params }) {
   const [entry, setEntry] = useState({});
@@ -111,7 +113,7 @@ if (isLoading) {
           </DialogHeader>
 
           <div className="min-h-[200px] flex items-center justify-center text-gray-500">
-            (Editor removed — blank dialog)
+            <SimpleEditor html={safeHTML} />
           </div>
 
           <DialogFooter>
