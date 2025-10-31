@@ -104,23 +104,25 @@ if (isLoading) {
 
       {/* Empty Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Edit Content</DialogTitle>
-            <DialogDescription>
-              This dialog is empty for now — Lexical has been removed.
-            </DialogDescription>
-          </DialogHeader>
+  <DialogContent className="max-w-3xl">
+    <DialogHeader>
+      <DialogTitle>Edit Content</DialogTitle>
+      <DialogDescription>
+        Modify the content below.
+      </DialogDescription>
+    </DialogHeader>
 
-          <div className="min-h-[200px] flex items-center justify-center text-gray-500">
-            <SimpleEditor html={safeHTML} />
-          </div>
+    {/* Editor container */}
+    <div className="w-full min-h-[300px] border border-gray-300 rounded-md p-4 bg-white">
+      <SimpleEditor html={safeHTML} />
+    </div>
 
-          <DialogFooter>
-            <Button onClick={() => setOpen(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+    <DialogFooter>
+      <Button onClick={() => setOpen(false)}>Close</Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+
     </div>
   );
 }

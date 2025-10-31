@@ -65,7 +65,7 @@ import { useWindowSize } from "@/hooks/use-window-size"
 import { useCursorVisibility } from "@/hooks/use-cursor-visibility"
 
 // --- Components ---
-import { ThemeToggle } from "@/components/tiptap-templates/simple/theme-toggle"
+
 
 // --- Lib ---
 import { handleImageUpload, MAX_FILE_SIZE } from "@/lib/tiptap-utils"
@@ -127,7 +127,7 @@ const MainToolbarContent = ({
       <Spacer />
       {isMobile && <ToolbarSeparator />}
       <ToolbarGroup>
-        <ThemeToggle />
+      
       </ToolbarGroup>
     </>
   );
@@ -159,7 +159,7 @@ const MobileToolbarContent = ({
   </>
 )
 
-export function SimpleEditor() {
+export function SimpleEditor({ html = "<p></p>" }) {
   const isMobile = useIsMobile()
   const { height } = useWindowSize()
   const [mobileView, setMobileView] = useState("main")
@@ -203,7 +203,7 @@ export function SimpleEditor() {
         onError: (error) => console.error("Upload failed:", error),
       }),
     ],
-    content,
+    content: html,
   })
 
   const rect = useCursorVisibility({
