@@ -11,42 +11,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-
-import { LexicalComposer } from "@lexical/react/LexicalComposer";
-import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
-import { ContentEditable } from "@lexical/react/LexicalContentEditable";
-import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-
-import { $generateNodesFromDOM } from "@lexical/html";
-import { $getRoot } from "lexical";
 import DOMPurify from "isomorphic-dompurify";
-
-// Component to load HTML into Lexical editor
-function HtmlEditor({ html }) {
-  const [editor] = useLexicalComposerContext();
-
-  useEffect(() => {
-    if (!editor) return;
-
-    const parser = new DOMParser();
-    const dom = parser.parseFromString(html, "text/html");
-
-    editor.update(() => {
-      const nodes = $generateNodesFromDOM(editor, dom.body);
-      $getRoot().clear();
-      $getRoot().append(...nodes);
-    });
-  }, [editor, html]);
-
-  return (
-    <RichTextPlugin
-      contentEditable={
-        <ContentEditable className="border p-2 rounded min-h-[200px]" />
-      }
-      placeholder="Start typing..."
-    />
-  );
-}
 
 export default function ArticleWithEditor({ params }) {
   const [entry, setEntry] = useState({});
@@ -64,20 +29,13 @@ export default function ArticleWithEditor({ params }) {
   };
 
   useEffect(() => {
-    onEntryChange(getContent); // optional: subscribe to changes
-    getContent(); // initial fetch
+    onEntryChange(getContent);
+    getContent();
   }, []);
 
   const safeHTML = DOMPurify.sanitize(
     entry?.blog_content || "<p>No content available</p>"
   );
-
-  const initialConfig = {
-    namespace: "ArticleEditor",
-    nodes: [], // add Lexical nodes if needed
-    onError: (error) => console.error(error),
-    theme: {}, // optional theme
-  };
 
   return (
     <div className="p-6">
@@ -103,19 +61,19 @@ export default function ArticleWithEditor({ params }) {
         Edit
       </Button>
 
-      {/* Dialog with Lexical Editor */}
+      {/* Empty Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Edit Content</DialogTitle>
             <DialogDescription>
-              Modify the content in the rich text editor below.
+              This dialog is empty for now — Lexical has been removed.
             </DialogDescription>
           </DialogHeader>
 
-          <LexicalComposer initialConfig={initialConfig}>
-            <HtmlEditor html={safeHTML} />
-          </LexicalComposer>
+          <div className="min-h-[200px] flex items-center justify-center text-gray-500">
+            (Editor removed — blank dialog)
+          </div>
 
           <DialogFooter>
             <Button onClick={() => setOpen(false)}>Close</Button>

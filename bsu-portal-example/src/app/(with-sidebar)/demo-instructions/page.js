@@ -7,10 +7,7 @@ import Image from "next/image";
 
 import {
     Card,
-    CardAction,
-    CardContent,
     CardDescription,
-    CardFooter,
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
@@ -39,7 +36,8 @@ export default function DemoInstructions() {
         onEntryChange(getContent);
     }, []);
 
-    if(isLoading) return <div></div>
+    if (isLoading) return <div className="loader"></div>;
+
 
     return (
         <div className="pl-10 pt-6 min-h-screen flex flex-col w-full">
