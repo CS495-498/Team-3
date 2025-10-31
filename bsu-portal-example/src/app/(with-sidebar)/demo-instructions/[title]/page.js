@@ -30,7 +30,7 @@ return (
     <div className="flex flex-col min-h-screen">
         <div className="p-6 flex-grow"> {/* Adjust the padding here if needed */}
             <div 
-                className="rich-text"
+                className="rich-text [&_ol]:list-decimal"
                 dangerouslySetInnerHTML={{ __html: safeHTML }}
             />
         </div>
