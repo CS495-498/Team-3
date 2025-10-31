@@ -218,31 +218,36 @@ export function SimpleEditor({ html = "<p></p>" }) {
   }, [isMobile, mobileView])
 
   return (
-    <div className="simple-editor-wrapper">
-      <EditorContext.Provider value={{ editor }}>
-        <Toolbar
-          ref={toolbarRef}
-          style={{
-            ...(isMobile
-              ? {
-                  bottom: `calc(100% - ${height - rect.y}px)`,
-                }
-              : {}),
-          }}>
-          {mobileView === "main" ? (
-            <MainToolbarContent
-              onHighlighterClick={() => setMobileView("highlighter")}
-              onLinkClick={() => setMobileView("link")}
-              isMobile={isMobile} />
-          ) : (
-            <MobileToolbarContent
-              type={mobileView === "highlighter" ? "highlighter" : "link"}
-              onBack={() => setMobileView("main")} />
-          )}
-        </Toolbar>
+    <div className="simple-editor-wrapper w-full max-w-full h-full min-h-[300px] border border-gray-300 rounded-md p-2">
+  <EditorContext.Provider value={{ editor }}>
+    <Toolbar
+      ref={toolbarRef}
+      style={{
+        ...(isMobile
+          ? { bottom: `calc(100% - ${height - rect.y}px)` }
+          : {}),
+      }}
+    >
+      {mobileView === "main" ? (
+        <MainToolbarContent
+          onHighlighterClick={() => setMobileView("highlighter")}
+          onLinkClick={() => setMobileView("link")}
+          isMobile={isMobile}
+        />
+      ) : (
+        <MobileToolbarContent
+          type={mobileView === "highlighter" ? "highlighter" : "link"}
+          onBack={() => setMobileView("main")}
+        />
+      )}
+    </Toolbar>
 
-        <EditorContent editor={editor} role="presentation" className="simple-editor-content" />
-      </EditorContext.Provider>
-    </div>
+    <EditorContent
+      editor={editor}
+      role="presentation"
+      className="simple-editor-content w-full h-full min-h-[250px] overflow-auto"
+    />
+  </EditorContext.Provider>
+</div>
   );
 }

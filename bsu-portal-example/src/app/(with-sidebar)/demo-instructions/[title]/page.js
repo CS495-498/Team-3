@@ -37,42 +37,41 @@ export default function ArticleWithEditor({ params }) {
     getContent();
   }, []);
 
-if (isLoading) {
-  return (
-    <div className="flex justify-center items-center min-h-[200px]">
-      <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-black"></div>
-    </div>
-  );
-}
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[200px]">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-black"></div>
+      </div>
+    );
+  }
 
   const safeHTML = DOMPurify.sanitize(
-  entry?.blog_content ||
+    entry?.blog_content ||
+      `
+      <div style="
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 40px 20px;
+        color: #6b7280;
+        font-size: 1rem;
+      ">
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 12px;">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="22" y1="22" x2="16.65" y2="16.65"></line>
+          <line x1="8" y1="10" x2="14" y2="10"></line>
+          <line x1="8" y1="14" x2="12" y2="14"></line>
+        </svg>
+
+        <p style="max-width: 300px;">
+          There’s no content here yet.  
+          Check back later or add some!
+        </p>
+      </div>
     `
-    <div style="
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 40px 20px;
-      color: #6b7280;
-      font-size: 1rem;
-    ">
-      <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 12px;">
-        <circle cx="12" cy="12" r="10"></circle>
-        <line x1="22" y1="22" x2="16.65" y2="16.65"></line>
-        <line x1="8" y1="10" x2="14" y2="10"></line>
-        <line x1="8" y1="14" x2="12" y2="14"></line>
-      </svg>
-
-      <p style="max-width: 300px;">
-        There’s no content here yet.  
-        Check back later or add some!
-      </p>
-    </div>
-  `
-);
-
+  );
 
   return (
     <div className="p-6">
@@ -104,25 +103,25 @@ if (isLoading) {
 
       {/* Empty Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
-  <DialogContent className="max-w-3xl">
-    <DialogHeader>
-      <DialogTitle>Edit Content</DialogTitle>
-      <DialogDescription>
-        Modify the content below.
-      </DialogDescription>
-    </DialogHeader>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Edit Content</DialogTitle>
+            <DialogDescription>
+              Modify the content below.
+            </DialogDescription>
+          </DialogHeader>
 
-    {/* Editor container */}
-    <div className="w-full min-h-[300px] border border-gray-300 rounded-md p-4 bg-white">
-      <SimpleEditor html={safeHTML} />
-    </div>
+          {/* Editor container */}
+          <div className="w-full min-h-[300px] border border-gray-300 rounded-md p-4 bg-white">
+            <SimpleEditor html={safeHTML} />
+          </div>
 
-    <DialogFooter>
-      <Button onClick={() => setOpen(false)}>Close</Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
-
+          <DialogFooter>
+            <Button onClick={() => setOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
