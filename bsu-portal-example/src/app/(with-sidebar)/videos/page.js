@@ -1,5 +1,8 @@
 "use client";
 
+import postAsset from "@/api/postAsset";
+import appendVideo from "@/api/appendVideo";
+
 import React, { useState, useEffect, Fragment } from "react";
 import Stack, { onEntryChange } from "@/lib/cstack";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
@@ -56,21 +59,86 @@ export default function VideoLibrary() {
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        const form = e.target;
-        const data = new FormData(form);
+    const form = e.target;
+    const data = new FormData(form);
+    const json_data = {};
 
-        const json = {};
+    // Step 1: Collect all form fields
+    for (let [key, value] of data.entries()) {
+        if (value instanceof File && value.size > 0) {
+        json_data[key] = value.name;
+        } else {
+        json_data[key] = value;
+        }
+    }
 
-        for (let [key, value] of data.entries()) {
-            if (value instanceof File && value.size > 0) {
-                json[key] = value.name;
-            } else {
-                json[key] = value;
-            }
+    try {
+        // Step 2: Upload video and thumbnail assets
+        const videoFile = data.get("video_file");
+        const thumbnailFile = data.get("thumbnail");
+
+        const uploadedVideo =
+        videoFile && videoFile.size > 0
+            ? await postAsset(
+                videoFile,
+                json_data.title,
+                json_data.description,
+                null,
+                "video-library"
+            )
+            : null;
+
+        const uploadedThumb =
+        thumbnailFile && thumbnailFile.size > 0
+            ? await postAsset(
+                thumbnailFile,
+                `${json_data.title} Thumbnail`,
+                "Video thumbnail",
+                null,
+                "video-thumbnails"
+            )
+            : null;
+
+        // Step 3: Build the new video object
+        const newVideo = {
+        video_file: uploadedVideo?.asset?.uid || null,
+        thumbnail: uploadedThumb?.asset?.uid || null,
+        title: json_data.title,
+        description: json_data.description,
+        se_name: json_data.se_name,
+        date_posted: json_data.date_posted || new Date().toISOString(),
+        };
+
+        // Step 4: Use helper to append the new video to existing array
+        const updatedVideos = appendVideo(entry, newVideo);
+
+        // Step 5: Send PUT request to update the video_library entry
+        const response = await fetch("/api/update-entry", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                entryUid: entry.uid,
+                videos: updatedVideos,
+            }),
+        });
+
+        if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Update failed: ${response.status} ${text}`);
         }
 
-        console.log("JSON to send:", JSON.stringify(json, null, 2));
+        // Step 6: Update UI with the new entry
+        const updatedEntry = await response.json();
+        console.log("Updated library:", updatedEntry);
+
+        alert("Video successfully added!");
+        setIsOpen(false);
+        setEntry(updatedEntry.entry);
+    } catch (error) {
+        console.error("Upload failed:", error);
+        alert("Failed to add video. Check console for details.");
     }
+    };
 
     let [isOpen, setIsOpen] = useState(false)
 
