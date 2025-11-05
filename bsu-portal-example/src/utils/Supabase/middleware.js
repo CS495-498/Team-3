@@ -2,7 +2,12 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 
 export async function updateSession(request) {
-    let supabaseResponse = NextResponse.next({request})
+     let supabaseResponse = NextResponse.next({
+        request: {
+            headers: request.headers,
+        },
+    })
+
 
     const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -26,7 +31,10 @@ export async function updateSession(request) {
     )
 
     // refreshing the auth token
-    await supabase.auth.getUser()
+    const user = await supabase.auth.getUser()
+    if (!request.nextUrl.pathname.startsWith('/login') && user.error) {
+        return NextResponse.redirect(new URL('/login', request.url))
+    }
 
     return supabaseResponse
 }
