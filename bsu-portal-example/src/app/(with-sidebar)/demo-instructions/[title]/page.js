@@ -102,13 +102,13 @@ export default function ArticleWithEditor({ params }) {
       <Dialog
         open={isOpen}
         onClose={() => setIsOpen(false)}
-        className="fixed inset-0 z-50 flex items-center justify-center p-1"
+        className="fixed inset-0 z-50 flex items-center justify-center p-0"
       >
         {/* Overlay */}
         <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
 
         {/* Panel */}
-        <DialogPanel className="relative w-full max-w-[90vw] md:max-w-[80vw] lg:max-w-[70vw] max-h-[90vh] overflow-auto rounded-xl bg-white shadow-lg p-6 z-50 dark:bg-gray-700">
+        <DialogPanel className="relative w-full max-w-[95vw] md:max-w-[80vw] lg:max-w-[80vw] max-h-[95vh] overflow-auto rounded-xl bg-white shadow-lg p-6 z-50 dark:bg-gray-700">
           <div className="flex items-center justify-between mb-4">
             <DialogTitle className="text-2xl font-bold dark:bg-gray-700">
               Edit Content
