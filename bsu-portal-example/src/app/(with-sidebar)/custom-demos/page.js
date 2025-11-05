@@ -18,7 +18,7 @@ import {Dialog, Transition} from "@headlessui/react";
 export default function Demos() {
     const [entry, setEntry] = useState({});
     const [isLoading, setIsLoading] = useState(true);
-
+    const [searchQuery, setSearchQuery] = useState("");
     const getContent = async () => {
         const entry = await Stack.getElementByTypeWithRefs(
             "custom_demos",
@@ -26,16 +26,24 @@ export default function Demos() {
             ["demos"
             ]
         );
-        console.log("CMS Entry:", entry);
-        console.log("Demo:", entry);
+    
 
         setEntry(entry[0][0]);
+        console.log("Demos Entry:", entry);
         setIsLoading(false);
     };
 
     useEffect(() => {
         onEntryChange(getContent);
     }, []);
+
+     const filteredDemos = entry?.demos?.filter((demo) => {
+        const query = searchQuery.toLowerCase();
+        return (
+            demo.title?.toLowerCase().includes(query) ||
+            demo.description?.toLowerCase().includes(query)
+        );
+    }) || [];
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -73,10 +81,12 @@ export default function Demos() {
                     </button>
 
                     <div className="relative w-full max-w-sm">
-                        <input
+                         <input
                             type="text"
                             placeholder="Search demos..."
-                            className="w-full rounded-lg border text-black border-gray-300 bg-white px-4 py-2 pl-10 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 pl-10 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
                         />
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -197,7 +207,7 @@ export default function Demos() {
             </div>
             <div className="flex-1">
                 <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6 me-10">
-                    {entry?.demos?.map((demo, idx) => (
+                    {filteredDemos.map((demo, idx) => (
                         <Link key={idx} target={'_blank'} href={demo?.link?.href || "#"} className="group">
                             <Card className="h-full shadow-md hover:shadow-lg transition-shadow duration-200">
                                 {demo?.image?.url && (
