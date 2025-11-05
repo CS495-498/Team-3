@@ -202,6 +202,49 @@ export default {
     });
   },
 
+  // Paginated method to fetch entries with limit and skip
+  getElementByTypePaginated(type, locale, references = [], limit = 12, skip = 0) {
+    return new Promise((resolve, reject) => {
+      let Query = Stack.ContentType(type)
+        .Query()
+        .language(locale ? locale : "en-us")
+        .limit(limit)
+        .skip(skip);
+
+      if (references.length > 0) {
+        Query = Query.includeReference(...references);
+      }
+
+      Query.toJSON()
+        .find()
+        .then(
+          function success(result) {
+            // Contentstack returns [entries, count] where count is total entries
+            const entries = result[0] || [];
+            const totalCount = result[1] || 0;
+            
+            if(window.self !== window.top) {
+              entries.forEach(entry => {
+                Contentstack.Utils.addEditableTags(entry, type, true, locale);
+              });
+            }
+            resolve({ entries, totalCount, hasMore: skip + entries.length < totalCount });
+          },
+          function error(err) {
+            console.error("Contentstack pagination error:", err);
+            console.error("Content type:", type);
+            console.error("Error details:", {
+              message: err?.message,
+              errorMessage: err?.errorMessage,
+              errorCode: err?.errorCode,
+              errors: err?.errors
+            });
+            reject(err);
+          }
+        );
+    });
+  },
+
   getElementByTypeByTaxonomy(type, locale, term) {
     return new Promise((resolve, reject) => {
       
