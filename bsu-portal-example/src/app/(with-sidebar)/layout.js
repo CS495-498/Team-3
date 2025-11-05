@@ -7,16 +7,15 @@ import { AppSidebar } from "@/components/app-sidebar";
 export default function WithSidebarLayout({ children }) {
   return (
     <SidebarProvider>
-      <div style={{ display: "flex", minHeight: "100vh", width: "100vw" }}>
-        <AppSidebar />
-        <main
-          style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            minHeight: "100vh",
-          }}
-        >
+      <div className="flex min-h-screen w-screen">
+        
+        {/* Sidebar wrapper that prevents flex growth */}
+        <div className=" sticky top-0 col-span-1 h-screen">
+          <AppSidebar />
+        </div>
+
+        {/* Main content */}
+        <main className="flex-1 flex flex-col min-h-screen overflow-auto">
           {children}
         </main>
       </div>
