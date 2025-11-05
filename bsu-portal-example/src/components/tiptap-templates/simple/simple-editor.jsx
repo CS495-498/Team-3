@@ -159,7 +159,7 @@ const MobileToolbarContent = ({
   </>
 )
 
-export function SimpleEditor({ html = "<p></p>" }) {
+export function SimpleEditor({ html = "<p></p>", editorRef }) {
   const isMobile = useIsMobile()
   const { height } = useWindowSize()
   const [mobileView, setMobileView] = useState("main")
@@ -216,9 +216,12 @@ export function SimpleEditor({ html = "<p></p>" }) {
       setMobileView("main")
     }
   }, [isMobile, mobileView])
+  useEffect(() => {
+    if (editor && editorRef) editorRef.current = editor;
+  }, [editor, editorRef]);
 
   return (
-    <div className="simple-editor-wrapper w-full max-w-full h-full min-h-[300px] border border-gray-300 rounded-md p-2">
+    <div className="simple-editor-wrapper w-full max-w-full h-full min-h-[300px] border border-gray-300 rounded-md p-1">
   <EditorContext.Provider value={{ editor }}>
     <Toolbar
       ref={toolbarRef}
