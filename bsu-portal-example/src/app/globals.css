@@ -1,8 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-
+@import '../styles/_variables.scss';
+@import '../styles/_keyframe-animations.scss';
 @custom-variant dark (&:is(.dark *));
 
+@plugin "@tailwindcss/typography";
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
