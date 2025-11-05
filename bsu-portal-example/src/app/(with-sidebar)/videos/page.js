@@ -3,42 +3,50 @@
 import React, { useState, useEffect, Fragment } from "react";
 import Stack, { onEntryChange } from "@/lib/cstack";
 import {
-  Card,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
 
-import {Dialog, Transition } from '@headlessui/react'
+import { Dialog, Transition } from '@headlessui/react'
 
 
 export default function VideoLibrary() {
-  const [entry, setEntry] = useState({});
-  const [isLoading, setIsLoading] = useState(true);
-  const [playingIndex, setPlayingIndex] = useState(null);
+    const [entry, setEntry] = useState({});
+    const [isLoading, setIsLoading] = useState(true);
+    const [playingIndex, setPlayingIndex] = useState(null);
+    const [searchQuery, setSearchQuery] = useState("");
 
+    const getContent = async () => {
+        try {
+            const entry = await Stack.getElementByTypeWithRefs(
+                "video_library",
+                "en-us",
+                ["videos"]
+            );
 
-  const getContent = async () => {
-    try {
-      const entry = await Stack.getElementByTypeWithRefs(
-        "video_library",
-        "en-us",
-        ["videos"]
-      );
+            console.log("Video Library Entry:", entry[0][0]);
+            setEntry(entry[0][0]);
+            setIsLoading(false);
+        } catch (error) {
+            console.error("Error fetching video library content:", error);
+            setIsLoading(false);
+        }
+    };
 
-      console.log("Video Library Entry:", entry[0][0]);
-      setEntry(entry[0][0]);
-      setIsLoading(false);
-    } catch (error) {
-      console.error("Error fetching video library content:", error);
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    onEntryChange(getContent);
-  }, []);
+    useEffect(() => {
+        onEntryChange(getContent);
+    }, []);
+    const filteredVideos = entry?.videos?.filter((video) => {
+        const query = searchQuery.toLowerCase();
+        return (
+            video.title?.toLowerCase().includes(query) ||
+            video.se_name?.toLowerCase().includes(query) ||
+            video.description?.toLowerCase().includes(query)
+        );
+    }) || [];
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -79,8 +87,10 @@ export default function VideoLibrary() {
                     <div className="relative w-full max-w-sm">
                         <input
                             type="text"
-                            placeholder="Search videos..."
-                            className="w-full rounded-lg border text-black border-gray-300 bg-white px-4 py-2 pl-10 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
+                            placeholder="Search demos..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 pl-10 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
                         />
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -236,9 +246,9 @@ export default function VideoLibrary() {
                 </div>
             </div>
             <div className="flex-1">
-                {entry?.videos?.length ? (
+                {filteredVideos.length ? (
                     <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6 me-10">
-                        {entry.videos.map((video, index) => (
+                        {filteredVideos.map((video, index) => (
                             <Card key={index} className="h-full shadow-md hover:shadow-lg transition-all duration-200">
                                 <div className="relative w-full h-60 bg-black rounded-t-lg overflow-hidden">
                                     {playingIndex === index ? (
