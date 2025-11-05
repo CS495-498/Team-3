@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, Fragment } from "react";
 import Stack, { onEntryChange } from "@/lib/cstack";
+import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import {
   Card,
   CardDescription,
@@ -39,6 +40,10 @@ export default function VideoLibrary() {
   useEffect(() => {
     onEntryChange(getContent);
   }, []);
+
+  // Infinite scroll pagination
+  const videos = entry?.videos || [];
+  const { items: visibleVideos, hasMore, ref } = useInfiniteScroll(videos, 6);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -236,73 +241,97 @@ export default function VideoLibrary() {
                 </div>
             </div>
             <div className="flex-1">
-                {entry?.videos?.length ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6 me-10">
-                        {entry.videos.map((video, index) => (
-                            <Card key={index} className="h-full shadow-md hover:shadow-lg transition-all duration-200">
-                                <div className="relative w-full h-60 bg-black rounded-t-lg overflow-hidden">
-                                    {playingIndex === index ? (
-                                        <video
-                                            className="w-full h-full object-cover"
-                                            controls
-                                            autoPlay
-                                            poster={video?.thumbnail?.url || ""}
+                {visibleVideos.length > 0 ? (
+                    <>
+                        <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6 me-10">
+                        {visibleVideos.map((video, index) => (
+                            <Card
+                                key={index}
+                                className="h-[350px] flex flex-col shadow-md hover:shadow-lg hover:scale-[1.02] transition-all duration-200"
+                            >
+                                <div className="relative w-full h-[2300px] bg-black rounded-t-lg overflow-hidden">
+                                {playingIndex === index ? (
+                                    <video
+                                    className="w-full h-full object-cover"
+                                    controls
+                                    autoPlay
+                                    poster={video?.thumbnail?.url || ""}
+                                    >
+                                    <source src={video?.video_file?.url} type="video/mp4" />
+                                    Your browser does not support the video tag.
+                                    </video>
+                                ) : (
+                                    <>
+                                    <img
+                                        src={video?.thumbnail?.url}
+                                        alt={video?.title || "Video thumbnail"}
+                                        className="w-full h-full object-cover cursor-pointer transition-opacity hover:opacity-80"
+                                        onClick={() => setPlayingIndex(index)}
+                                    />
+                                    <div
+                                        className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
+                                        onClick={() => setPlayingIndex(index)}
+                                    >
+                                        <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        fill="white"
+                                        viewBox="0 0 24 24"
+                                        strokeWidth="1.5"
+                                        stroke="white"
+                                        className="w-14 h-14"
                                         >
-                                            <source src={video?.video_file?.url} type="video/mp4" />
-                                            Your browser does not support the video tag.
-                                        </video>
-                                    ) : (
-                                        <>
-                                            <img
-                                                src={video?.thumbnail?.url}
-                                                alt={video?.title || "Video thumbnail"}
-                                                className="w-full h-full object-cover cursor-pointer transition-opacity hover:opacity-80"
-                                                onClick={() => setPlayingIndex(index)}
-                                            />
-                                            <div
-                                                className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
-                                                onClick={() => setPlayingIndex(index)}
-                                            >
-                                                <svg
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    fill="white"
-                                                    viewBox="0 0 24 24"
-                                                    strokeWidth="1.5"
-                                                    stroke="white"
-                                                    className="w-12 h-12"
-                                                >
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        d="M8.25 4.5v15l11.25-7.5L8.25 4.5z"
-                                                    />
-                                                </svg>
-                                            </div>
-                                        </>
-                                    )}
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M8.25 4.5v15l11.25-7.5L8.25 4.5z"
+                                        />
+                                        </svg>
+                                    </div>
+                                    </>
+                                )}
                                 </div>
 
-                                <CardHeader>
-                                    <CardTitle className="truncate">{video.title}</CardTitle>
+                                <CardHeader className="flex-grow flex flex-col justify-between">
+                                <div>
+                                    <CardTitle className="text-lg font-semibold truncate">
+                                    {video.title}
+                                    </CardTitle>
                                     {video.description && (
-                                        <CardDescription className="line-clamp-2">{video.description}</CardDescription>
+                                    <CardDescription className="line-clamp-3 text-gray-600 dark:text-gray-300">
+                                        {video.description}
+                                    </CardDescription>
                                     )}
+                                </div>
                                 </CardHeader>
 
                                 <CardFooter>
-                                    {video.date_posted && (
-                                        <p className="text-xs text-muted-foreground">
-                                            Posted on {new Date(video.date_posted).toLocaleDateString()}
-                                        </p>
-                                    )}
+                                {video.date_posted && (
+                                    <p className="text-xs text-muted-foreground">
+                                    Posted on {new Date(video.date_posted).toLocaleDateString()}
+                                    </p>
+                                )}
                                 </CardFooter>
                             </Card>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                        {hasMore && (
+                            <div ref={ref} className="flex flex-col justify-center items-center py-8 mt-6">
+                                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                                    <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                                    <span className="text-sm">Loading more videos...</span>
+                                </div>
+                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                                    Showing {visibleVideos.length} of {videos.length} videos
+                                </p>
+                            </div>
+                        )}
+                    </>
                 ) : (
-                    <p className="text-muted-foreground mt-10 text-center">
-                        No videos found in the library.
-                    </p>
+                    <div className="flex items-center justify-center py-12 mt-6">
+                        <p className="text-muted-foreground text-center">
+                            No videos found in the library.
+                        </p>
+                    </div>
                 )}
             </div>
         </div>

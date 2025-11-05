@@ -3,6 +3,7 @@ import React, {useState, useEffect, Fragment} from "react";
 import Stack, { onEntryChange } from "@/lib/cstack";
 import Link from "next/link";
 import Image from "next/image";
+import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 
 
 import {
@@ -36,6 +37,9 @@ export default function Demos() {
     useEffect(() => {
         onEntryChange(getContent);
     }, []);
+
+    const demos = entry?.demos || [];
+    const { items: visibleDemos, hasMore, ref } = useInfiniteScroll(demos, 8);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -196,28 +200,53 @@ export default function Demos() {
                 </div>
             </div>
             <div className="flex-1">
-                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6 me-10">
-                    {entry?.demos?.map((demo, idx) => (
-                        <Link key={idx} target={'_blank'} href={demo?.link?.href || "#"} className="group">
-                            <Card className="h-full shadow-md hover:shadow-lg transition-shadow duration-200">
-                                {demo?.image?.url && (
-                                    <div className="relative w-full h-48">
-                                        <Image
-                                            src={demo.image.url}
-                                            alt={demo.title || "Demo image"}
-                                            fill
-                                            className="object-cover rounded-t-lg group-hover:opacity-90 transition-opacity"
-                                        />
-                                    </div>
-                                )}
-                                <CardHeader>
-                                    <CardTitle>{demo?.title}</CardTitle>
-                                    <CardDescription>{demo?.description}</CardDescription>
-                                </CardHeader>
-                            </Card>
-                        </Link>
-                    ))}
-                </div>
+                {visibleDemos.length > 0 ? (
+                    <>
+                        <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6 me-10">
+                            {visibleDemos.map((demo, idx) => (
+                                <Link key={idx} target={'_blank'} href={demo?.link?.href || "#"} className="group">
+                                    <Card className="h-[340px] flex flex-col shadow-md hover:shadow-lg transition-shadow duration-200">
+                                        {demo?.image?.url && (
+                                            <div className="relative w-full h-[250px]">
+                                            <Image
+                                                src={demo.image.url}
+                                                alt={demo.title || "Demo image"}
+                                                fill
+                                                className="object-cover rounded-t-lg group-hover:opacity-90 transition-opacity"
+                                            />
+                                            </div>
+                                        )}
+                                        <CardHeader className="flex-grow flex flex-col justify-between">
+                                            <div>
+                                            <CardTitle className="text-lg font-semibold">{demo?.title}</CardTitle>
+                                            <CardDescription className="line-clamp-3 text-gray-600 dark:text-gray-300">
+                                                {demo?.description}
+                                            </CardDescription>
+                                            </div>
+                                        </CardHeader>
+                                    </Card>
+                                </Link>
+                            ))}
+                        </div>
+                        {hasMore && (
+                            <div ref={ref} className="flex flex-col justify-center items-center py-8 mt-6">
+                                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                                <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                                <span className="text-sm">{isLoading ? "Loading more demos..." : "Loading more demos..."}</span>
+                                </div>
+                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                                Showing {visibleDemos.length} of {demos.length} demos
+                                </p>
+                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                                </p>
+                            </div>
+                            )}
+                    </>
+                ) : (
+                    <div className="flex items-center justify-center py-12 mt-6">
+                        <p className="text-gray-500 dark:text-gray-400">No demos found.</p>
+                    </div>
+                )}
             </div>
         </div>
     );
