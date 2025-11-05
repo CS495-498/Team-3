@@ -17,6 +17,8 @@ import {
 export default function DemoInstructions() {
     const [entry, setEntry] = useState({});
     const [isLoading, setIsLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState("");
+
 
     const getContent = async () => {
         const entry = await Stack.getElementByTypeWithRefs(
@@ -25,7 +27,7 @@ export default function DemoInstructions() {
             ["demo_instructions"
             ]
         );
-        
+
 
         setEntry(entry[0][0]);
         console.log("Instructions Entry:", entry);
@@ -36,7 +38,14 @@ export default function DemoInstructions() {
         onEntryChange(getContent);
     }, []);
 
-    if(isLoading) return <div>Loading...</div>
+    const filteredDemos = entry?.demo_instructions?.filter((demo) => {
+        const query = searchQuery.toLowerCase();
+        return (
+            demo.title?.toLowerCase().includes(query) ||
+            demo.author_name?.toLowerCase().includes(query)
+        );
+    }) || [];
+    if (isLoading) return <div>Loading...</div>
 
     return (
         <div className="pl-10 pt-6 min-h-screen flex flex-col w-full">
@@ -56,8 +65,11 @@ export default function DemoInstructions() {
                         <input
                             type="text"
                             placeholder="Search demos..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 pl-10 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
                         />
+
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
                             fill="none"
@@ -77,7 +89,7 @@ export default function DemoInstructions() {
             </div>
             <div className="flex-1">
                 <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6 me-10">
-                    {entry?.demo_instructions?.map((demo, idx) => (
+                    {filteredDemos.map((demo, idx) => (
                         <Link key={idx} href={demo?.url || "#"} className="group">
                             <Card className="h-full shadow-md hover:shadow-lg transition-shadow duration-200">
                                 {demo?.image?.url && (
