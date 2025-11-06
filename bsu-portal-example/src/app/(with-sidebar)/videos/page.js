@@ -18,6 +18,7 @@ export default function VideoLibrary() {
   const [entry, setEntry] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [playingIndex, setPlayingIndex] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
 
   const getContent = async () => {
@@ -42,7 +43,14 @@ export default function VideoLibrary() {
   }, []);
 
   // Infinite scroll pagination
-  const videos = entry?.videos || [];
+  const videos = entry?.videos?.filter((video) => {
+        const query = searchQuery.toLowerCase();
+        return (
+            video.title?.toLowerCase().includes(query) ||
+            video.se_name?.toLowerCase().includes(query) ||
+            video.description?.toLowerCase().includes(query)
+        );
+    }) || [];
   const { items: visibleVideos, hasMore, ref } = useInfiniteScroll(videos, 6);
 
     const handleSubmit = (e) => {
@@ -85,7 +93,9 @@ export default function VideoLibrary() {
                         <input
                             type="text"
                             placeholder="Search videos..."
-                            className="w-full rounded-lg border text-black border-gray-300 bg-white px-4 py-2 pl-10 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 pl-10 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
                         />
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
