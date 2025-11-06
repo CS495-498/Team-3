@@ -46,8 +46,8 @@ export async function PUT(req, { params }) {
   const body = await req.json();
   const { Title, Content } = body;
 
-  if (!Content) {
-    return NextResponse.json({ error: "Content is required" }, { status: 400 });
+  if (!Content && !Title) {
+    return NextResponse.json({ error: "Content or Title is required" }, { status: 400 });
   }
 
   // Build update object dynamically
