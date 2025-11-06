@@ -25,6 +25,7 @@ import {
 import React from "react";
 import { useState, useEffect } from "react";
 import Stack, { onEntryChange } from "@/lib/cstack";
+import SignOutButton from "./signout-button";
 
 const iconMapper = {
   Home: <Home />,
@@ -164,9 +165,7 @@ function NavProjects() {
                                 <DropdownMenuItem>
                                     <span>Account</span>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                    <span>Sign out</span>
-                                </DropdownMenuItem>
+                                <SignOutButton />
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </SidebarMenuItem>
