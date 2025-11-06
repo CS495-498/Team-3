@@ -1,0 +1,121 @@
+import { NextResponse } from "next/server";
+import { redirect } from "next/navigation";
+import { createClient } from "@/utils/Supabase/server";
+
+export async function GET(req, { params }) {
+  const { id } = await params;
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    redirect("/login");
+  }
+
+  const { data, error } = await supabase
+    .from("feature_requests")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error)
+    return NextResponse.json({ error: error.message }, { status: 404 });
+
+  return NextResponse.json(data, { status: 200 });
+}
+
+
+export async function PUT(req, { params }) {
+  const { id } = await params;
+  const supabase = await createClient();
+
+  // Get authenticated user
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    redirect("/login");
+  }
+
+  // Parse request body
+  const body = await req.json();
+  const { Title, Content } = body;
+
+  if (!Content && !Title) {
+    return NextResponse.json(
+      { error: "Content or Title is required" },
+      { status: 400 }
+    );
+  }
+
+  // Build update object dynamically
+  const updateData = { updated_at: new Date().toISOString() };
+  if (Title) updateData.title = Title;
+  if (Content) updateData.content = Content;
+
+  // Perform update, return the count to see if anything changed
+  const { data, error, count } = await supabase
+    .from("feature_requests")
+    .update(updateData, { count: "exact" }) // 👈 includes affected row count
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .select("*");
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // No rows updated = not found or not owned
+  if (count === 0 || !data || data.length === 0) {
+    return NextResponse.json(
+      { error: "Request not found or not owned by user" },
+      { status: 404 }
+    );
+  }
+
+  // Successful update
+  return NextResponse.json(data[0], { status: 200 });
+}
+
+
+
+export async function DELETE(req, { params }) {
+  const { id } = await params;
+  const supabase = await createClient();
+
+  // Get authenticated user
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) redirect("/login");
+
+  // Attempt delete and request count of affected rows
+  const { error, count } = await supabase
+    .from("feature_requests")
+    .delete({ count: "exact" }) // 👈 tells Supabase to return row count
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  // Handle DB or permission error
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // If no rows were deleted, the user didn’t own this post
+  if (count === 0) {
+    return NextResponse.json(
+      { message: "Request not found or not owned by user" },
+      { status: 404 }
+    );
+  }
+
+  // Otherwise, success 🎉
+  return NextResponse.json({ message: "Deleted successfully" }, { status: 200 });
+}
