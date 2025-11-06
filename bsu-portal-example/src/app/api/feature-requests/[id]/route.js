@@ -85,6 +85,7 @@ export async function DELETE(req, { params }) {
   const { id } = await params;
   const supabase = await createClient();
 
+  // Get authenticated user
   const {
     data: { user },
     error: userError,
@@ -92,16 +93,26 @@ export async function DELETE(req, { params }) {
 
   if (userError || !user) redirect("/login");
 
-  const { data, error } = await supabase
+  // Attempt delete and request count of affected rows
+  const { error, count } = await supabase
     .from("feature_requests")
-    .delete()
+    .delete({ count: "exact" }) // 👈 tells Supabase to return row count
     .eq("id", id)
     .eq("user_id", user.id);
 
+  // Handle DB or permission error
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Always return 200, even if the row was already deleted
+  // If no rows were deleted, the user didn’t own this post
+  if (count === 0) {
+    return NextResponse.json(
+      { message: "Request not found or not owned by user" },
+      { status: 404 }
+    );
+  }
+
+  // Otherwise, success 🎉
   return NextResponse.json({ message: "Deleted successfully" }, { status: 200 });
 }
