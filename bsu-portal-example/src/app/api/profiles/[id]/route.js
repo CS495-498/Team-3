@@ -9,10 +9,6 @@ export async function GET(req, { params }) {
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) redirect("/login");
 
-  // Users can only fetch their own profile
-  if (user.id !== id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
 
   const { data, error } = await supabase
     .from("profiles")

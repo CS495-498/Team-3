@@ -1,164 +1,466 @@
 {
-  "openapi": "3.0.3",
-  "info": {
-    "title": "Feature Requests API",
-    "description": "API for managing feature requests (users can only access their own requests)",
-    "version": "1.0.0"
-  },
-  "servers": [
-    {
-      "url": "http://localhost:3000"
-    }
-  ],
-  "paths": {
-    "/api/feature-requests": {
-      "get": {
-        "summary": "List all feature requests for the authenticated user",
-        "tags": ["Feature Requests"],
-        "security": [{ "cookieAuth": [] }],
-        "responses": {
-          "200": {
-            "description": "List of feature requests",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": { "$ref": "#/components/schemas/FeatureRequest" }
-                }
-              }
-            }
-          },
-          "401": { "description": "Unauthorized" }
-        }
-      },
-      "post": {
-        "summary": "Create a new feature request",
-        "tags": ["Feature Requests"],
-        "security": [{ "cookieAuth": [] }],
-        "requestBody": {
-          "description": "Feature request object",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["Title", "Content"],
-                "properties": {
-                  "Title": { "type": "string", "example": "Dark Mode" },
-                  "Content": { "type": "string", "example": "Add dark mode toggle to dashboard" }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Feature request created",
-            "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/FeatureRequest" } }
-            }
-          },
-          "400": { "description": "Bad request" },
-          "401": { "description": "Unauthorized" }
-        }
-      }
+    "openapi": "3.0.3",
+    "info": {
+        "title": "Next.js Feature Requests & Profiles API",
+        "description": "API for managing feature requests and user profiles. Uses Supabase SSR cookies for authentication.",
+        "version": "1.0.0"
     },
-    "/api/feature-requests/{id}": {
-      "get": {
-        "summary": "Get a single feature request (only if owned by user)",
-        "tags": ["Feature Requests"],
-        "security": [{ "cookieAuth": [] }],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": { "type": "string", "format": "uuid" },
-            "required": true,
-            "description": "Request ID"
-          }
-        ],
-        "responses": {
-          "200": { "description": "Feature request object", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FeatureRequest" } } } },
-          "401": { "description": "Unauthorized" },
-          "404": { "description": "Request not found or not owned by user" }
+    "servers": [
+        {
+            "url": "http://localhost:3000"
         }
-      },
-      "put": {
-        "summary": "Update a feature request (title/content, only if owned by user)",
-        "tags": ["Feature Requests"],
-        "security": [{ "cookieAuth": [] }],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": { "type": "string", "format": "uuid" },
-            "required": true,
-            "description": "Request ID"
-          }
-        ],
-        "requestBody": {
-          "description": "Fields to update",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
+    ],
+    "paths": {
+        "/api/profiles": {
+            "get": {
+                "summary": "List all user profiles (authenticated users only)",
+                "tags": [
+                    "Profiles"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of profiles",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Profile"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            }
+        },
+        "/api/feature-requests": {
+            "get": {
+                "summary": "List all feature requests for the authenticated user",
+                "tags": [
+                    "Feature Requests"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of feature requests",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/FeatureRequest"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            },
+            "post": {
+                "summary": "Create a new feature request",
+                "tags": [
+                    "Feature Requests"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "requestBody": {
+                    "description": "Feature request object",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "Title",
+                                    "Content"
+                                ],
+                                "properties": {
+                                    "Title": {
+                                        "type": "string",
+                                        "example": "Dark Mode"
+                                    },
+                                    "Content": {
+                                        "type": "string",
+                                        "example": "Add dark mode toggle to dashboard"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Feature request created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/FeatureRequest"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            }
+        },
+        "/api/feature-requests/{id}": {
+            "get": {
+                "summary": "Get a single feature request (only if owned by user)",
+                "tags": [
+                    "Feature Requests"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true,
+                        "description": "Request ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Feature request object",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/FeatureRequest"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Request not found or not owned by user"
+                    }
+                }
+            },
+            "put": {
+                "summary": "Update a feature request (title/content, only if owned by user)",
+                "tags": [
+                    "Feature Requests"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true,
+                        "description": "Request ID"
+                    }
+                ],
+                "requestBody": {
+                    "description": "Fields to update",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "Title": {
+                                        "type": "string",
+                                        "example": "Dark Mode Updated"
+                                    },
+                                    "Content": {
+                                        "type": "string",
+                                        "example": "Add dark mode toggle to dashboard"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated feature request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/FeatureRequest"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Request not found or not owned by user"
+                    }
+                }
+            },
+            "delete": {
+                "summary": "Delete a feature request (only if owned by user)",
+                "tags": [
+                    "Feature Requests"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true,
+                        "description": "Request ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deleted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Deleted successfully"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Request not found or not owned by user"
+                    }
+                }
+            }
+        },
+        "/api/profiles/{id}": {
+            "get": {
+                "summary": "Get a user profile",
+                "tags": [
+                    "Profiles"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true,
+                        "description": "User ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Profile object",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Profile"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Profile not found"
+                    }
+                }
+            },
+            "put": {
+                "summary": "Update a user profile (only if authenticated user matches ID)",
+                "tags": [
+                    "Profiles"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true,
+                        "description": "User ID"
+                    }
+                ],
+                "requestBody": {
+                    "description": "Fields to update in profile",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "username": {
+                                        "type": "string",
+                                        "example": "johndoe"
+                                    },
+                                    "full_name": {
+                                        "type": "string",
+                                        "example": "John Doe"
+                                    },
+                                    "avatar_url": {
+                                        "type": "string",
+                                        "example": "https://example.com/avatar.jpg"
+                                    },
+                                    "website": {
+                                        "type": "string",
+                                        "example": "https://johndoe.com"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated profile",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Profile"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Profile not found"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "cookieAuth": {
+                "type": "apiKey",
+                "in": "cookie",
+                "name": "sb-access-token",
+                "description": "Supabase session cookie. Set this in Postman under Headers → Cookie: sb-access-token=<token>"
+            }
+        },
+        "schemas": {
+            "FeatureRequest": {
                 "type": "object",
                 "properties": {
-                  "Title": { "type": "string", "example": "Dark Mode Updated" },
-                  "Content": { "type": "string", "example": "Add dark mode toggle to dashboard" }
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "user_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "Title": {
+                        "type": "string"
+                    },
+                    "Content": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
                 }
-              }
+            },
+            "Profile": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "username": {
+                        "type": "string"
+                    },
+                    "full_name": {
+                        "type": "string"
+                    },
+                    "avatar_url": {
+                        "type": "string"
+                    },
+                    "website": {
+                        "type": "string"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                }
             }
-          }
-        },
-        "responses": {
-          "200": { "description": "Updated feature request", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FeatureRequest" } } } },
-          "400": { "description": "Bad request" },
-          "401": { "description": "Unauthorized" },
-          "404": { "description": "Request not found or not owned by user" }
         }
-      },
-      "delete": {
-        "summary": "Delete a feature request (only if owned by user)",
-        "tags": ["Feature Requests"],
-        "security": [{ "cookieAuth": [] }],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": { "type": "string", "format": "uuid" },
-            "required": true,
-            "description": "Request ID"
-          }
-        ],
-        "responses": {
-          "200": { "description": "Deleted successfully", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string", "example": "Deleted successfully" } } } } } },
-          "401": { "description": "Unauthorized" },
-          "404": { "description": "Request not found or not owned by user" }
-        }
-      }
     }
-  },
-  "components": {
-    "securitySchemes": {
-      "cookieAuth": {
-        "type": "apiKey",
-        "in": "cookie",
-        "name": "sb-ibfgbeocmmbnpziqjdtu-auth-token"
-      }
-    },
-    "schemas": {
-      "FeatureRequest": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "user_id": { "type": "string", "format": "uuid" },
-          "Title": { "type": "string" },
-          "Content": { "type": "string" },
-          "created_at": { "type": "string", "format": "date-time" },
-          "updated_at": { "type": "string", "format": "date-time" }
-        }
-      }
-    }
-  }
 }
