@@ -1,0 +1,164 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Feature Requests API",
+    "description": "API for managing feature requests (users can only access their own requests)",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000"
+    }
+  ],
+  "paths": {
+    "/api/feature-requests": {
+      "get": {
+        "summary": "List all feature requests for the authenticated user",
+        "tags": ["Feature Requests"],
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "List of feature requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/FeatureRequest" }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      },
+      "post": {
+        "summary": "Create a new feature request",
+        "tags": ["Feature Requests"],
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "description": "Feature request object",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["Title", "Content"],
+                "properties": {
+                  "Title": { "type": "string", "example": "Dark Mode" },
+                  "Content": { "type": "string", "example": "Add dark mode toggle to dashboard" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Feature request created",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/FeatureRequest" } }
+            }
+          },
+          "400": { "description": "Bad request" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api/feature-requests/{id}": {
+      "get": {
+        "summary": "Get a single feature request (only if owned by user)",
+        "tags": ["Feature Requests"],
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": { "type": "string", "format": "uuid" },
+            "required": true,
+            "description": "Request ID"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Feature request object", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FeatureRequest" } } } },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Request not found or not owned by user" }
+        }
+      },
+      "put": {
+        "summary": "Update a feature request (title/content, only if owned by user)",
+        "tags": ["Feature Requests"],
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": { "type": "string", "format": "uuid" },
+            "required": true,
+            "description": "Request ID"
+          }
+        ],
+        "requestBody": {
+          "description": "Fields to update",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Title": { "type": "string", "example": "Dark Mode Updated" },
+                  "Content": { "type": "string", "example": "Add dark mode toggle to dashboard" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Updated feature request", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FeatureRequest" } } } },
+          "400": { "description": "Bad request" },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Request not found or not owned by user" }
+        }
+      },
+      "delete": {
+        "summary": "Delete a feature request (only if owned by user)",
+        "tags": ["Feature Requests"],
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": { "type": "string", "format": "uuid" },
+            "required": true,
+            "description": "Request ID"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Deleted successfully", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string", "example": "Deleted successfully" } } } } } },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Request not found or not owned by user" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "sb-ibfgbeocmmbnpziqjdtu-auth-token"
+      }
+    },
+    "schemas": {
+      "FeatureRequest": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "user_id": { "type": "string", "format": "uuid" },
+          "Title": { "type": "string" },
+          "Content": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  }
+}
