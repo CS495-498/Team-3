@@ -42,43 +42,46 @@ export async function PUT(req, { params }) {
     redirect("/login");
   }
 
-  // Get request body
+  // Parse request body
   const body = await req.json();
   const { Title, Content } = body;
 
   if (!Content && !Title) {
-    return NextResponse.json({ error: "Content or Title is required" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Content or Title is required" },
+      { status: 400 }
+    );
   }
 
   // Build update object dynamically
-  const updateData = {
-    updated_at: new Date().toISOString(),
-  };
+  const updateData = { updated_at: new Date().toISOString() };
   if (Title) updateData.title = Title;
-  updateData.content = Content;
+  if (Content) updateData.content = Content;
 
-  // Update only if the request belongs to the authenticated user
-  const { data, error } = await supabase
+  // Perform update, return the count to see if anything changed
+  const { data, error, count } = await supabase
     .from("feature_requests")
-    .update(updateData)
+    .update(updateData, { count: "exact" }) // 👈 includes affected row count
     .eq("id", id)
     .eq("user_id", user.id)
-    .select()
-    .single();
+    .select("*");
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  if (!data) {
+  // No rows updated = not found or not owned
+  if (count === 0 || !data || data.length === 0) {
     return NextResponse.json(
       { error: "Request not found or not owned by user" },
       { status: 404 }
     );
   }
 
-  return NextResponse.json(data, { status: 200 });
+  // Successful update
+  return NextResponse.json(data[0], { status: 200 });
 }
+
 
 
 export async function DELETE(req, { params }) {
