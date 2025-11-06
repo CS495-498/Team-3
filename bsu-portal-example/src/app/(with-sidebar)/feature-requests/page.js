@@ -1,65 +1,98 @@
 "use client";
-import React, {useState, useEffect} from "react";
-import Stack, {onEntryChange} from "@/lib/cstack";
-import { ChevronsUp, ChevronsDown } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { ChevronsUp, ChevronsDown } from "lucide-react";
 
 export default function Home() {
-    const [entry, setEntry] = useState({});
+    const [requests, setRequests] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [votes, setVotes] = useState({});
 
+    // Fetch data from your API endpoint
     const getContent = async () => {
-        const entry = await Stack.getElementByTypeWithRefs(
-            "feature_requests",
-            "en-us",
-            ["requests"
-            ]
-        );
-        console.log("homepage", entry[0][0]);
-        setEntry(entry[0][0]);
-        setIsLoading(false);
+        try {
+            const res = await fetch("/api/feature-requests"); //connects to the api endpoint in the API folder
+            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+            const data = await res.json();
+            setRequests(data);
+        } catch (error) {
+            console.error("Error fetching feature requests:", error);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     useEffect(() => {
-        onEntryChange(getContent);
+        getContent();
     }, []);
 
-    if (isLoading) return <div></div>
+    const handleVote = (id, type) => {
+        setVotes((prev) => {
+            const current = prev[id];
+            if (current === type) return { ...prev, [id]: null };
+            return { ...prev, [id]: type };
+        });
+    };
+
+    if (isLoading) return <div className="p-10 text-gray-500">Loading...</div>;
 
     return (
         <main className="pt-6 px-10 min-h-screen w-full">
-
             <div className="flex justify-between items-center mb-6 pt-6">
-                <h1 className="text-4xl font-bold ml-4">
-                    {entry?.title}
-                </h1>
+                <h1 className="text-4xl font-bold ml-4">Feature Requests</h1>
             </div>
 
-            <ul className="divide-y divide-gray-200">
-                {entry?.requests?.map((req, idx) => (
-                    <li
-                        key={idx}
-                        className="flex items-center py-4 hover:bg-gray-100 transition-colors odd:bg-gray-50 even:bg-white"
-                    >
-                        <div className="flex flex-col items-center space-y-2 ml-4">
-                            <button className="p-1 rounded-md hover:bg-gray-100 transition">
-                                <ChevronsUp className="w-5 h-5" />
-                            </button>
-                            <span className="text-sm font-medium text-gray-800">12</span>
-                            <button className="p-1 rounded-md hover:bg-gray-100 transition">
-                                <ChevronsDown className="w-5 h-5" />
-                            </button>
-                        </div>
-                        <div className="ml-6">
-                            <h3 className="text-lg font-semibold text-gray-900">
-                                {req?.request.feature_title || "Untitled Request"} - {req?.request.author || "Anonymous"}
-                            </h3>
-                            <p className="text-sm text-gray-600">
-                                {req?.request.feature_description || "No description provided."}
-                            </p>
-                        </div>
-                    </li>
-                ))}
-            </ul>
+            {requests.length === 0 ? (
+                <p className="text-gray-600 ml-4">No feature requests found.</p>
+            ) : (
+                <ul className="divide-y divide-gray-200">
+                    {requests.map((req, idx) => {
+                        const voteState = votes[req.id];
+                        return (
+                            <li
+                                key={req.id || idx}
+                                className="flex items-center py-4 hover:bg-gray-100 transition-colors odd:bg-gray-50 even:bg-white"
+                            >
+                                <div className="flex flex-col items-center space-y-2 ml-4">
+                                    <button
+                                        className={`p-1 rounded-md transition ${
+                                            voteState === "up" ? "text-green-600" : "text-gray-700 hover:bg-gray-100"
+                                        }`}
+                                        onClick={() => handleVote(req.id, "up")}
+                                    >
+                                        <ChevronsUp className="w-5 h-5" />
+                                    </button>
+
+                                    <span className="text-sm font-medium text-gray-800">12</span>
+
+                                    <button
+                                        className={`p-1 rounded-md transition ${
+                                            voteState === "down" ? "text-green-600" : "text-gray-700 hover:bg-gray-100"
+                                        }`}
+                                        onClick={() => handleVote(req.id, "down")}
+                                    >
+                                        <ChevronsDown className="w-5 h-5" />
+                                    </button>
+                                </div>
+
+                                <div className="ml-6">
+                                    <h3 className="text-lg font-semibold text-gray-900">
+                                        {req.title || "Untitled Request"}{" "}
+                                        <span className="text-sm text-gray-500">
+                      — {req.user_id || "Anonymous"}
+                    </span>
+                                    </h3>
+                                    <p className="text-sm text-gray-600">
+                                        {req.content || "No description provided."}
+                                    </p>
+                                    <p className="text-xs text-gray-400 mt-1">
+                                        Created: {new Date(req.created_at).toLocaleString()}
+                                    </p>
+                                </div>
+                            </li>
+                        );
+                    })}
+                </ul>
+            )}
         </main>
     );
 }
