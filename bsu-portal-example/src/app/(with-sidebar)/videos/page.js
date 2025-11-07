@@ -113,7 +113,7 @@ export default function VideoLibrary() {
         const updatedVideos = appendVideo(entry, newVideo);
 
         // Step 5: Send PUT request to update the video_library entry
-        const response = await fetch("/api/update-entry", {
+        const response = await fetch("/api/update-entry-in-cs", {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

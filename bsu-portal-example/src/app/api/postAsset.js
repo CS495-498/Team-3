@@ -7,7 +7,7 @@ export default async function postAsset(file, title, description, parentUid, tag
     if (parentUid) formData.append("asset[parent_uid]", parentUid);
     if (tags) formData.append("asset[tags]", tags);
 
-    const response = await fetch("/api/upload", {
+    const response = await fetch("/api/upload-asset-to-cs", {
       method: "POST",
       body: formData,
     });
