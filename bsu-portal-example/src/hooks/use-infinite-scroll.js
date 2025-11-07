@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useInView } from "react-intersection-observer";
 
-export function useInfiniteScroll(items = [], itemsPerPage = 8, delay = 500) {
+export function useInfiniteScroll(items = [], itemsPerPage = 8, delay = 300) {
     const [displayedItems, setDisplayedItems] = useState([]);
     const [page, setPage] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
     const [hasUserScrolled, setHasUserScrolled] = useState(false);
     const [initiallyVisible, setInitiallyVisible] = useState(false);
+    const [shouldShowLoader, setShouldShowLoader] = useState(false);
 
     const itemsRef = useRef(items);
     const sentinelRef = useRef(null);
@@ -33,7 +34,7 @@ export function useInfiniteScroll(items = [], itemsPerPage = 8, delay = 500) {
 
     const { ref: inViewRef, inView } = useInView({
         threshold: 0.25,
-        rootMargin: "0px 0px 300px 0px",
+        rootMargin: "0px 0px 200px 0px",
     });
 
     const setRefs = useCallback(
@@ -49,19 +50,22 @@ export function useInfiniteScroll(items = [], itemsPerPage = 8, delay = 500) {
         if (!node) return;
         const rect = node.getBoundingClientRect();
         const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
-        setInitiallyVisible(Boolean(isVisible));
+        setInitiallyVisible(isVisible);
+        if (!isVisible) setShouldShowLoader(true);
     }, []);
 
     useEffect(() => {
         const onScroll = () => {
             if (window.scrollY > 150) {
                 setHasUserScrolled(true);
+                setShouldShowLoader(true);
                 window.removeEventListener("scroll", onScroll);
             }
         };
         window.addEventListener("scroll", onScroll, { passive: true });
         if (window.scrollY > 150) {
             setHasUserScrolled(true);
+            setShouldShowLoader(true);
             window.removeEventListener("scroll", onScroll);
         }
         return () => window.removeEventListener("scroll", onScroll);
@@ -82,12 +86,15 @@ export function useInfiniteScroll(items = [], itemsPerPage = 8, delay = 500) {
     }, [page, itemsPerPage, hasMore, isLoading, delay]);
 
     useEffect(() => {
-        if (!inView) return;
-        if (isLoading) return;
-        if (!hasMore) return;
-        if (!hasUserScrolled && initiallyVisible) return;
+        if (!inView || isLoading || !hasMore) return;
+        if (initiallyVisible && !hasUserScrolled) return;
         loadMore();
-    }, [inView, isLoading, hasMore, hasUserScrolled, initiallyVisible, loadMore]);
+    }, [inView, isLoading, hasMore, loadMore, initiallyVisible, hasUserScrolled]);
 
-    return { items: displayedItems, hasMore, ref: setRefs, isLoading };
+    return {
+        items: displayedItems,
+        hasMore,
+        ref: setRefs,
+        isLoading: shouldShowLoader ? isLoading : false,
+    };
 }
