@@ -57,7 +57,7 @@ export default function VideoLibrary() {
   const { items: visibleVideos, hasMore, ref } = useInfiniteScroll(videos, 6);
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
+    e.preventDefault();
 
     const form = e.target;
     const data = new FormData(form);
@@ -73,12 +73,21 @@ export default function VideoLibrary() {
     }
 
     try {
-        // Step 2: Upload video and thumbnail assets
         const videoFile = data.get("video_file");
         const thumbnailFile = data.get("thumbnail");
 
+        // ✅ Require BOTH a title and a valid video file
+        const titleProvided = json_data.title?.trim()?.length > 0;
+        const videoProvided = videoFile && videoFile.size > 0;
+
+        if (!titleProvided || !videoProvided) {
+        alert("Please provide both a title and a video file before submitting.");
+        return;
+        }
+
+        // Step 2: Upload video and thumbnail assets
         const uploadedVideo =
-        videoFile && videoFile.size > 0
+        videoProvided
             ? await postAsset(
                 videoFile,
                 json_data.title,
@@ -109,28 +118,17 @@ export default function VideoLibrary() {
         date_posted: json_data.date_posted || new Date().toISOString(),
         };
 
-        // Step 4: Use helper to append the new video to existing array
+        // Step 4: Use helper to append the new video
         const updatedVideos = appendVideo(entry, newVideo);
-
-        console.log("🧾 Payload being sent:",
-        JSON.stringify(
-            {
-            entryUid: entry.uid,
-            videos: updatedVideos,
-            },
-            null,
-            2
-        )
-        );
 
         // Step 5: Send PUT request to update the video_library entry
         const response = await fetch("/api/update-entry-in-cs", {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                entryUid: entry.uid,
-                videos: updatedVideos,
-            }),
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            entryUid: entry.uid,
+            videos: updatedVideos,
+        }),
         });
 
         if (!response.ok) {
@@ -138,7 +136,6 @@ export default function VideoLibrary() {
         throw new Error(`Update failed: ${response.status} ${text}`);
         }
 
-        // Step 6: Update UI with the new entry
         const updatedEntry = await response.json();
         console.log("Updated library:", updatedEntry);
 
@@ -150,6 +147,7 @@ export default function VideoLibrary() {
         alert("Failed to add video. Check console for details.");
     }
     };
+
 
     let [isOpen, setIsOpen] = useState(false)
 
@@ -317,7 +315,7 @@ export default function VideoLibrary() {
                                                     type="submit"
                                                     onClick={() => setIsOpen(false)}
                                                     className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
-                                                >
+                                                    >
                                                     Save Video
                                                 </button>
                                             </div>
