@@ -1,7 +1,7 @@
 "use client";
 
-import postAsset from "@/api/postAsset";
-import appendVideo from "@/api/appendVideo";
+import postAsset from "@/app/api/postAsset";
+import appendVideo from "@/app/api/appendVideo";
 
 import React, { useState, useEffect, Fragment } from "react";
 import Stack, { onEntryChange } from "@/lib/cstack";
@@ -56,7 +56,7 @@ export default function VideoLibrary() {
     }) || [];
   const { items: visibleVideos, hasMore, ref } = useInfiniteScroll(videos, 6);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
     const form = e.target;
@@ -111,6 +111,17 @@ export default function VideoLibrary() {
 
         // Step 4: Use helper to append the new video to existing array
         const updatedVideos = appendVideo(entry, newVideo);
+
+        console.log("🧾 Payload being sent:",
+        JSON.stringify(
+            {
+            entryUid: entry.uid,
+            videos: updatedVideos,
+            },
+            null,
+            2
+        )
+        );
 
         // Step 5: Send PUT request to update the video_library entry
         const response = await fetch("/api/update-entry-in-cs", {
