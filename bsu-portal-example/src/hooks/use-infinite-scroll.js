@@ -13,8 +13,7 @@ export function useInfiniteScroll(items = [], itemsPerPage = 8, delay = 300) {
     }, [items]);
 
     useEffect(() => {
-        const itemCount = items.length;
-        if (itemCount === 0) {
+        if (!items.length) {
             setDisplayedItems([]);
             setPage(1);
             setIsLoading(false);
@@ -29,13 +28,15 @@ export function useInfiniteScroll(items = [], itemsPerPage = 8, delay = 300) {
     const hasMore = items.length > displayedItems.length;
 
     const { ref, inView } = useInView({
-        threshold: 0,
-        rootMargin: "0px 0px 50px 0px",
+        threshold: 0.25,
+        rootMargin: "0px 0px 300px 0px",
     });
 
     useEffect(() => {
-        const handleScroll = () => setHasUserScrolled(true);
-        window.addEventListener("scroll", handleScroll, { once: true });
+        const handleScroll = () => {
+            if (window.scrollY > 100) setHasUserScrolled(true);
+        };
+        window.addEventListener("scroll", handleScroll, { passive: true });
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
 
