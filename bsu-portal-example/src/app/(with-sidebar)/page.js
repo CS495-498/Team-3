@@ -64,7 +64,6 @@ export default function Home() {
     const alerts = entry?.alerts || [];
 
     
-    // Calculate pagination
     const totalPages = Math.ceil(alerts.length / alertsPerPage);
     const startIndex = (currentPage - 1) * alertsPerPage;
     const endIndex = startIndex + alertsPerPage;
@@ -84,11 +83,9 @@ export default function Home() {
         <main className="relative w-full h-screen overflow-hidden">
             <div className="flex flex-col w-full max-w-6xl mx-auto justify-start items-start relative z-10 p-8">
 
-                {/* Header */}
                 <div className="flex flex-wrap items-start justify-between w-full mb-10">
                 <h1 className="text-4xl font-bold mt-10">Contentstack Portal</h1>
 
-                {/* Notification Button */}
                 <button
                     type="button"
                     onClick={() => setIsOpen(true)}
@@ -97,7 +94,6 @@ export default function Home() {
                     + Notification
                 </button>
 
-                {/* Modal */}
                 <Transition appear show={isOpen} as={Fragment}>
                     <Dialog as="div" className="relative z-50" onClose={() => setIsOpen(false)}>
                     <Transition.Child
@@ -211,7 +207,6 @@ export default function Home() {
                 </Transition>
                 </div>
 
-                {/* Notifications Header */}
                 <div className="flex justify-between w-full mt-8">
                 <div>
                     <div className="text-2xl font-medium my-2">Notifications</div>
@@ -231,15 +226,14 @@ export default function Home() {
                 </div>
                 </div>
 
-                {/* Notifications List */}
                 <div className="w-full mb-24 mt-3">
                 {currentAlerts.length ? (
                     currentAlerts.map((note, idx) => {
                     const bgColor = getBgColor(note?.critical_value);
                     return (
                         <div
-                        key={idx}
-                        className={`relative w-full rounded-xl border ${bgColor} p-4 mb-3 transition-transform duration-200 hover:scale-[1.02]`}
+                            key={idx}
+                            className={`relative w-full rounded-xl border ${bgColor} p-4 mb-3 transition-transform duration-1000 ease-in-out hover:scale-[1.02]`}
                         >
                         <div className="flex items-start gap-3">
                             <CircleAlert className="mt-1 shrink-0" />

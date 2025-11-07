@@ -218,6 +218,7 @@ export default function Demos() {
                                             <div className="relative w-full h-[250px]">
                                             <Image
                                                 src={demo.image.url}
+                                                sizes={500}
                                                 alt={demo.title || "Demo image"}
                                                 fill
                                                 className="object-cover rounded-t-lg group-hover:opacity-90 transition-opacity"
