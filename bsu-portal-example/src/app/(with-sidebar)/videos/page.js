@@ -76,7 +76,7 @@ export default function VideoLibrary() {
         const videoFile = data.get("video_file");
         const thumbnailFile = data.get("thumbnail");
 
-        // ✅ Require BOTH a title and a valid video file
+        // Require a title and a valid video file
         const titleProvided = json_data.title?.trim()?.length > 0;
         const videoProvided = videoFile && videoFile.size > 0;
 
