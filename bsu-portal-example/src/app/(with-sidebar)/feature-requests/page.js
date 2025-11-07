@@ -48,25 +48,27 @@ export default function Home() {
                     {requests.map((req, idx) => {
                         const voteState = votes[req.id];
                         return (
-                            <li
-                                key={req.id || idx}
-                                className="flex items-center py-4 hover:bg-gray-100 transition-colors odd:bg-gray-50 even:bg-white"
+                            <li key={req.id || idx}
+                                className="flex items-center py-4 transition-colors
+                              hover:bg-gray-100 dark:hover:bg-gray-800
+                              odd:bg-gray-50 even:bg-white
+                              dark:odd:bg-gray-900 dark:even:bg-gray-950"
                             >
                                 <div className="flex flex-col items-center space-y-2 ml-4">
                                     <button
                                         className={`p-1 rounded-md transition ${
-                                            voteState === "up" ? "text-green-600" : "text-gray-700 hover:bg-gray-100"
+                                            voteState === "up" ? "text-green-600" : "text-gray-700 dark:text-gray-50 hover:bg-gray-100 dark:hover:bg-gray-800"
                                         }`}
                                         onClick={() => handleVote(req.id, "up")}
                                     >
-                                        <ChevronsUp className="w-5 h-5" />
+                                        <ChevronsUp className="w-5 h-5 dark:" />
                                     </button>
 
-                                    <span className="text-sm font-medium text-gray-800">12</span>
+                                    <span className="text-sm font-medium text-gray-800 dark:text-gray-50">12</span>
 
                                     <button
                                         className={`p-1 rounded-md transition ${
-                                            voteState === "down" ? "text-red-600" : "text-gray-700 hover:bg-gray-100"
+                                            voteState === "down" ? "text-red-600" : "text-gray-700 dark:text-gray-50 hover:bg-gray-100 dark:hover:bg-gray-800"
                                         }`}
                                         onClick={() => handleVote(req.id, "down")}
                                     >
@@ -75,16 +77,16 @@ export default function Home() {
                                 </div>
 
                                 <div className="ml-6">
-                                    <h3 className="text-lg font-semibold text-gray-900">
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-50">
                                         {req.title || "Untitled Request"}{" "}
-                                        <span className="text-sm text-gray-500">
+                                        <span className="text-sm text-gray-500 dark:text-gray-50">
                       — {req.user_id || "Anonymous"}
                     </span>
                                     </h3>
-                                    <p className="text-sm text-gray-600">
+                                    <p className="text-sm text-gray-600 dark:text-gray-50">
                                         {req.content || "No description provided."}
                                     </p>
-                                    <p className="text-xs text-gray-400 mt-1">
+                                    <p className="text-xs text-gray-400 mt-1 dark:text-gray-50">
                                         Created: {new Date(req.created_at).toLocaleString()}
                                     </p>
                                 </div>
