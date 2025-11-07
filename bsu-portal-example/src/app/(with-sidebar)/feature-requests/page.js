@@ -66,7 +66,7 @@ export default function Home() {
 
                                     <button
                                         className={`p-1 rounded-md transition ${
-                                            voteState === "down" ? "text-green-600" : "text-gray-700 hover:bg-gray-100"
+                                            voteState === "down" ? "text-red-600" : "text-gray-700 hover:bg-gray-100"
                                         }`}
                                         onClick={() => handleVote(req.id, "down")}
                                     >
