@@ -6,7 +6,12 @@ export default function AccountPageButton() {
     const router = useRouter();
 
     const accountPageHandler = async() => {
-        await fetch("/account/account-page", { method: "GET"})
-        router.push("/account/account-page")
-    }
+        router.push("/account")
+    };
+
+    return (
+        <DropdownMenuItem onClick={accountPageHandler} className="cursor-pointer">
+            <span>Account</span>
+        </DropdownMenuItem>
+    );
 }

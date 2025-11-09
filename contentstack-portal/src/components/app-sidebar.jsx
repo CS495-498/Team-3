@@ -3,78 +3,79 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarMenuSkeleton,
+    Sidebar,
+    SidebarContent,
+    SidebarFooter,
+    SidebarGroup,
+    SidebarGroupContent,
+    SidebarGroupLabel,
+    SidebarHeader,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem,
+    SidebarMenuSkeleton,
 } from "@/components/ui/sidebar"
 import { ModeToggle } from "./mode-toggle"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import React from "react";
 import { useState, useEffect } from "react";
 import Stack, { onEntryChange } from "@/lib/cstack";
 import SignOutButton from "./signout-button";
+import AccountPageButton from "@/components/account-page-button";
 
 const iconMapper = {
-  Home: <Home />,
-  Inbox: <Inbox />,
-  Calendar: <Calendar />,
-  Settings: <Settings />,
-  TvMinimalPlay: <TvMinimalPlay />,
-  Search: <Search />,
-  User2: <User2 />,
-  ChevronUp: <ChevronUp />,
-  ChevronsLeftRightEllipsis: <ChevronsLeftRightEllipsis />,
-  Construction: <Construction />,
+    Home: <Home />,
+    Inbox: <Inbox />,
+    Calendar: <Calendar />,
+    Settings: <Settings />,
+    TvMinimalPlay: <TvMinimalPlay />,
+    Search: <Search />,
+    User2: <User2 />,
+    ChevronUp: <ChevronUp />,
+    ChevronsLeftRightEllipsis: <ChevronsLeftRightEllipsis />,
+    Construction: <Construction />,
 }
 
 class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
-  static getDerivedStateFromError(error) {
-    // Update state so the next render shows the fallback UI.
-    return { hasError: true };
-  }
-
-  componentDidCatch(error, errorInfo) {
-    // You can also log the error to an error reporting service
-    console.error(error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return <NavProjectsSkeleton />; // Fallback UI
+    constructor(props) {
+        super(props);
+        this.state = { hasError: false };
     }
 
-    return this.props.children; 
-  }
+    static getDerivedStateFromError(error) {
+        // Update state so the next render shows the fallback UI.
+        return { hasError: true };
+    }
+
+    componentDidCatch(error, errorInfo) {
+        // You can also log the error to an error reporting service
+        console.error(error, errorInfo);
+    }
+
+    render() {
+        if (this.state.hasError) {
+            return <NavProjectsSkeleton />; // Fallback UI
+        }
+
+        return this.props.children;
+    }
 }
 
 function NavProjectsSkeleton() {
-  return (
-    <SidebarMenu>
-      {Array.from({ length: 5 }).map((_, index) => (
-        <SidebarMenuItem key={index}>
-          <SidebarMenuSkeleton showIcon />
-        </SidebarMenuItem>
-      ))}
-    </SidebarMenu>
-  )
+    return (
+        <SidebarMenu>
+            {Array.from({ length: 5 }).map((_, index) => (
+                <SidebarMenuItem key={index}>
+                    <SidebarMenuSkeleton showIcon />
+                </SidebarMenuItem>
+            ))}
+        </SidebarMenu>
+    )
 }
 function NavProjects() {
     const [entry, setEntry] = useState({});
@@ -162,9 +163,7 @@ function NavProjects() {
                                 side="top"
                                 className="w-[--radix-popper-anchor-width]"
                             >
-                                <DropdownMenuItem>
-                                    <span>Account</span>
-                                </DropdownMenuItem>
+                                <AccountPageButton />
                                 <SignOutButton />
                             </DropdownMenuContent>
                         </DropdownMenu>
@@ -176,12 +175,12 @@ function NavProjects() {
 }
 
 export function AppSidebar({ children }) {
-  return (
-    <ErrorBoundary>
-      <React.Suspense fallback={<NavProjectsSkeleton />}>
-        <NavProjects />
-        {children}
-      </React.Suspense>
-    </ErrorBoundary>
-  );
+    return (
+        <ErrorBoundary>
+            <React.Suspense fallback={<NavProjectsSkeleton />}>
+                <NavProjects />
+                {children}
+            </React.Suspense>
+        </ErrorBoundary>
+    );
 }
