@@ -1,43 +1,45 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/utils/Supabase/client.js'
-import SignOutButton from '@/components/signout-button'
 
-export default function Page({ user }) {
+export default function Page() {
     const supabase = createClient()
 
     // State
     const [loading, setLoading] = useState(true)
+    const [user, setUser] = useState(null)
     const [profile, setProfile] = useState({
         full_name: '',
         username: '',
-        website: '',
-        avatar_url: '',
+        // website: '',
+        // avatar_url: '',
     })
 
     // Fetch profile on mount
     useEffect(() => {
         const fetchProfile = async () => {
-            if (!user?.id) return
 
             setLoading(true)
+            const {data: { user }, error: userError,} = await supabase.auth.getUser()
+
+            if (userError || !user) {
+                console.error('No logged-in user:', userError)
+                setLoading(false)
+                return
+            }
+
             try {
                 const { data, error } = await supabase
                     .from('profiles')
-                    .select('full_name, username, website, avatar_url')
+                    .select('full_name, username')
                     .eq('id', user.id)
                     .single()
 
                 if (error) throw error
 
-                if (data) {
-                    setProfile({
-                        full_name: data.full_name || '',
-                        username: data.username || '',
-                        website: data.website || '',
-                        avatar_url: data.avatar_url || '',
-                    })
-                }
+                if (data) setProfile(data)
+                setLoading(false)
+
             } catch (err) {
                 console.error('Error loading user data:', err)
                 alert('Error loading user data!')
@@ -58,8 +60,8 @@ export default function Page({ user }) {
                 id: user.id,
                 full_name: profile.full_name,
                 username: profile.username,
-                website: profile.website,
-                avatar_url: profile.avatar_url,
+                // website: profile.website,
+                // avatar_url: profile.avatar_url,
                 updated_at: new Date().toISOString(),
             }
 
@@ -87,17 +89,17 @@ export default function Page({ user }) {
                 <div className="absolute bottom-[-60px] left-1/2 transform -translate-x-1/2 text-center">
                     <img
                         src={
-                            profile.avatar_url ||
+                            // profile.avatar_url ||
                             'https://api.dicebear.com/8.x/adventurer/svg?seed=User'
                         }
                         alt="Avatar"
                         className="w-32 h-32 rounded-full border-4 border-white mx-auto"
                     />
                     <h2 className="text-2xl font-semibold mt-3 text-gray-800">
-                        {profile.full_name || 'Your Name'}
+                        {profile.full_name}
                     </h2>
                     <p className="text-gray-500 text-sm">
-                        {profile.username || 'username'}
+                        {profile.username}
                     </p>
                 </div>
             </div>
@@ -110,15 +112,15 @@ export default function Page({ user }) {
                         Introduction
                     </h3>
                     <p className="text-gray-600 mb-4">
-                        Hello, I’m {profile.full_name || 'a new user'}. I love building
+                        Hello, I’m {profile.full_name }. I love building
                         websites and learning web development.
                     </p>
                     <ul className="space-y-2 text-gray-600 text-sm">
                         <li>
-                            <strong>Full name:</strong> {profile.full_name || 'N/A'}
+                            <strong>Full name:</strong> {profile.full_name}
                         </li>
                         <li>
-                            <strong>Website:</strong> {profile.website || 'N/A'}
+                            <strong>Website:</strong> {profile.website}
                         </li>
                         <li>
                             <strong>Location:</strong> New York, USA
