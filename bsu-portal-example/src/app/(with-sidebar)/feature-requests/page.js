@@ -57,45 +57,45 @@ export default function Home() {
 
   // Add a new comment via POST API
   const handleAddComment = async () => {
-  if (!newComment.trim()) return;
-  setIsSubmitting(true);
+    if (!newComment.trim()) return;
+    setIsSubmitting(true);
 
-  try {
-    const res = await fetch(`/api/feature-requests/${selectedRequest.id}/comments`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: newComment }),
-    });
+    try {
+      const res = await fetch(`/api/feature-requests/${selectedRequest.id}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: newComment }),
+      });
 
-    if (!res.ok) {
-      const error = await res.json();
-      alert(`Error: ${error.error || "Failed to post comment"}`);
-      return;
+      if (!res.ok) {
+        const error = await res.json();
+        alert(`Error: ${error.error || "Failed to post comment"}`);
+        return;
+      }
+
+      const newCommentData = await res.json();
+
+      // ✅ Fix here
+      setComments((prev) =>
+        Array.isArray(prev) ? [...prev, newCommentData] : [newCommentData]
+      );
+
+      setNewComment("");
+
+      // Update main list comment count
+      setRequests((prev) =>
+        prev.map((r) =>
+          r.id === selectedRequest.id
+            ? { ...r, commentCount: (r.commentCount || 0) + 1 }
+            : r
+        )
+      );
+    } catch (error) {
+      console.error("Error adding comment:", error);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    const newCommentData = await res.json();
-
-    // ✅ Fix here
-    setComments((prev) =>
-      Array.isArray(prev) ? [...prev, newCommentData] : [newCommentData]
-    );
-
-    setNewComment("");
-
-    // Update main list comment count
-    setRequests((prev) =>
-      prev.map((r) =>
-        r.id === selectedRequest.id
-          ? { ...r, commentCount: (r.commentCount || 0) + 1 }
-          : r
-      )
-    );
-  } catch (error) {
-    console.error("Error adding comment:", error);
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+  };
 
   const handleVote = (id, type) => {
     setVotes((prev) => {
@@ -131,11 +131,10 @@ export default function Home() {
                 {/* Left: Voting buttons */}
                 <div className="flex flex-col items-center space-y-2 ml-2">
                   <button
-                    className={`p-1 rounded-md transition ${
-                      voteState === "up"
+                    className={`p-1 rounded-md transition ${voteState === "up"
                         ? "text-green-600"
                         : "text-gray-700 dark:text-gray-50 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    }`}
+                      }`}
                     onClick={() => handleVote(req.id, "up")}
                   >
                     <ChevronsUp className="w-5 h-5" />
@@ -146,11 +145,10 @@ export default function Home() {
                   </span>
 
                   <button
-                    className={`p-1 rounded-md transition ${
-                      voteState === "down"
+                    className={`p-1 rounded-md transition ${voteState === "down"
                         ? "text-red-600"
                         : "text-gray-700 dark:text-gray-50 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    }`}
+                      }`}
                     onClick={() => handleVote(req.id, "down")}
                   >
                     <ChevronsDown className="w-5 h-5" />
@@ -188,71 +186,98 @@ export default function Home() {
       )}
 
       {/* 💬 Comments Dialog */}
-      <Dialog open={isDialogOpen} onClose={() => setIsDialogOpen(false)} className="relative z-50">
-        <div className="fixed inset-0 bg-black/40" aria-hidden="true" />
-        <div className="fixed inset-0 flex items-center justify-center p-4">
-          <DialogPanel className="mx-auto max-w-lg rounded-2xl bg-white dark:bg-gray-900 p-6 shadow-xl w-full">
-            <DialogTitle className="text-xl font-bold text-gray-900 dark:text-gray-50 mb-2">
-              {selectedRequest?.title}
+      <Dialog
+        open={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+        className="relative z-50"
+      >
+        {/* Background overlay */}
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" aria-hidden="true" />
+
+        {/* Dialog container */}
+        <div className="fixed inset-0 flex items-center justify-center p-2 sm:p-4">
+          <DialogPanel
+            className="
+        mx-auto w-full sm:max-w-4xl rounded-2xl 
+        bg-white dark:bg-gray-900 
+        p-4 sm:p-8 shadow-2xl border border-gray-200 dark:border-gray-800
+        max-h-[95vh] overflow-y-auto
+      "
+          >
+            {/* Header / Title */}
+            <DialogTitle className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-4">
+              {selectedRequest?.title || "Untitled Feature Request"}
             </DialogTitle>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-              {selectedRequest?.content}
-            </p>
 
-            <h4 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">Comments</h4>
-            {comments.length > 0 ? (
-              <ul className="space-y-2 max-h-60 overflow-y-auto">
-                {comments.map((c) => (
-                  <li
-                    key={c.id}
-                    className="border border-gray-200 dark:border-gray-700 rounded-lg p-2"
-                  >
-                    <p className="text-gray-800 dark:text-gray-200 text-sm">{c.content}</p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {new Date(c.created_at).toLocaleString()}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-gray-500 text-sm">No comments yet.</p>
-            )}
+            {/* Request Content */}
+            <div className="mb-6">
+              <p className="text-base sm:text-lg text-gray-700 dark:text-gray-300 leading-relaxed">
+                {selectedRequest?.content || "No description provided."}
+              </p>
+              <p className="text-xs sm:text-sm text-gray-400 mt-2">
+                Created: {new Date(selectedRequest?.created_at).toLocaleString()}
+              </p>
+            </div>
 
-            {/* ➕ Add Comment Form */}
-            <div className="mt-4 border-t border-gray-300 dark:border-gray-700 pt-3">
+            {/* Comments Section */}
+            <h4 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-gray-100 mb-3">
+              Comments ({comments.length})
+            </h4>
+
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4 max-h-80 overflow-y-auto bg-gray-50 dark:bg-gray-800">
+              {comments.length > 0 ? (
+                <ul className="space-y-3">
+                  {comments.map((c) => (
+                    <li
+                      key={c.id}
+                      className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md p-3"
+                    >
+                      <p className="text-gray-800 dark:text-gray-200 text-sm sm:text-base">
+                        {c.content}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {new Date(c.created_at).toLocaleString()}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-gray-500 text-sm italic">No comments yet.</p>
+              )}
+            </div>
+
+            {/* Add Comment Form */}
+            <div className="mt-6 border-t border-gray-300 dark:border-gray-700 pt-4">
               <textarea
-                className="w-full rounded-md border border-gray-300 dark:border-gray-700 p-2 text-sm text-gray-900 dark:text-gray-100 bg-transparent resize-none"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-700 p-3 text-sm sm:text-base text-gray-900 dark:text-gray-100 bg-transparent resize-none"
                 rows="3"
                 placeholder="Add a comment..."
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
               />
-              <div className="mt-2 flex justify-end">
+              <div className="mt-3 flex flex-col sm:flex-row justify-end gap-2">
+                <button
+                  onClick={() => setIsDialogOpen(false)}
+                  className="px-4 py-2 rounded-md bg-gray-600 text-white hover:bg-gray-700 transition text-sm sm:text-base"
+                >
+                  Close
+                </button>
                 <button
                   onClick={handleAddComment}
                   disabled={isSubmitting}
-                  className={`px-4 py-2 rounded-md text-white ${
-                    isSubmitting
+                  className={`px-4 py-2 rounded-md text-white transition text-sm sm:text-base ${isSubmitting
                       ? "bg-gray-500 cursor-not-allowed"
                       : "bg-blue-600 hover:bg-blue-700"
-                  }`}
+                    }`}
                 >
                   {isSubmitting ? "Posting..." : "Post Comment"}
                 </button>
               </div>
             </div>
-
-            <div className="mt-4 flex justify-end">
-              <button
-                onClick={() => setIsDialogOpen(false)}
-                className="px-4 py-2 rounded-md bg-gray-800 text-white hover:bg-gray-700"
-              >
-                Close
-              </button>
-            </div>
           </DialogPanel>
         </div>
       </Dialog>
+
     </main>
   );
 }
