@@ -27,8 +27,7 @@ export async function GET(req, { params }) {
       content,
       created_at,
       updated_at,
-      user_id,
-      users:auth.users(email)
+      user_id
     `)
     .eq("feature_request_id", id)
     .order("created_at", { ascending: true });
