@@ -1,5 +1,8 @@
 "use client";
 
+import postAsset from "@/app/api/postAsset";
+import appendVideo from "@/app/api/appendVideo";
+
 import React, { useState, useEffect, Fragment } from "react";
 import Stack, { onEntryChange } from "@/lib/cstack";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
@@ -18,6 +21,7 @@ export default function VideoLibrary() {
   const [entry, setEntry] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [playingIndex, setPlayingIndex] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
 
   const getContent = async () => {
@@ -42,27 +46,108 @@ export default function VideoLibrary() {
   }, []);
 
   // Infinite scroll pagination
-  const videos = entry?.videos || [];
+  const videos = entry?.videos?.filter((video) => {
+        const query = searchQuery.toLowerCase();
+        return (
+            video.title?.toLowerCase().includes(query) ||
+            video.se_name?.toLowerCase().includes(query) ||
+            video.description?.toLowerCase().includes(query)
+        );
+    }) || [];
   const { items: visibleVideos, hasMore, ref } = useInfiniteScroll(videos, 6);
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
+    const handleSubmit = async (e) => {
+    e.preventDefault();
 
-        const form = e.target;
-        const data = new FormData(form);
+    const form = e.target;
+    const data = new FormData(form);
+    const json_data = {};
 
-        const json = {};
+    // Step 1: Collect all form fields
+    for (let [key, value] of data.entries()) {
+        if (value instanceof File && value.size > 0) {
+        json_data[key] = value.name;
+        } else {
+        json_data[key] = value;
+        }
+    }
 
-        for (let [key, value] of data.entries()) {
-            if (value instanceof File && value.size > 0) {
-                json[key] = value.name;
-            } else {
-                json[key] = value;
-            }
+    try {
+        const videoFile = data.get("video_file");
+        const thumbnailFile = data.get("thumbnail");
+
+        // Require a title and a valid video file
+        const titleProvided = json_data.title?.trim()?.length > 0;
+        const videoProvided = videoFile && videoFile.size > 0;
+
+        if (!titleProvided || !videoProvided) {
+        alert("Please provide both a title and a video file before submitting.");
+        return;
         }
 
-        console.log("JSON to send:", JSON.stringify(json, null, 2));
+        // Step 2: Upload video and thumbnail assets
+        const uploadedVideo =
+        videoProvided
+            ? await postAsset(
+                videoFile,
+                json_data.title,
+                json_data.description,
+                null,
+                "video-library"
+            )
+            : null;
+
+        const uploadedThumb =
+        thumbnailFile && thumbnailFile.size > 0
+            ? await postAsset(
+                thumbnailFile,
+                `${json_data.title} Thumbnail`,
+                "Video thumbnail",
+                null,
+                "video-thumbnails"
+            )
+            : null;
+
+        // Step 3: Build the new video object
+        const newVideo = {
+        video_file: uploadedVideo?.asset?.uid || null,
+        thumbnail: uploadedThumb?.asset?.uid || null,
+        title: json_data.title,
+        description: json_data.description,
+        se_name: json_data.se_name,
+        date_posted: json_data.date_posted || new Date().toISOString(),
+        };
+
+        // Step 4: Use helper to append the new video
+        const updatedVideos = appendVideo(entry, newVideo);
+
+        // Step 5: Send PUT request to update the video_library entry
+        const response = await fetch("/api/update-entry-in-cs", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            entryUid: entry.uid,
+            videos: updatedVideos,
+        }),
+        });
+
+        if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Update failed: ${response.status} ${text}`);
+        }
+
+        const updatedEntry = await response.json();
+        console.log("Updated library:", updatedEntry);
+
+        alert("Video successfully added!");
+        setIsOpen(false);
+        setEntry(updatedEntry.entry);
+    } catch (error) {
+        console.error("Upload failed:", error);
+        alert("Failed to add video. Check console for details.");
     }
+    };
+
 
     let [isOpen, setIsOpen] = useState(false)
 
@@ -85,7 +170,9 @@ export default function VideoLibrary() {
                         <input
                             type="text"
                             placeholder="Search videos..."
-                            className="w-full rounded-lg border text-black border-gray-300 bg-white px-4 py-2 pl-10 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 pl-10 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
                         />
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -228,7 +315,7 @@ export default function VideoLibrary() {
                                                     type="submit"
                                                     onClick={() => setIsOpen(false)}
                                                     className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
-                                                >
+                                                    >
                                                     Save Video
                                                 </button>
                                             </div>

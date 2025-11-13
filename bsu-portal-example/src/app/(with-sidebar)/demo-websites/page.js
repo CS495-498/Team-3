@@ -19,7 +19,7 @@ import {Dialog, Transition} from "@headlessui/react";
 export default function Demos() {
     const [entry, setEntry] = useState({});
     const [isLoading, setIsLoading] = useState(true);
-
+    const [searchQuery, setSearchQuery] = useState("");
     const getContent = async () => {
         const entry = await Stack.getElementByTypeWithRefs(
             "custom_demos",
@@ -38,7 +38,13 @@ export default function Demos() {
         onEntryChange(getContent);
     }, []);
 
-    const demos = entry?.demos || [];
+    const demos = entry?.demos?.filter((demo) => {
+        const query = searchQuery.toLowerCase();
+        return (
+            demo.title?.toLowerCase().includes(query) ||
+            demo.description?.toLowerCase().includes(query)
+        );
+    }) || [];
     const { items: visibleDemos, hasMore, ref } = useInfiniteScroll(demos, 8);
 
     const handleSubmit = (e) => {
@@ -80,7 +86,9 @@ export default function Demos() {
                         <input
                             type="text"
                             placeholder="Search demos..."
-                            className="w-full rounded-lg border text-black border-gray-300 bg-white px-4 py-2 pl-10 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 pl-10 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
                         />
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -210,6 +218,7 @@ export default function Demos() {
                                             <div className="relative w-full h-[250px]">
                                             <Image
                                                 src={demo.image.url}
+                                                sizes={500}
                                                 alt={demo.title || "Demo image"}
                                                 fill
                                                 className="object-cover rounded-t-lg group-hover:opacity-90 transition-opacity"

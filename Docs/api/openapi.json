@@ -220,8 +220,8 @@
       "cookieAuth": {
         "type": "apiKey",
         "in": "cookie",
-        "name": "sb-access-token",
-        "description": "Supabase session cookie. Set this in Postman under Headers → Cookie: sb-access-token=<token>"
+        "name": "sb-ibfgbeocmmbnpziqjdtu-auth-token",
+        "description": "Supabase session cookie. Set this in Postman under Headers → Cookie: sb-ibfgbeocmmbnpziqjdtu-auth-token=<token>"
       }
     },
     "schemas": {

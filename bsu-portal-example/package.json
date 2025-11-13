@@ -2,11 +2,14 @@
   "name": "portal-test-bsu",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
+
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "mocha"
   },
   "dependencies": {
     "@contentstack/live-preview-utils": "^4.0.1",
@@ -65,8 +68,10 @@
     "@tailwindcss/postcss": "^4",
     "@types/lodash.throttle": "^4.1.9",
     "autoprefixer": "^10.4.21",
+    "chai": "^6.2.0",
     "eslint": "^9",
     "eslint-config-next": "15.5.3",
+    "mocha": "^11.7.4",
     "postcss": "^8.5.6",
     "sass": "^1.93.3",
     "tailwindcss": "^4.1.13",

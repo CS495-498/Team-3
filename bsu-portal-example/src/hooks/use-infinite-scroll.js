@@ -1,68 +1,100 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useInView } from "react-intersection-observer";
 
-export function useInfiniteScroll(items = [], itemsPerPage = 8) {
-  const [displayedItems, setDisplayedItems] = useState([]);
-  const [page, setPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
-  const itemsRef = useRef(items);
+export function useInfiniteScroll(items = [], itemsPerPage = 8, delay = 300) {
+    const [displayedItems, setDisplayedItems] = useState([]);
+    const [page, setPage] = useState(1);
+    const [isLoading, setIsLoading] = useState(false);
+    const [hasUserScrolled, setHasUserScrolled] = useState(false);
+    const [initiallyVisible, setInitiallyVisible] = useState(false);
+    const [shouldShowLoader, setShouldShowLoader] = useState(false);
 
-  useEffect(() => {
-    itemsRef.current = items;
-  }, [items]);
+    const itemsRef = useRef(items);
+    const sentinelRef = useRef(null);
 
-  useEffect(() => {
-    if (!items || items.length === 0) return;
-  
-    const initial = items.slice(0, itemsPerPage);
-    setDisplayedItems(initial);
-    setPage(1);
-    setIsLoading(false);
-    
-  }, [items.length, itemsPerPage]);
+    useEffect(() => {
+        itemsRef.current = items;
+    }, [items]);
 
-  const hasMore = items.length > displayedItems.length;
+    useEffect(() => {
+        const count = items.length;
+        if (count === 0) {
+            setDisplayedItems([]);
+            setPage(1);
+            setIsLoading(false);
+            return;
+        }
+        const initial = items.slice(0, itemsPerPage);
+        setDisplayedItems(initial);
+        setPage(1);
+        setIsLoading(false);
+    }, [items.length, itemsPerPage]);
 
-  const { ref, inView } = useInView({
-    threshold: 0.1,
-    rootMargin: "0px 0px 100px 0px",
-  });
+    const hasMore = items.length > displayedItems.length;
 
-  const loadMore = useCallback(() => {
-    if (!hasMore) {
-      return;
-    }
-    setIsLoading(true);
-    const nextPage = page + 1;
-    const endIndex = nextPage * itemsPerPage;
-    const newItems = itemsRef.current.slice(0, endIndex);
-    setTimeout(() => {
-      setDisplayedItems(newItems);
-      setPage(nextPage);
-      setIsLoading(false);
-  });
-  }, [page, itemsPerPage, hasMore]);
-
-  useEffect(() => {
-    console.log("InfiniteScroll: effect", {
-      inView,
-      hasMore,
-      isLoading,
-      itemsLen: items.length,
-      displayedLen: displayedItems.length,
-      page,
+    const { ref: inViewRef, inView } = useInView({
+        threshold: 0.25,
+        rootMargin: "0px 0px 200px 0px",
     });
 
-    if (!inView) return;
-    if (isLoading) {
-      return;
-    }
-    if (!hasMore) {
-      return;
-    }
+    const setRefs = useCallback(
+        (node) => {
+            sentinelRef.current = node;
+            inViewRef(node);
+        },
+        [inViewRef]
+    );
 
-    loadMore();
-  }, [inView, hasMore, isLoading, loadMore, items.length, displayedItems.length, page]);
+    useEffect(() => {
+        const node = sentinelRef.current;
+        if (!node) return;
+        const rect = node.getBoundingClientRect();
+        const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+        setInitiallyVisible(isVisible);
+        if (!isVisible) setShouldShowLoader(true);
+    }, []);
 
-  return { items: displayedItems, hasMore, ref, isLoading };
+    useEffect(() => {
+        const onScroll = () => {
+            if (window.scrollY > 150) {
+                setHasUserScrolled(true);
+                setShouldShowLoader(true);
+                window.removeEventListener("scroll", onScroll);
+            }
+        };
+        window.addEventListener("scroll", onScroll, { passive: true });
+        if (window.scrollY > 150) {
+            setHasUserScrolled(true);
+            setShouldShowLoader(true);
+            window.removeEventListener("scroll", onScroll);
+        }
+        return () => window.removeEventListener("scroll", onScroll);
+    }, []);
+
+    const loadMore = useCallback(() => {
+        if (!hasMore || isLoading) return;
+        setIsLoading(true);
+        const nextPage = page + 1;
+        const endIndex = nextPage * itemsPerPage;
+        const newItems = itemsRef.current.slice(0, endIndex);
+        const timer = setTimeout(() => {
+            setDisplayedItems(newItems);
+            setPage(nextPage);
+            setIsLoading(false);
+        }, delay);
+        return () => clearTimeout(timer);
+    }, [page, itemsPerPage, hasMore, isLoading, delay]);
+
+    useEffect(() => {
+        if (!inView || isLoading || !hasMore) return;
+        if (initiallyVisible && !hasUserScrolled) return;
+        loadMore();
+    }, [inView, isLoading, hasMore, loadMore, initiallyVisible, hasUserScrolled]);
+
+    return {
+        items: displayedItems,
+        hasMore,
+        ref: setRefs,
+        isLoading: shouldShowLoader ? isLoading : false,
+    };
 }
