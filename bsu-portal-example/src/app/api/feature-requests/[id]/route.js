@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/Supabase/server";
 
-export async function GET(req, { params }) {
-  const { id } = await params;
+export async function POST(req, { params }) {
+  const { id } = params;
   const supabase = await createClient();
 
+  // Authenticate user
   const {
     data: { user },
     error: userError,
@@ -15,107 +16,62 @@ export async function GET(req, { params }) {
     redirect("/login");
   }
 
-  const { data, error } = await supabase
-    .from("feature_requests")
-    .select("*")
-    .eq("id", id)
-    .single();
-
-  if (error)
-    return NextResponse.json({ error: error.message }, { status: 404 });
-
-  return NextResponse.json(data, { status: 200 });
-}
-
-
-export async function PUT(req, { params }) {
-  const { id } = await params;
-  const supabase = await createClient();
-
-  // Get authenticated user
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    redirect("/login");
-  }
-
-  // Parse request body
+  // Parse body
   const body = await req.json();
-  const { Title, Content } = body;
+  const { vote } = body; // "up" or "down"
 
-  if (!Content && !Title) {
+  if (!vote || !["up", "down"].includes(vote)) {
     return NextResponse.json(
-      { error: "Content or Title is required" },
-      { status: 400 }
+        { error: "Invalid vote type" },
+        { status: 400 }
     );
   }
 
-  // Build update object dynamically
-  const updateData = { updated_at: new Date().toISOString() };
-  if (Title) updateData.title = Title;
-  if (Content) updateData.content = Content;
+  try {
+    // 1. Upsert vote (user can change their vote)
+    const { error: voteError } = await supabase
+        .from("votes")
+        .upsert(
+            {
+              user_id: user.id,
+              request_id: Number(id),
+              vote,
+            },
+            { onConflict: "user_id,request_id" }
+        );
 
-  // Perform update, return the count to see if anything changed
-  const { data, error, count } = await supabase
-    .from("feature_requests")
-    .update(updateData, { count: "exact" }) // 👈 includes affected row count
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .select("*");
+    if (voteError) throw voteError;
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+    // 2. Recount votes for this request
+    const { data: votes, error: fetchError } = await supabase
+        .from("votes")
+        .select("vote")
+        .eq("request_id", Number(id));
 
-  // No rows updated = not found or not owned
-  if (count === 0 || !data || data.length === 0) {
+    if (fetchError) throw fetchError;
+
+    const up = votes.filter(v => v.vote === "up").length;
+    const down = votes.filter(v => v.vote === "down").length;
+
+    const total = up - down;
+
+    // 3. Update total votes in feature_requests table
+    const { error: updateError } = await supabase
+        .from("feature_requests")
+        .update({ number_of_votes: total })
+        .eq("id", Number(id));
+
+    if (updateError) throw updateError;
+
     return NextResponse.json(
-      { error: "Request not found or not owned by user" },
-      { status: 404 }
+        { number_of_votes: total },
+        { status: 200 }
+    );
+  } catch (error) {
+    console.error("Vote error:", error);
+    return NextResponse.json(
+        { error: error.message || "Failed to cast vote" },
+        { status: 500 }
     );
   }
-
-  // Successful update
-  return NextResponse.json(data[0], { status: 200 });
-}
-
-
-
-export async function DELETE(req, { params }) {
-  const { id } = await params;
-  const supabase = await createClient();
-
-  // Get authenticated user
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) redirect("/login");
-
-  // Attempt delete and request count of affected rows
-  const { error, count } = await supabase
-    .from("feature_requests")
-    .delete({ count: "exact" }) // 👈 tells Supabase to return row count
-    .eq("id", id)
-    .eq("user_id", user.id);
-
-  // Handle DB or permission error
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  // If no rows were deleted, the user didn’t own this post
-  if (count === 0) {
-    return NextResponse.json(
-      { message: "Request not found or not owned by user" },
-      { status: 404 }
-    );
-  }
-
-  // Otherwise, success 🎉
-  return NextResponse.json({ message: "Deleted successfully" }, { status: 200 });
 }

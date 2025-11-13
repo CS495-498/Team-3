@@ -5,6 +5,7 @@ import { ChevronsUp, ChevronsDown, MessageSquare } from "lucide-react";
 import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import AddFeatureRequest from "@/components/featureRequestModal";
 import CommentsDialog from "@/components/commentsDialog";
+
 export default function Home() {
   const [requests, setRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -20,18 +21,51 @@ export default function Home() {
     try {
       const res = await fetch("/api/feature-requests");
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-      const data = await res.json();
 
-      // Optionally include comment counts
+      const requests = await res.json();
+
+      // --------------------------------------------
+      // 1. Fetch comment counts
+      // --------------------------------------------
       const requestsWithCounts = await Promise.all(
-        data.map(async (req) => {
-          const resComments = await fetch(`/api/feature-requests/${req.id}/comments`);
-          const commentsData = await resComments.json();
-          return { ...req, commentCount: commentsData.length || 0 };
-        })
+          requests.map(async (req) => {
+            const resComments = await fetch(`/api/feature-requests/${req.id}/comments`);
+            const commentsData = await resComments.json();
+            return { ...req, commentCount: commentsData.length || 0 };
+          })
       );
 
-      setRequests(requestsWithCounts);
+      // --------------------------------------------
+      // 2. Extract unique user IDs from posts
+      // --------------------------------------------
+      const uniqueUserIds = [...new Set(requestsWithCounts.map(r => r.user_id))];
+
+      // --------------------------------------------
+      // 3. Fetch each user profile once
+      // --------------------------------------------
+      const userProfiles = {};
+      await Promise.all(
+          uniqueUserIds.map(async (uid) => {
+            const res = await fetch(`/api/profiles/${uid}`);
+            if (!res.ok) {
+              userProfiles[uid] = "Anonymous";
+              return;
+            }
+            const profile = await res.json();
+            userProfiles[uid] = profile?.username || "Anonymous";
+          })
+      );
+
+      // --------------------------------------------
+      // 4. Attach username to requests
+      // --------------------------------------------
+      const finalRequests = requestsWithCounts.map(req => ({
+        ...req,
+        username: userProfiles[req.user_id] || "Anonymous"
+      }));
+
+      setRequests(finalRequests);
+
     } catch (error) {
       console.error("Error fetching feature requests:", error);
     } finally {
@@ -39,8 +73,23 @@ export default function Home() {
     }
   };
 
+  const loadUserVotes = async () => {
+    const res = await fetch("/api/votes");
+    const data = await res.json();
+
+    // Convert to the format your UI expects
+    const formatted = {};
+    data.forEach(v => {
+      formatted[v.req_id] = v.Upvoted ? "up" : "down";
+    });
+
+    setVotes(formatted);
+  };
+
+
   useEffect(() => {
     getContent();
+    loadUserVotes();
   }, []);
 
   // Fetch comments for a specific feature request
@@ -92,12 +141,49 @@ export default function Home() {
   }
 };
 
-  const handleVote = (id, type) => {
-    setVotes((prev) => {
+
+
+  const castVote = async (requestId, voteType) => {
+    const res = await fetch(`/api/feature-requests/${requestId}/vote`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ vote: voteType }),
+    });
+
+    if (!res.ok) {
+      console.error("Vote error:", await res.json());
+      return;
+    }
+
+    const updated = await res.json();
+
+    setRequests(prev =>
+        prev.map(r =>
+            r.id === requestId
+                ? { ...r, number_of_votes: updated.number_of_votes }
+                : r
+        )
+    );
+  };
+
+  const handleVote = async (id, type) => {
+    setVotes(prev => {
       const current = prev[id];
+
       if (current === type) return { ...prev, [id]: null };
+
       return { ...prev, [id]: type };
     });
+
+    let apiVote;
+
+    if (votes[id] === type) {
+      apiVote = "remove";          // toggle off
+    } else {
+      apiVote = type === "up" ? "up" : "down";
+    }
+
+    await castVote(id, apiVote);
   };
 
   if (isLoading)
@@ -156,7 +242,7 @@ export default function Home() {
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-50">
                     {req.title || "Untitled Request"}{" "}
                     <span className="text-sm text-gray-500">
-                      — {req.user_id || "Anonymous"}
+                      — {req.username || "Anonymous"}
                     </span>
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-200">
