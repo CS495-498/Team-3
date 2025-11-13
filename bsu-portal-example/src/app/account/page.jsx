@@ -7,7 +7,7 @@ export default function Page() {
 
     // State
     const [loading, setLoading] = useState(true)
-    const [user, setUser] = useState(null)
+    const [user] = useState(null)
     const [profile, setProfile] = useState({
         full_name: '',
         username: '',

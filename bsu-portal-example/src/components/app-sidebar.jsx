@@ -77,6 +77,7 @@ function NavProjectsSkeleton() {
     </SidebarMenu>
   )
 }
+
 function NavProjects() {
     const [entry, setEntry] = useState({});
     const [isLoading, setIsLoading] = useState(true);
@@ -159,10 +160,7 @@ function NavProjects() {
                                     <ChevronUp className="ml-auto"/>
                                 </SidebarMenuButton>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                                side="top"
-                                className="w-[--radix-popper-anchor-width]"
-                            >
+                            <DropdownMenuContent side="top" className="w-[--radix-popper-anchor-width]">
                                 <AccountPageButton />
                                 <SignOutButton />
                             </DropdownMenuContent>
