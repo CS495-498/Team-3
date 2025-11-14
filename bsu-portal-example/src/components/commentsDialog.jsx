@@ -53,6 +53,9 @@ export default function CommentsDialog({
                     key={c.id}
                     className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md p-3"
                   >
+                    <p className="font-semibold text-sm">
+                      {c.user?.username ?? "Anonymous"}
+                    </p>
                     <p className="text-gray-800 dark:text-gray-200 text-sm sm:text-base">
                       {c.content}
                     </p>
