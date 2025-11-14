@@ -4,6 +4,8 @@ import Stack, { onEntryChange } from "@/lib/cstack";
 import Link from "next/link";
 import Image from "next/image";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
+import BookmarkButton from "@/components/bookmark-button";
+import { BOOKMARK_TYPES, useBookmarks } from "@/hooks/use-bookmarks";
 
 
 import {
@@ -20,6 +22,11 @@ export default function Demos() {
     const [entry, setEntry] = useState({});
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
+    const {
+        isBookmarked,
+        toggleBookmark,
+        isPending,
+    } = useBookmarks(BOOKMARK_TYPES.DEMO_WEBSITE);
     const getContent = async () => {
         const entry = await Stack.getElementByTypeWithRefs(
             "custom_demos",
@@ -46,6 +53,35 @@ export default function Demos() {
         );
     }) || [];
     const { items: visibleDemos, hasMore, ref } = useInfiniteScroll(demos, 8);
+
+    const getDemoId = (demo) =>
+        demo?.uid ||
+        demo?.system?.uid ||
+        demo?.link?.href ||
+        demo?.title;
+
+    const handleBookmarkToggle = async (demo) => {
+        const resourceId = getDemoId(demo);
+        if (!resourceId) {
+            alert("Unable to bookmark this demo because it is missing an identifier.");
+            return;
+        }
+        const result = await toggleBookmark(resourceId, {
+            title: demo?.title,
+            description: demo?.description,
+            url: demo?.link?.href,
+            thumbnail: demo?.image?.url,
+            extra: {
+                type: "demoWebsite",
+            },
+        });
+
+        if (result?.error === "AUTH_REQUIRED") {
+            alert("Please sign in to bookmark demos.");
+        } else if (result?.error) {
+            alert("Could not update bookmark. Please try again.");
+        }
+    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -211,31 +247,45 @@ export default function Demos() {
                 {visibleDemos.length > 0 ? (
                     <>
                         <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6 me-10">
-                            {visibleDemos.map((demo, idx) => (
-                                <Link key={idx} target={'_blank'} href={demo?.link?.href || "#"} className="group">
-                                    <Card className="h-[340px] flex flex-col shadow-md hover:shadow-lg transition-shadow duration-200">
-                                        {demo?.image?.url && (
-                                            <div className="relative w-full h-[250px]">
-                                            <Image
-                                                src={demo.image.url}
-                                                sizes={500}
-                                                alt={demo.title || "Demo image"}
-                                                fill
-                                                className="object-cover rounded-t-lg group-hover:opacity-90 transition-opacity"
-                                            />
-                                            </div>
-                                        )}
-                                        <CardHeader className="flex-grow flex flex-col justify-between">
-                                            <div>
-                                            <CardTitle className="text-lg font-semibold">{demo?.title}</CardTitle>
-                                            <CardDescription className="line-clamp-3 text-gray-600 dark:text-gray-300">
-                                                {demo?.description}
-                                            </CardDescription>
-                                            </div>
-                                        </CardHeader>
-                                    </Card>
-                                </Link>
-                            ))}
+                            {visibleDemos.map((demo, idx) => {
+                                const demoId = getDemoId(demo);
+                                const key = demoId ? `${demoId}-${idx}` : `demo-${idx}`;
+                                return (
+                                    <div key={key} className="relative group">
+                                        <Link target={"_blank"} rel="noopener noreferrer" href={demo?.link?.href || "#"} className="group block h-full">
+                                            <Card className="h-[340px] flex flex-col shadow-md hover:shadow-lg transition-shadow duration-200">
+                                                {demo?.image?.url && (
+                                                    <div className="relative w-full h-[250px]">
+                                                        <Image
+                                                            src={demo.image.url}
+                                                            sizes={500}
+                                                            alt={demo.title || "Demo image"}
+                                                            fill
+                                                            className="object-cover rounded-t-lg group-hover:opacity-90 transition-opacity"
+                                                        />
+                                                    </div>
+                                                )}
+                                                <CardHeader className="flex-grow flex flex-col justify-between">
+                                                    <div>
+                                                        <CardTitle className="text-lg font-semibold">{demo?.title}</CardTitle>
+                                                        <CardDescription className="line-clamp-3 text-gray-600 dark:text-gray-300">
+                                                            {demo?.description}
+                                                        </CardDescription>
+                                                    </div>
+                                                </CardHeader>
+                                            </Card>
+                                        </Link>
+                                        <BookmarkButton
+                                            active={demoId ? isBookmarked(demoId) : false}
+                                            disabled={!demoId || isPending(demoId)}
+                                            onToggle={() => handleBookmarkToggle(demo)}
+                                            className="absolute top-3 right-3 shadow-md"
+                                            titleWhenActive="Remove demo from bookmarks"
+                                            titleWhenInactive="Save demo to bookmarks"
+                                        />
+                                    </div>
+                                );
+                            })}
                         </div>
                         {hasMore && (
                             <div ref={ref} className="flex flex-col justify-center items-center py-8 mt-6">

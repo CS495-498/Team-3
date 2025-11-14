@@ -3,6 +3,8 @@ import React, { useState, useEffect } from "react";
 import Stack, { onEntryChange } from "@/lib/cstack";
 import Link from "next/link";
 import Image from "next/image";
+import BookmarkButton from "@/components/bookmark-button";
+import { BOOKMARK_TYPES, useBookmarks } from "@/hooks/use-bookmarks";
 
 
 import {
@@ -18,6 +20,11 @@ export default function DemoInstructions() {
     const [entry, setEntry] = useState({});
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
+    const {
+        isBookmarked,
+        toggleBookmark,
+        isPending,
+    } = useBookmarks(BOOKMARK_TYPES.DEMO_INSTRUCTION);
 
 
     const getContent = async () => {
@@ -45,6 +52,36 @@ export default function DemoInstructions() {
             demo.author_name?.toLowerCase().includes(query)
         );
     }) || [];
+
+    const getInstructionId = (demo) =>
+        demo?.uid ||
+        demo?.url ||
+        demo?.title;
+
+    const handleBookmarkToggle = async (demo) => {
+        const resourceId = getInstructionId(demo);
+        if (!resourceId) {
+            alert("Unable to bookmark this instruction yet. Missing identifier.");
+            return;
+        }
+
+        const result = await toggleBookmark(resourceId, {
+            title: demo?.title,
+            description: demo?.author_name,
+            url: demo?.url,
+            thumbnail: demo?.image?.url,
+            extra: {
+                type: "demoInstruction",
+            },
+        });
+
+        if (result?.error === "AUTH_REQUIRED") {
+            alert("Please sign in to bookmark demo instructions.");
+        } else if (result?.error) {
+            alert("Could not update bookmark. Please try again.");
+        }
+    };
+
     if (isLoading) return <div>Loading...</div>
 
     return (
@@ -89,26 +126,40 @@ export default function DemoInstructions() {
             </div>
             <div className="flex-1">
                 <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6 me-10">
-                    {filteredDemos.map((demo, idx) => (
-                        <Link key={idx} href={demo?.url || "#"} className="group">
-                            <Card className="h-full shadow-md hover:shadow-lg transition-shadow duration-200">
-                                {demo?.image?.url && (
-                                    <div className="relative w-full h-48">
-                                        <Image
-                                            src={demo.image.url}
-                                            alt={demo.title || "Demo image"}
-                                            fill
-                                            className="object-cover rounded-t-lg group-hover:opacity-90 transition-opacity"
-                                        />
-                                    </div>
-                                )}
-                                <CardHeader>
-                                    <CardTitle>{demo?.title}</CardTitle>
-                                    <CardDescription>{demo?.author_name}</CardDescription>
-                                </CardHeader>
-                            </Card>
-                        </Link>
-                    ))}
+                    {filteredDemos.map((demo, idx) => {
+                        const instructionId = getInstructionId(demo);
+                        const key = instructionId ? `${instructionId}-${idx}` : `instruction-${idx}`;
+                        return (
+                            <div key={key} className="relative group">
+                                <Link href={demo?.url || "#"} className="group block h-full">
+                                    <Card className="h-full shadow-md hover:shadow-lg transition-shadow duration-200">
+                                        {demo?.image?.url && (
+                                            <div className="relative w-full h-48">
+                                                <Image
+                                                    src={demo.image.url}
+                                                    alt={demo.title || "Demo image"}
+                                                    fill
+                                                    className="object-cover rounded-t-lg group-hover:opacity-90 transition-opacity"
+                                                />
+                                            </div>
+                                        )}
+                                        <CardHeader>
+                                            <CardTitle>{demo?.title}</CardTitle>
+                                            <CardDescription>{demo?.author_name}</CardDescription>
+                                        </CardHeader>
+                                    </Card>
+                                </Link>
+                                <BookmarkButton
+                                    active={instructionId ? isBookmarked(instructionId) : false}
+                                    disabled={!instructionId || isPending(instructionId)}
+                                    onToggle={() => handleBookmarkToggle(demo)}
+                                    className="absolute top-3 right-3 shadow-md"
+                                    titleWhenActive="Remove instruction from bookmarks"
+                                    titleWhenInactive="Save instruction to bookmarks"
+                                />
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         </div>

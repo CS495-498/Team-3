@@ -8,12 +8,12 @@ export default function Page() {
     // State
     const [loading, setLoading] = useState(true)
     const [user] = useState(null)
-    const [profile, setProfile] = useState({
+    const emptyProfile = {
         full_name: '',
         username: '',
-        // website: '',
-        // avatar_url: '',
-    })
+        website: '',
+    }
+    const [profile, setProfile] = useState(emptyProfile)
 
     // Fetch profile on mount
     useEffect(() => {
@@ -37,7 +37,15 @@ export default function Page() {
 
                 if (error) throw error
 
-                if (data) setProfile(data)
+                if (data) {
+                    setProfile({
+                        full_name: data.full_name ?? '',
+                        username: data.username ?? '',
+                        website: data.website ?? '',
+                    })
+                } else {
+                    setProfile(emptyProfile)
+                }
                 setLoading(false)
 
             } catch (err) {
@@ -58,10 +66,9 @@ export default function Page() {
 
             const updates = {
                 id: user.id,
-                full_name: profile.full_name,
-                username: profile.username,
-                // website: profile.website,
-                // avatar_url: profile.avatar_url,
+                full_name: profile.full_name?.trim() || null,
+                username: profile.username?.trim() || null,
+                website: profile.website?.trim() || null,
                 updated_at: new Date().toISOString(),
             }
 
@@ -119,9 +126,11 @@ export default function Page() {
                         <li>
                             <strong>Full name:</strong> {profile.full_name}
                         </li>
-                        <li>
-                            <strong>Website:</strong> {profile.website}
-                        </li>
+                        {profile.website && (
+                            <li>
+                                <strong>Website:</strong> {profile.website}
+                            </li>
+                        )}
                         <li>
                             <strong>Location:</strong> New York, USA
                         </li>
@@ -139,7 +148,7 @@ export default function Page() {
                             <input
                                 type="text"
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring focus:ring-indigo-300"
-                                value={profile.full_name}
+                                value={profile.full_name ?? ''}
                                 onChange={(e) =>
                                     handleChange('full_name', e.target.value)
                                 }
@@ -150,7 +159,7 @@ export default function Page() {
                             <input
                                 type="text"
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring focus:ring-indigo-300"
-                                value={profile.username}
+                                value={profile.username ?? ''}
                                 onChange={(e) =>
                                     handleChange('username', e.target.value)
                                 }
@@ -161,7 +170,7 @@ export default function Page() {
                             <input
                                 type="url"
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring focus:ring-indigo-300"
-                                value={profile.website}
+                                value={profile.website ?? ''}
                                 onChange={(e) =>
                                     handleChange('website', e.target.value)
                                 }
