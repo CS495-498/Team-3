@@ -82,7 +82,7 @@ export default function Demos() {
                         + Demos
                     </button>
 
-                    <div className="relative w-full max-w-sm">
+                    <div className="relative w-full max-w-sm dark:text-black">
                         <input
                             type="text"
                             placeholder="Search demos..."
