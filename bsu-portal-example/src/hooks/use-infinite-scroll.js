@@ -34,7 +34,7 @@ export function useInfiniteScroll(items = [], itemsPerPage = 8, delay = 300) {
 
     const { ref: inViewRef, inView } = useInView({
         threshold: 0.25,
-        rootMargin: "0px 0px 200px 0px",
+        rootMargin: "0px 0px -25px 0px",
     });
 
     const setRefs = useCallback(
