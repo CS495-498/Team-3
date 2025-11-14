@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/utils/Supabase/server";
 
 export async function POST(req, { params }) {
-    const { id } = params;
+    const { id } = await params;
     const supabase = await createClient();
 
     // Get logged-in user
