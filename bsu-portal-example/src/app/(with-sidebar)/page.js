@@ -220,9 +220,6 @@ export default function Home() {
                 <div className="flex justify-between w-full mt-4">
                     <div>
                         <div className="text-2xl font-medium my-2">Notifications</div>
-                        <span className="font-light italic text-[13px]">
-              Showing {visibleAlerts.length} of {alerts.length}
-            </span>
                     </div>
                     <div className="flex gap-3">
                         <span>Critical Scale</span>
