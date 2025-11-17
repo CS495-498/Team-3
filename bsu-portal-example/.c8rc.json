@@ -1,0 +1,11 @@
+{
+  "include": [
+    "src/app/api/helper/*.js",
+    "src/app/api/upload-asset-to-cs/*.js"
+  ],
+  "exclude": [
+    "test/**",
+    ".next/**"
+  ],
+  "reporter": ["text", "html"]
+}

@@ -3,6 +3,8 @@ import normalizeVideo from "../../src/app/api/helper/normalizeVideo.js";
 
 describe("normalizeVideo()", () => {
 
+    console.log("normalizeVideo imported:", normalizeVideo);
+
     // Test case for a fully populated Contentstack asset object
     it("normalizes a fully populated Contentstack asset object", () => {
         const input = {
