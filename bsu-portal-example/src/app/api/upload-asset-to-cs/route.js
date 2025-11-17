@@ -1,3 +1,4 @@
+import { NextResponse } from "next/server";
 import { uploadAndPublishAsset } from "./uploadAndPublishAsset";
 
 export async function POST(req) {

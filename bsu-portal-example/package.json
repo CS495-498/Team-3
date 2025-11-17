@@ -10,6 +10,9 @@
     "lint": "eslint",
     "test": "mocha"
   },
+  "mocha": {
+    "spec": "test/**/*.test.js"
+  },
   "dependencies": {
     "@contentstack/live-preview-utils": "^4.0.1",
     "@floating-ui/react": "^0.27.16",

@@ -1,4 +1,4 @@
-export default async function postAsset(file, title, description, parentUid, tags) {
+export default async function createAssetFormData(file, title, description, parentUid, tags) {
   try {
     const formData = new FormData();
     formData.append("asset[upload]", file);

@@ -4,7 +4,7 @@ import Stack, { onEntryChange } from "@/lib/cstack";
 import { CircleAlert } from "lucide-react";
 import { Dialog, Transition } from "@headlessui/react";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
-import appendNotification from "@/app/api/appendNotification.js";
+import appendNotification from "@/app/api/helper/appendNotification.js";
 
 export default function Home() {
     const [entry, setEntry] = useState({});
