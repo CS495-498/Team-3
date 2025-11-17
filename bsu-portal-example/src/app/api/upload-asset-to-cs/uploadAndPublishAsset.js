@@ -1,4 +1,4 @@
-// bsu-portal-example/src/app/api/upload-asset-to-cs/uploadAndPublishAsset.js
+//uploadAndPublishAsset.js
 
 export async function uploadAndPublishAsset(formData, fetchFunc = fetch) {
 
