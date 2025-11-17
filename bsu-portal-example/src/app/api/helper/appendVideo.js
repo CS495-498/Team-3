@@ -1,4 +1,4 @@
-import normalizeVideo from "./normalizeVideo";
+import normalizeVideo from "./normalizeVideo.js";
 
 export default function appendVideo(entry, newVideo) {
   const existingVideos = Array.isArray(entry?.videos) ? entry.videos : [];
