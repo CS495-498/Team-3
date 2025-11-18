@@ -1,18 +1,29 @@
 import { NextResponse } from "next/server";
 
-// Upload asset and immediately publish it to Contentstack
 export async function POST(req) {
   try {
     const formData = await req.formData();
+    const file = formData.get("asset[upload]");
 
-    // Step 1: Upload the asset
+    if (!file) {
+      return NextResponse.json(
+        { error: "No file provided. Expected field: asset[upload]" },
+        { status: 400 }
+      );
+    }
+
+    const uploadForm = new FormData();
+    uploadForm.append("asset[upload]", file);
+    uploadForm.append("asset[title]", file.name);
+
+    // Upload to Contentstack
     const uploadResponse = await fetch("https://api.contentstack.io/v3/assets", {
       method: "POST",
       headers: {
         api_key: process.env.CONTENTSTACK_API_KEY,
         authorization: process.env.CONTENTSTACK_MANAGEMENT_TOKEN,
       },
-      body: formData,
+      body: uploadForm,
     });
 
     if (!uploadResponse.ok) {
@@ -27,7 +38,7 @@ export async function POST(req) {
       throw new Error("No asset UID returned from upload.");
     }
 
-    // Step 2: Publish the uploaded asset
+    // Publish the asset
     const publishResponse = await fetch(
       `https://api.contentstack.io/v3/assets/${assetUid}/publish`,
       {
@@ -39,8 +50,8 @@ export async function POST(req) {
         },
         body: JSON.stringify({
           asset: {
-            locales: ["en-us"], // adjust locale(s) if needed
-            environments: ["preview"], // or your target environment name(s)
+            locales: ["en-us"],
+            environments: [process.env.CONTENTSTACK_ENVIRONMENT],
           },
         }),
       }
@@ -48,22 +59,18 @@ export async function POST(req) {
 
     if (!publishResponse.ok) {
       const text = await publishResponse.text();
-      console.error("Asset publish failed:", text);
       return NextResponse.json(
         { error: "Asset uploaded but publish failed", details: text },
         { status: publishResponse.status }
       );
     }
 
-    const publishResult = await publishResponse.json();
-
     return NextResponse.json({
       message: "Asset uploaded and published successfully.",
       asset: uploadedAsset.asset,
-      publish: publishResult,
     });
+
   } catch (err) {
-    console.error("Server upload/publish failed:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
