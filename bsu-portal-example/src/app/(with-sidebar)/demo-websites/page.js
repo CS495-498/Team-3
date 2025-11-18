@@ -6,7 +6,8 @@ import Image from "next/image";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import BookmarkButton from "@/components/bookmark-button";
 import { BOOKMARK_TYPES, useBookmarks } from "@/hooks/use-bookmarks";
-
+import appendDemoWebsite from "@/app/api/appendDemoWebsite";
+import postAsset from "@/app/api/postAsset";
 
 import {
     Card,
@@ -83,20 +84,89 @@ export default function Demos() {
         }
     };
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
+    const handleSubmit = async (e) => {
+    e.preventDefault();
 
-        const form = e.target;
-        const data = new FormData(form);
+    const form = e.target;
+    const data = new FormData(form);
+    const json_data = {};
 
-        const json = Object.fromEntries(data.entries());
+    // Step 1: Collect all form fields
+    for (let [key, value] of data.entries()) {
+        if (value instanceof File && value.size > 0) {
+        json_data[key] = value.name;
+        } else {
+        json_data[key] = value;
+        }
+    }
 
-        if (data.get("image")) {
-            json.thumbnailFile = data.get("image").name;
+    try {
+        const thumbnailFile = data.get("image");
+
+        // Require a title and a valid video file
+        const titleProvided = json_data.title?.trim()?.length > 0;
+
+        if (!titleProvided) {
+        alert("Please provide both a title.");
+        return;
         }
 
-        console.log("JSON to send:", JSON.stringify(json, null, 2));
+        // Step 2: Upload thumbnail assets
+
+        const uploadedThumb =
+        thumbnailFile && thumbnailFile.size > 0
+            ? await postAsset(
+                thumbnailFile,
+                `${json_data.title} Thumbnail`,
+                "Video thumbnail",
+                null,
+                "video-thumbnails"
+            )
+            : null;
+
+        // Step 3: Build the new video object
+        const newDemo = {
+            link: {
+                title: json_data.title || "Demo Link",
+                href: json_data.url || "",
+            },
+            image: uploadedThumb?.asset?.uid || null,
+            title: json_data.title,
+            description: json_data.description,
+            se_name: json_data.se_name,
+            date_posted: json_data.date_posted || new Date().toISOString(),
+        };
+
+
+        // Step 4: Use helper to append the new video
+        const updatedDemoWebsites = appendDemoWebsite(entry, newDemo);
+
+        // Step 5: Send PUT request to update the video_library entry
+        const response = await fetch("/api/update-demo-web-in-cs", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            entryUid: entry.uid,
+            demos: updatedDemoWebsites,
+        }),
+        });
+
+        if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Update failed: ${response.status} ${text}`);
+        }
+
+        const updatedEntry = await response.json();
+        console.log("Updated library:", updatedEntry);
+
+        alert("Demo Website successfully added!");
+        setIsOpen(false);
+        setEntry(updatedEntry.entry);
+    } catch (error) {
+        console.error("Upload failed:", error);
+        alert("Failed to add demo. Check console for details.");
     }
+    };
 
     let [isOpen, setIsOpen] = useState(false)
 
@@ -172,8 +242,9 @@ export default function Demos() {
                                                     Title
                                                 </label>
                                                 <input
+                                                    name="title"
                                                     type="text"
-                                                    placeholder="Enter video title"
+                                                    placeholder="Enter demo title"
                                                     className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition"
                                                 />
                                             </div>
@@ -183,8 +254,9 @@ export default function Demos() {
                                                     Demo Description
                                                 </label>
                                                 <textarea
+                                                    name="description"
                                                     rows="3"
-                                                    placeholder="Describe the video..."
+                                                    placeholder="Describe the demo..."
                                                     className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition resize-none"
                                                 ></textarea>
                                             </div>
@@ -194,6 +266,7 @@ export default function Demos() {
                                                     Link
                                                 </label>
                                                 <input
+                                                    name="url"
                                                     type="text"
                                                     placeholder="Enter Demo URL"
                                                     className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition"
@@ -201,11 +274,11 @@ export default function Demos() {
                                             </div>
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                                                    Image
+                                                    Thumbnail
                                                 </label>
                                                 <input
-                                                    type="file"
                                                     name="image"
+                                                    type="file"
                                                     accept="image/*"
                                                     className="w-full text-sm text-gray-700 dark:text-gray-200
                                                              file:mr-4 file:py-2 file:px-4
@@ -229,7 +302,6 @@ export default function Demos() {
                                                 </button>
                                                 <button
                                                     type="submit"
-                                                    onClick={() => setIsOpen(false)}
                                                     className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
                                                 >
                                                     Save Demo
