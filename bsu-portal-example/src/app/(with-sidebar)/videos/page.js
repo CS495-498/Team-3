@@ -227,9 +227,13 @@ export default function VideoLibrary() {
             }
 
             const updatedEntry = await response.json();
-            setShowToast(true);
-            setIsOpen(false);
             setEntry(updatedEntry.entry);
+            setIsOpen(false);
+            setShowToast(true);
+
+            setTimeout(() => {
+                setShowToast(false);
+            }, 2000);
         } catch (error) {
             console.error("Upload failed:", error);
             alert("Failed to add video. Check console for details.");
