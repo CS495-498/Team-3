@@ -8,6 +8,8 @@ import BookmarkButton from "@/components/bookmark-button";
 import { BOOKMARK_TYPES, useBookmarks } from "@/hooks/use-bookmarks";
 import appendDemoWebsite from "@/app/api/helper/appendDemoWebsite";
 import postAsset from "@/app/api/helper/postAsset";
+import SuccessToast from "@/components/ui/success-toast.jsx";
+import { AnimatePresence, motion } from "framer-motion";
 
 import {
     Card,
@@ -15,7 +17,7 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
-import {Dialog, Transition} from "@headlessui/react";
+import { Dialog } from "@headlessui/react";
 
 
 
@@ -23,6 +25,9 @@ export default function Demos() {
     const [entry, setEntry] = useState({});
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
+    const [showToast, setShowToast] = useState(false);
+    const [isOpen, setIsOpen] = useState(false)
+
     const {
         isBookmarked,
         toggleBookmark,
@@ -138,10 +143,8 @@ export default function Demos() {
         };
 
 
-        // Step 4: Use helper to append the new video
         const updatedDemoWebsites = appendDemoWebsite(entry, newDemo);
 
-        // Step 5: Send PUT request to update the video_library entry
         const response = await fetch("/api/update-demo-web-in-cs", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -157,24 +160,32 @@ export default function Demos() {
         }
 
         const updatedEntry = await response.json();
-        console.log("Updated library:", updatedEntry);
-
-        alert("Demo Website successfully added!");
-        setIsOpen(false);
         setEntry(updatedEntry.entry);
+
+
+        setIsOpen(false);
+        setShowToast(true);
+
+        setTimeout(() => {
+            setShowToast(false);
+        }, 2000);
     } catch (error) {
         console.error("Upload failed:", error);
         alert("Failed to add demo. Check console for details.");
     }
     };
 
-    let [isOpen, setIsOpen] = useState(false)
 
 
     if(isLoading) return <div></div>
 
     return (
         <div className="pl-10 pt-6 min-h-screen flex flex-col">
+            <SuccessToast
+                message="Demo website added!"
+                isOpen={showToast}
+                onClose={() => setShowToast(false)}
+            />
             <div className="flex justify-between items-center mb-6 pt-6">
                 <h1 className="text-4xl font-bold ml-4">
                     {entry?.title}
@@ -185,7 +196,7 @@ export default function Demos() {
                         onClick={() => setIsOpen(true)}
                         className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
                     >
-                        + Demos
+                        Add Demo
                     </button>
 
                     <div className="relative w-full max-w-sm dark:text-black">
@@ -211,76 +222,79 @@ export default function Demos() {
                             />
                         </svg>
                     </div>
-                    <Transition appear show={isOpen} as={Fragment}>
-                        <Dialog as="div" className="relative z-50" onClose={() => setIsOpen(false)}>
-                            <Transition.Child
-                                as={Fragment}
-                                enter="ease-out duration-300"
-                                enterFrom="opacity-0"
-                                enterTo="opacity-100"
-                                leave="ease-in duration-200"
-                                leaveFrom="opacity-100"
-                                leaveTo="opacity-0"
+                    <AnimatePresence>
+                        {isOpen && (
+                            <Dialog
+                                className="fixed inset-0 z-50"
+                                open={isOpen}
+                                onClose={() => setIsOpen(false)}
                             >
-                                <div className="fixed inset-0 bg-black/50" aria-hidden="true" />
-                            </Transition.Child>
-                            <div className="fixed inset-0 flex items-center justify-center p-4">
-                                <Transition.Child
-                                    as={Fragment}
-                                    enter="ease-out duration-300"
-                                    enterFrom="opacity-0 scale-95"
-                                    enterTo="opacity-100 scale-100"
-                                    leave="ease-in duration-200"
-                                    leaveFrom="opacity-100 scale-100"
-                                    leaveTo="opacity-0 scale-95"
-                                >
-                                    <Dialog.Panel className="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-700 shadow-2xl p-8 transition-all">
-                                        <h4 className="font-bold text-2xl mb-4">Add A Demo</h4>
-                                        <form onSubmit={handleSubmit} className="space-y-5">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                                                    Title
-                                                </label>
-                                                <input
-                                                    name="title"
-                                                    type="text"
-                                                    placeholder="Enter demo title"
-                                                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition"
-                                                />
-                                            </div>
+                                <motion.div
+                                    className="fixed inset-0 bg-black/50"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.5 }}
+                                    aria-hidden="true"
+                                />
 
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                                                    Demo Description
-                                                </label>
-                                                <textarea
-                                                    name="description"
-                                                    rows="3"
-                                                    placeholder="Describe the demo..."
-                                                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition resize-none"
-                                                ></textarea>
-                                            </div>
+                                <div className="fixed inset-0 flex items-center justify-center p-6">
+                                    <motion.div
+                                        className="w-full max-w-xl mx-auto"
+                                        initial={{ opacity: 0, scale: 0.96, y: -8 }}
+                                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 0.96, y: -8 }}
+                                        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                                    >
+                                        <Dialog.Panel className="w-full rounded-xl bg-white dark:bg-gray-700 p-8 shadow-2xl">
+                                            <Dialog.Title className="font-bold text-2xl mb-4">Add A Demo</Dialog.Title>
 
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                                                    Link
-                                                </label>
-                                                <input
-                                                    name="url"
-                                                    type="text"
-                                                    placeholder="Enter Demo URL"
-                                                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                                                    Thumbnail
-                                                </label>
-                                                <input
-                                                    name="image"
-                                                    type="file"
-                                                    accept="image/*"
-                                                    className="w-full text-sm text-gray-700 dark:text-gray-200
+                                            <form onSubmit={handleSubmit} className="space-y-5 w-full">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                                        Title
+                                                    </label>
+                                                    <input
+                                                        name="title"
+                                                        type="text"
+                                                        placeholder="Enter demo title"
+                                                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                                        Demo Description
+                                                    </label>
+                                                    <textarea
+                                                        name="description"
+                                                        rows="3"
+                                                        placeholder="Describe the demo..."
+                                                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition resize-none"
+                                                    ></textarea>
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                                        Link
+                                                    </label>
+                                                    <input
+                                                        name="url"
+                                                        type="text"
+                                                        placeholder="Enter Demo URL"
+                                                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                                        Thumbnail
+                                                    </label>
+                                                    <input
+                                                        name="image"
+                                                        type="file"
+                                                        accept="image/*"
+                                                        className="w-full text-sm text-gray-700 dark:text-gray-200
                                                              file:mr-4 file:py-2 file:px-4
                                                              file:rounded-lg file:border-0
                                                              file:text-sm file:font-medium
@@ -289,30 +303,31 @@ export default function Demos() {
                                                              bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700
                                                              rounded-lg px-2 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500
                                                              outline-none transition"
-                                                />
-                                            </div>
+                                                    />
+                                                </div>
 
-                                            <div className="flex justify-end gap-3 pt-4">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setIsOpen(false)}
-                                                    className="px-5 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-                                                >
-                                                    Cancel
-                                                </button>
-                                                <button
-                                                    type="submit"
-                                                    className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
-                                                >
-                                                    Save Demo
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </Dialog.Panel>
-                                </Transition.Child>
-                            </div>
-                        </Dialog>
-                    </Transition>
+                                                <div className="flex justify-end gap-3 pt-4">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setIsOpen(false)}
+                                                        className="px-5 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                    <button
+                                                        type="submit"
+                                                        className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
+                                                    >
+                                                        Save Demo
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </Dialog.Panel>
+                                    </motion.div>
+                                </div>
+                            </Dialog>
+                        )}
+                    </AnimatePresence>
                 </div>
             </div>
             <div className="flex-1">

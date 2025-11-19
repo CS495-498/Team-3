@@ -6,6 +6,10 @@ import appendVideo from "@/app/api/helper/appendVideo";
 import React, { useState, useEffect, Fragment } from "react";
 import Stack, { onEntryChange } from "@/lib/cstack";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
+import { AnimatePresence, motion } from "framer-motion";
+import SuccessToast from "@/components/ui/success-toast.jsx";
+
+
 import BookmarkButton from "@/components/bookmark-button";
 import { BOOKMARK_TYPES, useBookmarks } from "@/hooks/use-bookmarks";
 import {
@@ -16,7 +20,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-import {Dialog, Transition } from '@headlessui/react'
+import { Dialog } from '@headlessui/react'
 
 
 export default function VideoLibrary() {
@@ -24,7 +28,9 @@ export default function VideoLibrary() {
   const [isLoading, setIsLoading] = useState(true);
   const [playingIndex, setPlayingIndex] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const {
+  const [showToast, setShowToast] = useState(false);
+
+    const {
     isBookmarked,
     toggleBookmark,
     isPending,
@@ -194,6 +200,11 @@ export default function VideoLibrary() {
 
     return (
         <div className="pl-10 pt-6 min-h-screen flex flex-col">
+            <SuccessToast
+                message="Video added!"
+                isOpen={showToast}
+                onClose={() => setShowToast(false)}
+            />
             <div className="flex justify-between items-center mb-6 pt-6">
                 <h1 className="text-4xl font-bold ml-4">{entry?.title}</h1>
 
@@ -203,7 +214,7 @@ export default function VideoLibrary() {
                         onClick={() => setIsOpen(true)}
                         className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
                     >
-                        + Videos
+                        Add Video
                     </button>
                     <div className="relative w-full max-w-sm dark:text-black">
                         <input
@@ -228,142 +239,143 @@ export default function VideoLibrary() {
                             />
                         </svg>
                     </div>
-                    <Transition appear show={isOpen} as={Fragment}>
-                        <Dialog as="div" className="relative z-50" onClose={() => setIsOpen(false)}>
-                            <Transition.Child
-                                as={Fragment}
-                                enter="ease-out duration-300"
-                                enterFrom="opacity-0"
-                                enterTo="opacity-100"
-                                leave="ease-in duration-200"
-                                leaveFrom="opacity-100"
-                                leaveTo="opacity-0"
+                    <AnimatePresence>
+                        {isOpen && (
+                            <Dialog
+                                className="fixed inset-0 z-50"
+                                open={isOpen}
+                                onClose={() => setIsOpen(false)}
                             >
-                                <div className="fixed inset-0 bg-black/50" aria-hidden="true" />
-                            </Transition.Child>
+                                <motion.div
+                                    className="fixed inset-0 bg-black/50"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.5 }}
+                                    aria-hidden="true"
+                                />
 
-                            <div className="fixed inset-0 flex items-center justify-center p-4">
-                                <Transition.Child
-                                    as={Fragment}
-                                    enter="ease-out duration-300"
-                                    enterFrom="opacity-0 scale-95"
-                                    enterTo="opacity-100 scale-100"
-                                    leave="ease-in duration-200"
-                                    leaveFrom="opacity-100 scale-100"
-                                    leaveTo="opacity-0 scale-95"
-                                >
-                                    <Dialog.Panel className="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-700 shadow-2xl p-8 transition-all">
-                                        <h4 className="font-bold text-2xl mb-4">Add A Video</h4>
-                                        <form onSubmit={handleSubmit} className="space-y-5">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                                                    Title
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    name="title"
-                                                    placeholder="Enter video title"
-                                                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition"
-                                                />
-                                            </div>
+                                <div className="fixed inset-0 flex items-center justify-center p-6">
+                                    <motion.div
+                                        className="w-full max-w-lg mx-auto"
+                                        initial={{ opacity: 0, scale: 0.96, y: -8 }}
+                                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 0.96, y: -8 }}
+                                        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                                    >
+                                        <Dialog.Panel className="w-full rounded-2xl bg-white dark:bg-gray-700 shadow-2xl p-8 transition-all">
+                                            <h4 className="font-bold text-2xl mb-4 text-gray-900 dark:text-gray-100">
+                                                Add A Video
+                                            </h4>
 
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                                                    Video Description
-                                                </label>
-                                                <textarea
-                                                    rows="3"
-                                                    name="description"
-                                                    placeholder="Describe the video..."
-                                                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition resize-none"
-                                                ></textarea>
-                                            </div>
+                                            <form onSubmit={handleSubmit} className="space-y-5">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                                        Title
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        name="title"
+                                                        placeholder="Enter video title"
+                                                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                                                    />
+                                                </div>
 
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                                                    Date Posted
-                                                </label>
-                                                <input
-                                                    type="date"
-                                                    name="date_posted"
-                                                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition"
-                                                />
-                                            </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                                        Video Description
+                                                    </label>
+                                                    <textarea
+                                                        rows="3"
+                                                        name="description"
+                                                        placeholder="Describe the video..."
+                                                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition resize-none"
+                                                    ></textarea>
+                                                </div>
 
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                                                    SE Name
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    name="se_name"
-                                                    placeholder="Enter SE Name"
-                                                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition"
-                                                />
-                                            </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                                        Date Posted
+                                                    </label>
+                                                    <input
+                                                        type="date"
+                                                        name="date_posted"
+                                                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                                                    />
+                                                </div>
 
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                                                    Video File
-                                                </label>
-                                                <input
-                                                    type="file"
-                                                    name="video_file"
-                                                    accept="video/*"
-                                                    className="w-full text-sm text-gray-700 dark:text-gray-200
-                                                             file:mr-4 file:py-2 file:px-4
-                                                             file:rounded-lg file:border-0
-                                                             file:text-sm file:font-medium
-                                                             file:bg-gray-400 file:text-white
-                                                             hover:file:bg-gray-500
-                                                             bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700
-                                                             rounded-lg px-2 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500
-                                                             outline-none transition"
-                                                />
-                                            </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                                        SE Name
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        name="se_name"
+                                                        placeholder="Enter SE Name"
+                                                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                                                    />
+                                                </div>
 
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                                                    Thumbnail File
-                                                </label>
-                                                <input
-                                                    type="file"
-                                                    accept="image/*"
-                                                    name="thumbnail"
-                                                    className="w-full text-sm text-gray-700 dark:text-gray-200
-                                                             file:mr-4 file:py-2 file:px-4
-                                                             file:rounded-lg file:border-0
-                                                             file:text-sm file:font-medium
-                                                             file:bg-gray-400 file:text-white
-                                                             hover:file:bg-gray-500
-                                                             bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700
-                                                             rounded-lg px-2 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500
-                                                             outline-none transition"
-                                                />
-                                            </div>
-
-                                            <div className="flex justify-end gap-3 pt-4">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setIsOpen(false)}
-                                                    className="px-5 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-                                                >
-                                                    Cancel
-                                                </button>
-                                                <button
-                                                    type="submit"
-                                                    onClick={() => setIsOpen(false)}
-                                                    className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                                        Video File
+                                                    </label>
+                                                    <input
+                                                        type="file"
+                                                        name="video_file"
+                                                        accept="video/*"
+                                                        className="w-full text-sm text-gray-700 dark:text-gray-200
+                                                                file:mr-4 file:py-2 file:px-4
+                                                                file:rounded-lg file:border-0
+                                                                file:text-sm file:font-medium
+                                                                file:bg-gray-400 file:text-white
+                                                                hover:file:bg-gray-500
+                                                                bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700
+                                                                rounded-lg px-2 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500
+                                                                outline-none transition"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                                        Thumbnail File
+                                                    </label>
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        name="thumbnail"
+                                                        className="w-full text-sm text-gray-700 dark:text-gray-200
+                                                                file:mr-4 file:py-2 file:px-4
+                                                                file:rounded-lg file:border-0
+                                                                file:text-sm file:font-medium
+                                                                file:bg-gray-400 file:text-white
+                                                                hover:file:bg-gray-500
+                                                                bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700
+                                                                rounded-lg px-2 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500
+                                                                outline-none transition"
+                                                    />
+                                                </div>
+                                                <div className="flex justify-end gap-3 pt-4">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setIsOpen(false)}
+                                                        className="px-5 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
                                                     >
-                                                    Save Video
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </Dialog.Panel>
-                                </Transition.Child>
-                            </div>
-                        </Dialog>
-                    </Transition>
+                                                        Cancel
+                                                    </button>
+                                                    <button
+                                                        type="submit"
+                                                        className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
+                                                    >
+                                                        Save Video
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </Dialog.Panel>
+                                    </motion.div>
+                                </div>
+                            </Dialog>
+                        )}
+                    </AnimatePresence>
                 </div>
             </div>
             <div className="flex-1">
