@@ -3,6 +3,8 @@ import React, { useState, useEffect } from "react";
 import Stack, { onEntryChange } from "@/lib/cstack";
 import Link from "next/link";
 import DOMPurify from "isomorphic-dompurify";
+import { AnimatePresence, motion } from "framer-motion";
+import { Dialog } from "@headlessui/react";
 
 import { Card } from "@/components/ui/card";
 import BookmarkButton from "@/components/bookmark-button";
@@ -12,7 +14,7 @@ export default function DemoInstructions() {
     const [entry, setEntry] = useState({});
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
-
+    const [isOpen, setIsOpen] = useState(false)
     const {
         isBookmarked,
         toggleBookmark,
@@ -33,6 +35,8 @@ export default function DemoInstructions() {
     useEffect(() => {
         onEntryChange(getContent);
     }, []);
+
+    const handleSubmit = async (e) => {};
 
     const filteredDemos = entry?.demo_instructions?.filter((demo) => {
         const query = searchQuery.toLowerCase();
@@ -72,9 +76,88 @@ export default function DemoInstructions() {
         <div className="pl-10 pt-6 min-h-screen flex flex-col w-full">
             <div className="flex justify-between items-center mb-6 pt-6">
                 <h1 className="text-4xl font-bold ml-4">{entry?.title}</h1>
+                <AnimatePresence>
+                        {isOpen && (
+                            <Dialog
+                                className="fixed inset-0 z-50"
+                                open={isOpen}
+                                onClose={() => setIsOpen(false)}
+                            >
+                                <motion.div
+                                    className="fixed inset-0 bg-black/50"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.5 }}
+                                    aria-hidden="true"
+                                />
+
+                                <div className="fixed inset-0 flex items-center justify-center p-6">
+                                    <motion.div
+                                        className="w-full max-w-xl mx-auto"
+                                        initial={{ opacity: 0, scale: 0.96, y: -8 }}
+                                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 0.96, y: -8 }}
+                                        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                                    >
+                                        <Dialog.Panel className="w-full rounded-xl bg-white dark:bg-gray-700 p-8 shadow-2xl">
+                                            <Dialog.Title className="font-bold text-2xl mb-4">Add Instructions</Dialog.Title>
+
+                                            <form onSubmit={handleSubmit} className="space-y-5 w-full">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                                        Title
+                                                    </label>
+                                                    <input
+                                                        name="title"
+                                                        type="text"
+                                                        placeholder="Enter demo title"
+                                                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                                        Demo Description
+                                                    </label>
+                                                    <textarea
+                                                        name="description"
+                                                        rows="3"
+                                                        placeholder="Describe the demo..."
+                                                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition resize-none"
+                                                    ></textarea>
+                                                </div>
+
+                                        
+
+
+
+                                                <div className="flex justify-end gap-3 pt-4">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setIsOpen(false)}
+                                                        className="px-5 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                    <button
+                                                        type="submit"
+                                                        className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
+                                                    >
+                                                        Save Demo
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </Dialog.Panel>
+                                    </motion.div>
+                                </div>
+                            </Dialog>
+                        )}
+                    </AnimatePresence>
 
                 <div className="flex items-center gap-2 mr-4">
                     <button
+                    onClick={() => setIsOpen(true)}
                         type="button"
                         className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
                     >
