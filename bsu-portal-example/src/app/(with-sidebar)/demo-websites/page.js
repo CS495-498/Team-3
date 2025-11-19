@@ -6,11 +6,10 @@ import Image from "next/image";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import BookmarkButton from "@/components/bookmark-button";
 import { BOOKMARK_TYPES, useBookmarks } from "@/hooks/use-bookmarks";
-import appendDemoWebsite from "@/app/api/appendDemoWebsite";
-import postAsset from "@/app/api/postAsset";
+import appendDemoWebsite from "@/app/api/helper/appendDemoWebsite";
+import postAsset from "@/app/api/helper/postAsset";
 import SuccessToast from "@/components/ui/success-toast.jsx";
 import { AnimatePresence, motion } from "framer-motion";
-
 
 import {
     Card,

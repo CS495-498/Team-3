@@ -1,7 +1,7 @@
 "use client";
 
-import postAsset from "@/app/api/postAsset";
-import appendVideo from "@/app/api/appendVideo";
+import postAsset from "@/app/api/helper/postAsset";
+import appendVideo from "@/app/api/helper/appendVideo";
 
 import React, { useState, useEffect, Fragment } from "react";
 import Stack, { onEntryChange } from "@/lib/cstack";
