@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import sinon from "sinon";
-import createAssetFormData from "../../src/app/api/helper/createAssetFormData.js";
+import createAssetFormData from "../../src/app/api/helper/postAsset.js";
 
 describe("createAssetFormData()", () => {
   let fetchStub;

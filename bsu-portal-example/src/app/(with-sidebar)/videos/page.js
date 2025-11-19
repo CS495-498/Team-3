@@ -1,6 +1,6 @@
 "use client";
 
-import createAssetFormData from "@/app/api/helper/createAssetFormData";
+import postAsset from "@/app/api/helper/postAsset";
 import appendVideo from "@/app/api/helper/appendVideo";
 
 import React, { useState, useEffect, Fragment } from "react";
@@ -127,7 +127,7 @@ export default function VideoLibrary() {
         // Step 2: Upload video and thumbnail assets
         const uploadedVideo =
         videoProvided
-            ? await createAssetFormData(
+            ? await postAsset(
                 videoFile,
                 json_data.title,
                 json_data.description,
@@ -138,7 +138,7 @@ export default function VideoLibrary() {
 
         const uploadedThumb =
         thumbnailFile && thumbnailFile.size > 0
-            ? await createAssetFormData(
+            ? await postAsset(
                 thumbnailFile,
                 `${json_data.title} Thumbnail`,
                 "Video thumbnail",
