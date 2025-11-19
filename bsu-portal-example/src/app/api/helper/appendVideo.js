@@ -13,11 +13,12 @@ export default function appendVideo(entry, newVideo) {
   const existingVideos = Array.isArray(entry?.videos) ? entry.videos : [];
 
   const simplifiedVideos = extractFields(existingVideos, [
-    "video_file",
-    "thumbnail",
-    "title",
-    "description",
-    "se_name",
+      "video_url",
+      "video_file",
+      "thumbnail",
+      "title",
+      "description",
+      "se_name",
   ]);
 
   return [...simplifiedVideos, newVideo];
