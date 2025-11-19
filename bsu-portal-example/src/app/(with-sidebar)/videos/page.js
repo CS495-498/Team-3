@@ -16,6 +16,43 @@ import {
 
 import {Dialog, Transition } from '@headlessui/react'
 
+function getVideoEmbed(video) {
+    const url = video?.video_url || video?.video_file?.url;
+    if (!url) return null;
+
+    // --- YouTube Detection ---
+    const youtubeMatch = url.match(
+        /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/
+    );
+    if (youtubeMatch) {
+        return {
+            type: "youtube",
+            id: youtubeMatch[1],
+            embedUrl: `https://www.youtube.com/embed/${youtubeMatch[1]}`,
+        };
+    }
+
+    // --- Vimeo Detection ---
+    const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+    if (vimeoMatch) {
+        return {
+            type: "vimeo",
+            id: vimeoMatch[1],
+            embedUrl: `https://player.vimeo.com/video/${vimeoMatch[1]}`,
+        };
+    }
+
+    // --- Direct Video File ---
+    if (url.match(/\.(mp4|mov|webm|m4v)$/i) || video?.video_file?.url) {
+        return {
+            type: "file",
+            embedUrl: url,
+        };
+    }
+
+    return null;
+}
+
 
 export default function VideoLibrary() {
   const [entry, setEntry] = useState({});
@@ -73,21 +110,26 @@ export default function VideoLibrary() {
     }
 
     try {
+        const videoURL = data.get("video_url").trim();
         const videoFile = data.get("video_file");
         const thumbnailFile = data.get("thumbnail");
+        const titleProvided = data.get("title") && data.get("title").length > 0;
+
 
         // Require a title and a valid video file
-        const titleProvided = json_data.title?.trim()?.length > 0;
+        const urlProvided = videoURL && videoURL.length > 0;
         const videoProvided = videoFile && videoFile.size > 0;
 
-        if (!titleProvided || !videoProvided) {
-        alert("Please provide both a title and a video file before submitting.");
-        return;
+        if (!titleProvided || (!videoProvided && !urlProvided) || (videoProvided && urlProvided)) {
+            alert("Please provide a title and either a video file OR a video URL.");
+            return;
         }
 
-        // Step 2: Upload video and thumbnail assets
-        const uploadedVideo =
-        videoProvided
+
+        // Step 2: Upload video and thumbnail asset
+
+
+        const uploadedVideo = videoProvided
             ? await postAsset(
                 videoFile,
                 json_data.title,
@@ -110,13 +152,15 @@ export default function VideoLibrary() {
 
         // Step 3: Build the new video object
         const newVideo = {
-        video_file: uploadedVideo?.asset?.uid || null,
-        thumbnail: uploadedThumb?.asset?.uid || null,
-        title: json_data.title,
-        description: json_data.description,
-        se_name: json_data.se_name,
-        date_posted: json_data.date_posted || new Date().toISOString(),
+            video_file: uploadedVideo?.asset?.uid || null,
+            video_url: urlProvided ? json_data.video_url : null,
+            thumbnail: uploadedThumb?.asset?.uid || null,
+            title: json_data.title,
+            description: json_data.description,
+            se_name: json_data.se_name,
+            date_posted: json_data.date_posted || new Date().toISOString(),
         };
+
 
         // Step 4: Use helper to append the new video
         const updatedVideos = appendVideo(entry, newVideo);
@@ -264,24 +308,40 @@ export default function VideoLibrary() {
                                             </div>
 
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                                                    Video File
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+                                                    Add Video File
                                                 </label>
+
                                                 <input
                                                     type="file"
                                                     name="video_file"
                                                     accept="video/*"
                                                     className="w-full text-sm text-gray-700 dark:text-gray-200
-                                                             file:mr-4 file:py-2 file:px-4
-                                                             file:rounded-lg file:border-0
-                                                             file:text-sm file:font-medium
-                                                             file:bg-gray-400 file:text-white
-                                                             hover:file:bg-gray-500
-                                                             bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700
-                                                             rounded-lg px-2 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500
-                                                             outline-none transition"
-                                                />
+                                                              file:mr-4 file:py-2 file:px-4
+                                                              file:rounded-lg file:border-0
+                                                              file:text-sm file:font-medium
+                                                              file:bg-gray-400 file:text-white
+                                                              hover:file:bg-gray-500
+                                                              bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700
+                                                              rounded-lg px-2 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500
+                                                              outline-none transition"/>
+
+                                                <div className="flex items-center my-4">
+                                                    <div className="flex-grow border-t border-gray-300"></div>
+                                                    <span className="mx-3 text-xs text-gray-500 uppercase tracking-wide">or</span>
+                                                    <div className="flex-grow border-t border-gray-300"></div>
+                                                </div>
+
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                                    Input URL Link
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    name="video_url"
+                                                    placeholder="https://example.com/video.mp4"
+                                                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition"/>
                                             </div>
+
 
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
@@ -336,47 +396,87 @@ export default function VideoLibrary() {
                                 key={index}
                                 className="h-[350px] flex flex-col shadow-md hover:shadow-lg hover:scale-[1.02] transition-all duration-200"
                             >
-                                <div className="relative w-full h-[2300px] bg-black rounded-t-lg overflow-hidden">
-                                {playingIndex === index ? (
-                                    <video
-                                    className="w-full h-full object-cover"
-                                    controls
-                                    autoPlay
-                                    poster={video?.thumbnail?.url || ""}
-                                    >
-                                    <source src={video?.video_file?.url} type="video/mp4" />
-                                    Your browser does not support the video tag.
-                                    </video>
-                                ) : (
-                                    <>
-                                    <img
-                                        src={video?.thumbnail?.url}
-                                        alt={video?.title || "Video thumbnail"}
-                                        className="w-full h-full object-cover cursor-pointer transition-opacity hover:opacity-80"
-                                        onClick={() => setPlayingIndex(index)}
-                                    />
-                                    <div
-                                        className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
-                                        onClick={() => setPlayingIndex(index)}
-                                    >
-                                        <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        fill="white"
-                                        viewBox="0 0 24 24"
-                                        strokeWidth="1.5"
-                                        stroke="white"
-                                        className="w-14 h-14"
-                                        >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            d="M8.25 4.5v15l11.25-7.5L8.25 4.5z"
-                                        />
-                                        </svg>
-                                    </div>
-                                    </>
-                                )}
+                                <div className="relative w-full h-[230px] bg-black rounded-t-lg overflow-hidden">
+                                    {(() => {
+                                        const media = getVideoEmbed(video);
+
+                                        if (playingIndex === index) {
+                                            return (
+                                                <>
+                                                    {/* YouTube */}
+                                                    {media?.type === "youtube" && (
+                                                        <iframe
+                                                            className="w-full h-full"
+                                                            src={media.embedUrl}
+                                                            title="YouTube video player"
+                                                            frameBorder="0"
+                                                            allow="accelerometer; autoplay; clipboard-write;
+                                   encrypted-media; gyroscope; picture-in-picture"
+                                                            allowFullScreen
+                                                        ></iframe>
+                                                    )}
+
+                                                    {/* Vimeo */}
+                                                    {media?.type === "vimeo" && (
+                                                        <iframe
+                                                            className="w-full h-full"
+                                                            src={media.embedUrl}
+                                                            title="Vimeo player"
+                                                            frameBorder="0"
+                                                            allow="autoplay; fullscreen; picture-in-picture"
+                                                            allowFullScreen
+                                                        ></iframe>
+                                                    )}
+
+                                                    {/* Direct Video File */}
+                                                    {media?.type === "file" && (
+                                                        <video
+                                                            className="w-full h-full object-cover"
+                                                            controls
+                                                            autoPlay
+                                                            poster={video?.thumbnail?.url || ""}
+                                                        >
+                                                            <source src={media.embedUrl} type="video/mp4" />
+                                                        </video>
+                                                    )}
+                                                </>
+                                            );
+                                        }
+
+                                        // Thumbnail mode (not playing)
+                                        return (
+                                            <>
+                                                <img
+                                                    src={video?.thumbnail?.url}
+                                                    alt={video?.title || "Video thumbnail"}
+                                                    className="w-full h-full object-cover cursor-pointer transition-opacity hover:opacity-80"
+                                                    onClick={() => setPlayingIndex(index)}
+                                                />
+
+                                                <div
+                                                    className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
+                                                    onClick={() => setPlayingIndex(index)}
+                                                >
+                                                    <svg
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        fill="white"
+                                                        viewBox="0 0 24 24"
+                                                        strokeWidth="1.5"
+                                                        stroke="white"
+                                                        className="w-14 h-14"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            d="M8.25 4.5v15l11.25-7.5L8.25 4.5z"
+                                                        />
+                                                    </svg>
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
                                 </div>
+
 
                                 <CardHeader className="flex-grow flex flex-col justify-between">
                                 <div>
