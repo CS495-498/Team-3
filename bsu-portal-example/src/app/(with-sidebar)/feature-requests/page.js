@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { ChevronsUp, ChevronsDown, MessageSquare } from "lucide-react";
+import SuccessToast from "@/components/ui/success-toast.jsx";
+
 
 import AddFeatureRequest from "@/components/featureRequestModal";
 import CommentsDialog from "@/components/commentsDialog";
 
-// Data helpers
 import { getFeatureRequests } from "@/lib/featureRequests/requests/getFeatureRequests";
 import { getUserVotes } from "@/lib/featureRequests/requests/getUserVotes";
 import { castVote } from "@/lib/featureRequests/votes/castVote";
@@ -21,8 +22,10 @@ export default function Home() {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [comments, setComments] = useState([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [showToast, setShowToast] = useState(false);
 
-  useEffect(() => {
+
+    useEffect(() => {
     Promise.all([getFeatureRequests(), getUserVotes()])
         .then(([reqs, userVotes]) => {
           setRequests(reqs);
@@ -55,7 +58,6 @@ export default function Home() {
   const handleVote = async (id, type) => {
     const previousVote = votes[id];
 
-    // Update vote state immediately
     setVotes((prev) => ({
       ...prev,
       [id]: previousVote === type ? null : type,
@@ -95,7 +97,12 @@ export default function Home() {
 
   return (
       <main className="pt-6 px-10 min-h-screen w-full">
-        <div className="flex justify-between items-center mb-6 pt-6">
+          <SuccessToast
+              message="Feature request added!"
+              isOpen={showToast}
+              onClose={() => setShowToast(false)}
+          />
+          <div className="flex justify-between items-center mb-6 pt-6">
           <h1 className="text-4xl font-bold ml-4">Feature Requests</h1>
           <AddFeatureRequest
               onAdded={() =>

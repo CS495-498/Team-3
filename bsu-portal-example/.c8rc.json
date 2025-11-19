@@ -1,0 +1,17 @@
+{
+  "reporter": ["text", "html"],
+  "include": [
+    "src/app/api/**/*.js"
+  ],
+  "exclude": [
+    "test/**",
+    ".next/**",
+    "src/app/**/*.page.js",
+    "src/app/**/page.js",
+    "src/app/**/layout.js",
+    "src/app/**/loading.js",
+    "src/app/**/error.js",
+    "src/app/**/components/**"
+  ],
+  "all": true
+}

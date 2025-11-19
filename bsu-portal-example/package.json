@@ -8,7 +8,12 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
-    "test": "mocha"
+    "test": "mocha",
+    "test:unit": "mocha \"test/**/*.test.js\"",
+    "test:coverage": "c8 mocha \"test/**/*.test.js\""
+  },
+  "mocha": {
+    "spec": "test/**/*.test.js"
   },
   "dependencies": {
     "@contentstack/live-preview-utils": "^4.0.1",
@@ -50,6 +55,7 @@
     "cmdk": "^1.1.1",
     "contentstack": "^3.26.2",
     "dompurify": "^3.3.0",
+    "framer-motion": "^12.23.24",
     "isomorphic-dompurify": "^2.30.1",
     "lexical": "^0.38.1",
     "lodash.throttle": "^4.1.1",
@@ -68,12 +74,16 @@
     "@tailwindcss/postcss": "^4",
     "@types/lodash.throttle": "^4.1.9",
     "autoprefixer": "^10.4.21",
-    "chai": "^6.2.0",
+    "c8": "^10.1.3",
+    "chai": "^6.2.1",
     "eslint": "^9",
     "eslint-config-next": "15.5.3",
-    "mocha": "^11.7.4",
+    "mocha": "^11.7.5",
+    "mock-require": "^3.0.3",
     "postcss": "^8.5.6",
     "sass": "^1.93.3",
+    "sinon": "^21.0.0",
+    "source-map-support": "^0.5.21",
     "tailwindcss": "^4.1.13",
     "tw-animate-css": "^1.3.8"
   }
