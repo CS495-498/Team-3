@@ -7,11 +7,10 @@ export default function Page() {
 
     // State
     const [loading, setLoading] = useState(true)
-    const [user] = useState(null)
+    const [user, setUser] = useState(null)
     const emptyProfile = {
         full_name: '',
         username: '',
-        website: '',
     }
     const [profile, setProfile] = useState(emptyProfile)
 
@@ -27,6 +26,7 @@ export default function Page() {
                 setLoading(false)
                 return
             }
+            setUser(user)
 
             try {
                 const { data, error } = await supabase
@@ -41,7 +41,6 @@ export default function Page() {
                     setProfile({
                         full_name: data.full_name ?? '',
                         username: data.username ?? '',
-                        website: data.website ?? '',
                     })
                 } else {
                     setProfile(emptyProfile)
@@ -57,30 +56,34 @@ export default function Page() {
         }
 
         fetchProfile()
-    }, [user, supabase])
+    }, [])
 
     // Update profile
     const updateProfile = async () => {
-        try {
-            setLoading(true)
+        if (loading || !user) {
+            console.warn("User not ready yet.")
+        }
+        else {
+            try {
+                setLoading(true)
 
-            const updates = {
-                id: user.id,
-                full_name: profile.full_name?.trim() || null,
-                username: profile.username?.trim() || null,
-                website: profile.website?.trim() || null,
-                updated_at: new Date().toISOString(),
+                const updates = {
+                    id: user.id,
+                    full_name: profile.full_name?.trim() || null,
+                    username: profile.username?.trim() || null,
+                    updated_at: new Date().toISOString(),
+                }
+
+                const { error } = await supabase.from('profiles').upsert(updates)
+                if (error) throw error
+
+                alert('Profile updated successfully!')
+            } catch (err) {
+                console.error('Error updating profile:', err)
+                alert('Error updating profile.')
+            } finally {
+                setLoading(false)
             }
-
-            const { error } = await supabase.from('profiles').upsert(updates)
-            if (error) throw error
-
-            alert('Profile updated successfully!')
-        } catch (err) {
-            console.error('Error updating profile:', err)
-            alert('Error updating profile.')
-        } finally {
-            setLoading(false)
         }
     }
 
@@ -90,55 +93,33 @@ export default function Page() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col items-center">
+        <div className="min-h-screen bg-gray-100 flex flex-col items-center">
             {/* Profile Banner */}
-            <div className="w-full h-64 bg-gradient-to-r from-indigo-500 to-purple-500 relative">
-                <div className="absolute bottom-[-60px] left-1/2 transform -translate-x-1/2 text-center">
+            <div className="w-full h-40 bg-gradient-to-r from-indigo-500 to-purple-500 relative">
+                <div className="absolute bottom-[5px] left-79 transform -translate-x-1/2 flex items-center gap-5 text-left">
                     <img
                         src={
                             // profile.avatar_url ||
-                            'https://api.dicebear.com/8.x/adventurer/svg?seed=User'
+                            'https://avatar.iran.liara.run/public/4'
                         }
                         alt="Avatar"
-                        className="w-32 h-32 rounded-full border-4 border-white mx-auto"
+                        className="w-37 h-37 rounded-full border-7 border-white-600 mx-auto"
                     />
-                    <h2 className="text-2xl font-semibold mt-3 text-gray-800">
-                        {profile.full_name}
-                    </h2>
-                    <p className="text-gray-500 text-sm">
-                        {profile.username}
-                    </p>
+                    <div className="flex flex-col gap-3">
+                        <h2 className="text-5xl font-bold text-shadow-lg text-white">
+                            {profile.full_name}
+                        </h2>
+                        <p className="bottom-[50px] text-white text-shadow-lg text-2xl">
+                            {profile.username}
+                        </p>
+                    </div>
                 </div>
             </div>
 
             {/* Profile Info + Form */}
-            <div className="mt-10 w-full max-w-4xl grid md:grid-cols-2 gap-6 px-6">
-                {/* Introduction Card */}
-                <div className="bg-white p-6 rounded-2xl shadow-md">
-                    <h3 className="text-lg font-semibold mb-3 text-gray-800">
-                        Introduction
-                    </h3>
-                    <p className="text-gray-600 mb-4">
-                        Hello, I’m {profile.full_name }. I love building
-                        websites and learning web development.
-                    </p>
-                    <ul className="space-y-2 text-gray-600 text-sm">
-                        <li>
-                            <strong>Full name:</strong> {profile.full_name}
-                        </li>
-                        {profile.website && (
-                            <li>
-                                <strong>Website:</strong> {profile.website}
-                            </li>
-                        )}
-                        <li>
-                            <strong>Location:</strong> New York, USA
-                        </li>
-                    </ul>
-                </div>
-
+            <div className="mt-16 w-full flex justify-center px-6">
                 {/* Edit Profile Form */}
-                <div className="bg-white p-6 rounded-2xl shadow-md">
+                <div className="bg-white p-6 rounded-2xl shadow-md w-full max-w-xl">
                     <h3 className="text-lg font-semibold mb-4 text-gray-800">
                         Edit Profile
                     </h3>
@@ -165,18 +146,6 @@ export default function Page() {
                                 }
                             />
                         </div>
-                        <div>
-                            <label className="text-sm text-gray-600">Website</label>
-                            <input
-                                type="url"
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring focus:ring-indigo-300"
-                                value={profile.website ?? ''}
-                                onChange={(e) =>
-                                    handleChange('website', e.target.value)
-                                }
-                            />
-                        </div>
-
                         <button
                             onClick={updateProfile}
                             disabled={loading}
