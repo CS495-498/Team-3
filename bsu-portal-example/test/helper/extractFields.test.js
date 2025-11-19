@@ -1,113 +1,129 @@
 import { expect } from "chai";
-import normalizeVideo from "../../src/app/api/helper/extractFields.js";
+import extractFields from "../../src/app/api/helper/extractFields.js";
 
-describe("normalizeVideo()", () => {
-
-    console.log("normalizeVideo imported:", normalizeVideo);
-
-    // Test case for a fully populated Contentstack asset object
-    it("normalizes a fully populated Contentstack asset object", () => {
-        const input = {
-        title: "My Video",
+describe("extractFields()", () => {
+  it("extracts only specified fields", () => {
+    const array = [
+      {
+        title: "Test Video",
         description: "Desc",
-        se_name: "Test Name",
-        date_posted: "2025-10-01",
+        extra_field: "SHOULD NOT APPEAR",
+      },
+    ];
 
-        video_file: {
-            uid: "video123",
-            _version: 1,
-            title: "example.mp4",
-            created_by: "user123",
-            updated_by: "user123",
-            created_at: "2025-09-10T10:00:00.000Z",
-            updated_at: "2025-09-10T10:00:00.000Z",
-            content_type: "video/mp4",
-            file_size: "123456",
-            filename: "example.mp4",
-            ACL: {},
-            parent_uid: null,
-            is_dir: false,
-            tags: [],
-            publish_details: {
-            time: "2025-09-11T10:00:00.000Z",
-            user: "publisher001",
-            environment: "env123",
-            locale: "en-us",
-            },
-            url: "https://assets.contentstack.io/.../example.mp4",
-        },
+    const result = extractFields(array, ["title", "description"]);
 
-        thumbnail: {
-            uid: "thumb789",
-            _version: 1,
-            title: "thumb.png",
-            created_by: "user123",
-            updated_by: "user123",
-            created_at: "2025-09-10T10:00:00.000Z",
-            updated_at: "2025-09-10T10:00:00.000Z",
-            content_type: "image/png",
-            file_size: "98765",
-            filename: "thumb.png",
-            ACL: {},
-            parent_uid: null,
-            is_dir: false,
-            tags: [],
-            publish_details: {
-            time: "2025-09-11T10:00:00.000Z",
-            user: "publisher001",
-            environment: "env123",
-            locale: "en-us",
-            },
-            url: "https://images.contentstack.io/.../thumb.png",
-        },
-    };
+    expect(result[0]).to.deep.equal({
+      title: "Test Video",
+      description: "Desc",
+    });
+  });
 
-        // Test normalization
-        const result = normalizeVideo(input);
+  it("extracts asset UID when field is an object with .uid", () => {
+    const array = [
+      {
+        video_file: { uid: "asset123" },
+        thumbnail: { uid: "thumb789" },
+      },
+    ];
 
-        // Normalization should flatten to only these fields
-        expect(result).to.deep.equal({
-        title: "My Video",
-        description: "Desc",
-        se_name: "Test Name",
-        date_posted: "2025-10-01",
-        video_file: "video123",
-        thumbnail: "thumb789",
-        });
+    const result = extractFields(array, ["video_file", "thumbnail"]);
+
+    expect(result[0]).to.deep.equal({
+      video_file: "asset123",
+      thumbnail: "thumb789",
+    });
+  });
+
+  it("keeps raw primitive values (string/number/etc)", () => {
+    const array = [
+      {
+        title: "Hello",
+        description: "World",
+        se_name: "slug-123",
+      },
+    ];
+
+    const result = extractFields(array, ["title", "description", "se_name"]);
+
+    expect(result[0]).to.deep.equal({
+      title: "Hello",
+      description: "World",
+      se_name: "slug-123",
+    });
+  });
+
+  it("skips null, undefined, and empty-string fields", () => {
+    const array = [
+      {
+        title: "Valid",
+        description: null,
+        se_name: "",
+        thumbnail: undefined,
+      },
+    ];
+
+    const result = extractFields(array, ["title", "description", "se_name", "thumbnail"]);
+
+    expect(result[0]).to.deep.equal({
+      title: "Valid",
+    });
+  });
+
+  it("always includes date_posted if present", () => {
+    const array = [
+      {
+        title: "Test",
+        date_posted: "2025-01-01",
+      },
+    ];
+
+    const result = extractFields(array, ["title"]);
+
+    expect(result[0]).to.deep.equal({
+      title: "Test",
+      date_posted: "2025-01-01",
+    });
+  });
+
+  it("supports multiple array elements", () => {
+    const array = [
+      { title: "A", video_file: { uid: "1" } },
+      { title: "B", video_file: { uid: "2" } },
+    ];
+
+    const result = extractFields(array, ["title", "video_file"]);
+
+    expect(result).to.deep.equal([
+      { title: "A", video_file: "1" },
+      { title: "B", video_file: "2" },
+    ]);
+  });
+
+  it("does not mutate the original items", () => {
+    const array = [
+      { title: "Original", video_file: { uid: "abc" } },
+    ];
+
+    const originalCopy = JSON.parse(JSON.stringify(array));
+
+    extractFields(array, ["title", "video_file"]);
+
+    expect(array).to.deep.equal(originalCopy);
+  });
+
+  it("returns an empty object when no fields match", () => {
+    const array = [{ something: "x", somethingElse: 123 }];
+
+    const result = extractFields(array, ["title", "video_file"]);
+
+    expect(result[0]).to.deep.equal({});
+  });
+
+    it("returns an empty array when input array is empty", () => {
+    const array = [];
+    const result = extractFields(array, ["title", "video_file"]);
+    expect(result).to.deep.equal([]);
     });
 
-    // Test case for video_file and thumbnail as objects with uid properties
-    it("extracts UID when video_file and thumbnail are objects", () => {
-        const input = {
-        video_file: { uid: "abc001" },
-        thumbnail: { uid: "xyz999" },
-        };
-
-        const result = normalizeVideo(input);
-
-        expect(result.video_file).to.equal("abc001");
-        expect(result.thumbnail).to.equal("xyz999");
-    });
-
-    // Test case for video_file and thumbnail as string UIDs
-    it("keeps string values as-is", () => {
-        const input = {
-        video_file: "file123",
-        thumbnail: "img456",
-        };
-
-        const result = normalizeVideo(input);
-
-        expect(result.video_file).to.equal("file123");
-        expect(result.thumbnail).to.equal("img456");
-    });
-
-    // Test case for missing video_file and thumbnail
-    it("returns null for missing values", () => {
-        const result = normalizeVideo({});
-
-        expect(result.video_file).to.equal(null);
-        expect(result.thumbnail).to.equal(null);
-        expect(result.title).to.equal(null);
-    });
 });
