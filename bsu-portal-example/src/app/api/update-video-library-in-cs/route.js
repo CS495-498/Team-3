@@ -1,11 +1,8 @@
 import { NextResponse } from "next/server";
-import normalizeVideo from "@/app/api/helper/normalizeVideo";
 
 export async function PUT(req) {
   try {
     const { entryUid, videos } = await req.json();
-
-    const cleanedVideos = videos.map(normalizeVideo);
 
     // Step 1: Update the entry in Contentstack
     const updateResponse = await fetch(
@@ -17,7 +14,7 @@ export async function PUT(req) {
           authorization: process.env.CONTENTSTACK_MANAGEMENT_TOKEN,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ entry: { videos: cleanedVideos  } }),
+        body: JSON.stringify({ entry: { videos } }),
       }
     );
 

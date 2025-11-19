@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import normalizeVideo from "../../src/app/api/helper/normalizeVideo.js";
+import normalizeVideo from "../../src/app/api/helper/extractFields.js";
 
 describe("normalizeVideo()", () => {
 

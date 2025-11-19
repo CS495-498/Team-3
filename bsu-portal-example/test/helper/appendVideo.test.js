@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import appendVideo from "../../src/app/api/helper/appendVideo.js";
-import normalizeVideo from "../../src/app/api/helper/normalizeVideo.js";
+import normalizeVideo from "../../src/app/api/helper/extractFields.js";
 
 describe("appendVideo()", () => {
 
