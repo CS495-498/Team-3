@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import {useEffect, useState} from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/Supabase/client.js'
 
@@ -10,7 +10,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
-  const [showRegister, setShowRegister] = useState(false)
+  const [showRegister, setShowRegister] = useState(false);
+    const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -23,7 +25,7 @@ export default function LoginPage() {
     if (error) {
       setMessage(error.message)
     } else {
-      setMessage('Logged in successfully!')
+        localStorage.setItem("loginMessage", "Logged in");
       router.push('/') // redirect to homepage
     }
 
@@ -50,6 +52,7 @@ export default function LoginPage() {
 
   return (
     <div className="flex h-screen w-screen bg-white">
+
       <div className="relative w-1/2 flex items-center justify-center px-10">
         <div className="w-full max-w-sm">
           {showRegister ? (
