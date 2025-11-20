@@ -83,30 +83,30 @@ export default function DemoInstructions() {
                 <h1 className="text-4xl font-bold ml-4">{entry?.title}</h1>
                 <AnimatePresence>
                     {isOpen && (
-<Dialog
-    className="fixed inset-0 z-50"
-    open={isOpen}
-    onClose={() => setIsOpen(false)}
->
-    <motion.div
-        className="fixed inset-0 bg-black/50"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.5 }}
-        aria-hidden="true"
-    />
+                        <Dialog
+                            className="fixed inset-0 z-50"
+                            open={isOpen}
+                            onClose={() => setIsOpen(false)}
+                        >
+                            <motion.div
+                                className="fixed inset-0 bg-black/50"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.5 }}
+                                aria-hidden="true"
+                            />
 
-    <div className="fixed inset-0 flex items-center justify-center p-6">
-        <motion.div
-            className="w-full max-w-5xl mx-auto"
-            initial={{ opacity: 0, scale: 0.96, y: -8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: -8 }}
-            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        >
-            <Dialog.Panel
-                className="
+                            <div className="fixed inset-0 flex items-center justify-center p-6">
+                                <motion.div
+                                    className="w-full max-w-5xl mx-auto"
+                                    initial={{ opacity: 0, scale: 0.96, y: -8 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.96, y: -8 }}
+                                    transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                                >
+                                    <Dialog.Panel
+                                        className="
                     w-full
                     max-w-5xl
                     h-[95vh]
@@ -119,73 +119,90 @@ export default function DemoInstructions() {
                     shadow-2xl
                     overflow-hidden
                 "
-            >
+                                    >
 
-                {/* Sticky Header */}
-                <div className="sticky top-0 bg-white dark:bg-gray-700 px-4 py-3 border-b border-gray-200 dark:border-gray-600 z-10 flex items-center justify-between">
-                    <Dialog.Title className="font-bold text-2xl">Add Instructions</Dialog.Title>
+                                        {/* Sticky Header */}
+                                        <div className="sticky top-0 bg-white dark:bg-gray-700 px-4 py-3 border-b border-gray-200 dark:border-gray-600 z-10 flex items-center justify-between">
+                                            <Dialog.Title className="font-bold text-2xl">Add Instructions</Dialog.Title>
 
-                    <div className="flex items-center gap-3">
-                        {/* Cancel button moved to top */}
-                        <button
-                            type="button"
-                            onClick={() => setIsOpen(false)}
-                            className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-                        >
-                            Cancel
-                        </button>
+                                            <div className="flex items-center gap-3">
+                                                {/* Cancel button moved to top */}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setIsOpen(false)}
+                                                    className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                                                >
+                                                    Cancel
+                                                </button>
 
-                        {/* Upload button */}
-                        <button
-                            type="submit"
-                            form="dialogForm"
-                            onClick={() => {
-                                const html = editorRef.current?.getHTML();
-                                console.log("Saved content HTML:", html);
-                            }}
-                            className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
-                        >
-                            Upload
-                        </button>
-                    </div>
-                </div>
+                                                {/* Upload button */}
+                                                <button
+                                                    type="button"
+                                                    onClick={async () => {
+                                                        const html = editorRef.current?.getHTML();
+                                                        const title = document.querySelector("input[name='title']").value;
+                                                        const author = "Your Name"; // OR pull from logged-in user
 
-                {/* Scrollable Content */}
-                <div className="flex-1 overflow-y-auto p-8">
+                                                        const res = await fetch("/api/demo-instructions", {
+                                                            method: "POST",
+                                                            headers: { "Content-Type": "application/json" },
+                                                            body: JSON.stringify({ title, html, author }),
+                                                        });
 
-                    <form id="dialogForm" onSubmit={handleSubmit} className="space-y-5 w-full">
+                                                        const data = await res.json();
 
-                        {/* Title input */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                                Title
-                            </label>
-                            <input
-                                name="title"
-                                type="text"
-                                placeholder="Enter demo title"
-                                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition"
-                            />
-                        </div>
+                                                        if (data.success) {
+                                                            console.log("Uploaded successfully:", data);
+                                                            setIsOpen(false); // close dialog
+                                                        } else {
+                                                            console.error("Upload failed:", data.error, data.details);
 
-                        {/* Rich Text Editor */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                                Demo Content
-                            </label>
+                                                        }
+                                                    }}
+                                                    className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
+                                                >
+                                                    Upload
+                                                </button>
 
-                            <div className="w-full min-h-[300px] rounded-md p-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700">
-                                <SimpleEditor html={dialogEditorContent} editorRef={editorRef} />
+                                            </div>
+                                        </div>
+
+                                        {/* Scrollable Content */}
+                                        <div className="flex-1 overflow-y-auto p-8">
+
+                                            <form id="dialogForm" onSubmit={handleSubmit} className="space-y-5 w-full">
+
+                                                {/* Title input */}
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                                        Title
+                                                    </label>
+                                                    <input
+                                                        name="title"
+                                                        type="text"
+                                                        placeholder="Enter demo title"
+                                                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                                                    />
+                                                </div>
+
+                                                {/* Rich Text Editor */}
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                                        Demo Content
+                                                    </label>
+
+                                                    <div className="w-full min-h-[300px] rounded-md p-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700">
+                                                        <SimpleEditor html={dialogEditorContent} editorRef={editorRef} />
+                                                    </div>
+                                                </div>
+
+                                            </form>
+                                        </div>
+
+                                    </Dialog.Panel>
+                                </motion.div>
                             </div>
-                        </div>
-
-                    </form>
-                </div>
-
-            </Dialog.Panel>
-        </motion.div>
-    </div>
-</Dialog>
+                        </Dialog>
 
 
 
