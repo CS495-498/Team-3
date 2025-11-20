@@ -13,6 +13,11 @@ import { getUserVotes } from "@/lib/featureRequests/requests/getUserVotes";
 import { castVote } from "@/lib/featureRequests/votes/castVote";
 import { addComment } from "@/lib/featureRequests/comments/addComments";
 import { getComments } from "@/lib/featureRequests/comments/getComments";
+import CardDropdown from "@/components/cardDropdown.jsx";
+import EditDemoInstructionModal from "@/components/editDemoInstructions.jsx";
+import DeleteModal from "@/components/deleteModal.jsx";
+import EditFeatureRequestModal from "@/components/editFeatureRequestModal.jsx";
+
 
 export default function Home() {
   const [requests, setRequests] = useState([]);
@@ -23,7 +28,9 @@ export default function Home() {
   const [comments, setComments] = useState([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [showToast, setShowToast] = useState(false);
-
+    const [isEditOpen, setIsEditOpen] = useState(false);
+    const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+    const [selectedItem, setSelectedItem] = useState(null);
 
     useEffect(() => {
     Promise.all([getFeatureRequests(), getUserVotes()])
@@ -40,6 +47,38 @@ export default function Home() {
     setSelectedRequest(req);
     setIsDialogOpen(true);
   };
+
+    const openEditModal = (demo) => {
+        setSelectedItem(demo);
+        setIsEditOpen(true);
+    };
+
+    const openDeleteModal = (demo) => {
+        setSelectedItem(demo);
+        setIsDeleteOpen(true);
+    };
+
+    const handleEditSave = (e) => {
+        if (e && e.preventDefault) {
+            e.preventDefault();
+            const form = e.target;
+            const data = new FormData(form);
+            const updated = {
+                ...selectedItem,
+                title: data.get("title"),
+                description: data.get("description"),
+            };
+            console.log("Edited item (placeholder):", updated);
+        } else {
+            console.log("Edited item (placeholder):", e);
+        }
+        setIsEditOpen(false);
+    };
+
+    const handleConfirmDelete = () => {
+        console.log("Delete confirmed for:", selectedItem);
+        setIsDeleteOpen(false);
+    };
 
   const handleAddComment = async (content) => {
     const newComment = await addComment(selectedRequest.id, content);
@@ -123,7 +162,6 @@ export default function Home() {
                         key={req.id}
                         className="flex items-center justify-between py-4 px-4 hover:bg-gray-100 dark:hover:bg-gray-800"
                     >
-                      {/* Vote Buttons */}
                       <div className="flex flex-col items-center space-y-2 ml-2">
                         <button
                             className={`p-1 rounded-md transition ${
@@ -152,7 +190,6 @@ export default function Home() {
                         </button>
                       </div>
 
-                      {/* Request Content */}
                       <div className="flex-1 ml-6">
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-50">
                           {req.title}{" "}
@@ -168,20 +205,24 @@ export default function Home() {
                         </p>
                       </div>
 
-                      {/* Comments Button */}
-                      <button
-                          onClick={() => openCommentsDialog(req)}
-                          className="flex items-center gap-1 px-3 py-2 rounded-md text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700"
-                      >
-                        <MessageSquare className="w-5 h-5" />
-                        <span className="text-sm">{req.commentCount}</span>
-                      </button>
+                        <div className="flex justify-between items-center">
+                            <button
+                              onClick={() => openCommentsDialog(req)}
+                              className="flex items-center gap-1 px-3 py-2 rounded-md text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700"
+                              >
+                                <MessageSquare className="w-5 h-5" />
+                                <span className="text-sm">{req.commentCount}</span>
+                            </button>
+                            <CardDropdown
+                                onEdit={() => openEditModal(req)}
+                                onDelete={() => openDeleteModal(req)}
+                            />
+                        </div>
                     </li>
                 );
               })}
             </ul>
         )}
-
         <CommentsDialog
             isOpen={isDialogOpen}
             onClose={() => setIsDialogOpen(false)}
@@ -189,6 +230,18 @@ export default function Home() {
             comments={comments}
             onAddComment={handleAddComment}
         />
+          <EditFeatureRequestModal
+              isOpen={isEditOpen}
+              closeModal={() => setIsEditOpen(false)}
+              onSave={handleEditSave}
+              item={selectedItem}
+          />
+
+          <DeleteModal
+              isOpen={isDeleteOpen}
+              closeModal={() => setIsDeleteOpen(false)}
+              onDeleteConfirm={handleConfirmDelete}
+          />
       </main>
   );
 }

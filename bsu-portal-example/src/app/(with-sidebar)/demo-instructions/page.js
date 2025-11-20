@@ -13,6 +13,10 @@ import SuccessToast from "@/components/ui/success-toast.jsx";
 import { Card } from "@/components/ui/card";
 import BookmarkButton from "@/components/bookmark-button";
 import { BOOKMARK_TYPES, useBookmarks } from "@/hooks/use-bookmarks";
+import CardDropdown from "@/components/cardDropdown.jsx";
+import EditDemoWebsiteModal from "@/components/editDemoWebsiteModal.jsx";
+import DeleteModal from "@/components/deleteModal.jsx";
+import EditDemoInstructionModal from "@/components/editDemoInstructions.jsx";
 
 export default function DemoInstructions() {
     const [uploadError, setUploadError] = useState("");
@@ -23,6 +27,9 @@ export default function DemoInstructions() {
     const [dialogEditorContent, setDialogEditorContent] = useState("");
     const editorRef = useRef(null);
     const [showToast, setShowToast] = useState(false);
+    const [isEditOpen, setIsEditOpen] = useState(false);
+    const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+    const [selectedItem, setSelectedItem] = useState(null);
 
     const {
         isBookmarked,
@@ -57,6 +64,38 @@ export default function DemoInstructions() {
 
     const getInstructionId = (demo) =>
         demo?.uid || demo?.url || demo?.title;
+
+    const openEditModal = (demo) => {
+        setSelectedItem(demo);
+        setIsEditOpen(true);
+    };
+
+    const openDeleteModal = (demo) => {
+        setSelectedItem(demo);
+        setIsDeleteOpen(true);
+    };
+
+    const handleEditSave = (e) => {
+        if (e && e.preventDefault) {
+            e.preventDefault();
+            const form = e.target;
+            const data = new FormData(form);
+            const updated = {
+                ...selectedItem,
+                title: data.get("title"),
+                description: data.get("description"),
+            };
+            console.log("Edited item (placeholder):", updated);
+        } else {
+            console.log("Edited item (placeholder):", e);
+        }
+        setIsEditOpen(false);
+    };
+
+    const handleConfirmDelete = () => {
+        console.log("Delete confirmed for:", selectedItem);
+        setIsDeleteOpen(false);
+    };
 
     const handleBookmarkToggle = async (demo) => {
         const resourceId = getInstructionId(demo);
@@ -116,21 +155,19 @@ export default function DemoInstructions() {
                                 >
                                     <Dialog.Panel
                                         className="
-                    w-full
-                    max-w-5xl
-                    h-[95vh]
-                    max-h-[95vh]
-                    flex
-                    flex-col
-                    bg-white
-                    dark:bg-gray-700
-                    rounded-xl
-                    shadow-2xl
-                    overflow-hidden
-                "
+                                                w-full
+                                                max-w-5xl
+                                                h-[95vh]
+                                                max-h-[95vh]
+                                                flex
+                                                flex-col
+                                                bg-white
+                                                dark:bg-gray-700
+                                                rounded-xl
+                                                shadow-2xl
+                                                overflow-hidden
+                                            "
                                     >
-
-                                        {/* Sticky Header */}
                                         <div className="sticky top-0 bg-white dark:bg-gray-700 px-4 py-3 border-b border-gray-200 dark:border-gray-600 z-10 flex items-center justify-between">
                                             <Dialog.Title className="font-bold text-2xl">Add Instructions</Dialog.Title>
                                             {uploadError && (
@@ -138,7 +175,6 @@ export default function DemoInstructions() {
                                             )}
 
                                             <div className="flex items-center gap-3">
-                                                {/* Cancel button moved to top */}
                                                 <button
                                                     type="button"
                                                     onClick={() => setIsOpen(false)}
@@ -165,12 +201,12 @@ export default function DemoInstructions() {
 
                                                         if (data.success) {
                                                             console.log("Uploaded successfully:", data);
-                                                            setIsOpen(false);        // close dialog
+                                                            setIsOpen(false);
                                                             setShowToast(true);
                                                             setTimeout(() => {
                                                                 setShowToast(false);
-                                                            }, 2000);      // show success toast
-                                                            getContent();            // refresh list
+                                                            }, 2000);
+                                                            getContent();
                                                         } else {
                                                             console.error("Upload failed:", data.error, data.details);
                                                             if (data.details?.error_code === 119) {
@@ -188,13 +224,8 @@ export default function DemoInstructions() {
 
                                             </div>
                                         </div>
-
-                                        {/* Scrollable Content */}
                                         <div className="flex-1 overflow-y-auto p-8">
-
                                             <form id="dialogForm" onSubmit={handleSubmit} className="space-y-5 w-full">
-
-                                                {/* Title input */}
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                                                         Title
@@ -206,8 +237,6 @@ export default function DemoInstructions() {
                                                         className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition"
                                                     />
                                                 </div>
-
-                                                {/* Rich Text Editor */}
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                                                         Demo Content
@@ -225,20 +254,15 @@ export default function DemoInstructions() {
                                 </motion.div>
                             </div>
                         </Dialog>
-
-
-
                     )}
                 </AnimatePresence>
-
-
                 <div className="flex items-center gap-2 mr-4">
                     <button
                         onClick={() => setIsOpen(true)}
                         type="button"
                         className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
                     >
-                        + Demos
+                        Add Instructions
                     </button>
 
                     <div className="relative w-full max-w-sm">
@@ -279,14 +303,11 @@ export default function DemoInstructions() {
                         );
 
                         return (
-                            <div key={key} className="relative group">
-                                <Link
-                                    href={demo?.url || "#"}
-                                    className="group block h-full bg-white rounded-xl shadow-md hover:shadow-xl transition-all border border-gray-200 overflow-hidden"
-                                >
+                            <div key={key} className="relative group bg-white rounded-xl shadow-md hover:shadow-xl transition-all border border-gray-200">
 
+                                <Link href={demo?.url || "#"} className="block">
                                     <div
-                                        className="relative bg-white"
+                                        className="relative"
                                         style={{
                                             height: "300px",
                                             padding: "20px",
@@ -306,12 +327,11 @@ export default function DemoInstructions() {
                                             }}
                                         />
                                     </div>
+                                </Link>
 
-                                    <div className="px-4 py-4 bg-white flex flex-col gap-2">
-
-                                        {/* Title Row */}
+                                <div className="px-4 py-3 bg-white flex flex-col gap-1 rounded-b-xl">
+                                    <div className="flex justify-between items-center">
                                         <div className="flex items-center gap-2">
-                                            {/* Document Icon */}
                                             <svg
                                                 xmlns="http://www.w3.org/2000/svg"
                                                 width="18"
@@ -331,34 +351,34 @@ export default function DemoInstructions() {
                                                 <line x1="9" y1="9" x2="11" y2="9" />
                                             </svg>
 
-                                            <h2 className="text-lg font-semibold line-clamp-1">
+                                            <h2 className="text-base font-semibold leading-tight line-clamp-1">
                                                 {demo?.title}
                                             </h2>
                                         </div>
-
-                                        {/* Author Row */}
-                                        <div className="flex items-center gap-2 text-gray-500">
-                                            {/* Person Icon */}
-                                            <svg
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                width="18"
-                                                height="18"
-                                                viewBox="0 0 24 24"
-                                                fill="#7C3AED"
-                                                className="shrink-0"
-                                            >
-                                                <circle cx="12" cy="8" r="4" />
-                                                <path d="M4 20c0-4 4-6 8-6s8 2 8 6v1H4v-1z" />
-                                            </svg>
-
-                                            <p className="text-sm line-clamp-1">
-                                                {demo?.author_name || ""}
-                                            </p>
-                                        </div>
+                                        <CardDropdown
+                                            onEdit={() => openEditModal(demo)}
+                                            onDelete={() => openDeleteModal(demo)}
+                                        />
                                     </div>
-                                </Link>
 
+                                    <div className="flex items-center gap-1 text-gray-500 mt-1">
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            width="16"
+                                            height="16"
+                                            viewBox="0 0 24 24"
+                                            fill="#7C3AED"
+                                            className="shrink-0"
+                                        >
+                                            <circle cx="12" cy="8" r="4" />
+                                            <path d="M4 20c0-4 4-6 8-6s8 2 8 6v1H4v-1z" />
+                                        </svg>
 
+                                        <p className="text-xs line-clamp-1">
+                                            {demo?.author_name || ""}
+                                        </p>
+                                    </div>
+                                </div>
                                 <BookmarkButton
                                     active={instructionId ? isBookmarked(instructionId) : false}
                                     disabled={!instructionId || isPending(instructionId)}
@@ -372,6 +392,18 @@ export default function DemoInstructions() {
                     })}
                 </div>
             </div>
+            <EditDemoInstructionModal
+                isOpen={isEditOpen}
+                closeModal={() => setIsEditOpen(false)}
+                onSave={handleEditSave}
+                item={selectedItem}
+            />
+
+            <DeleteModal
+                isOpen={isDeleteOpen}
+                closeModal={() => setIsDeleteOpen(false)}
+                onDeleteConfirm={handleConfirmDelete}
+            />
         </div>
     );
 }

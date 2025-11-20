@@ -21,6 +21,11 @@ import {
 } from "@/components/ui/card";
 
 import { Dialog } from "@headlessui/react";
+import EditVideoLibraryModal from "@/components/editVideoLibraryModal.jsx";
+import DeleteModal from "@/components/deleteModal.jsx";
+import CardDropdown from "@/components/cardDropdown.jsx";
+
+import { X } from "lucide-react";
 
 /* ---------------------------------------------------------------------------------------
    EMBED DETECTOR — NOW INCLUDED IN THIS FILE
@@ -72,6 +77,20 @@ export default function VideoLibrary() {
     const [searchQuery, setSearchQuery] = useState("");
     const [showToast, setShowToast] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
+    const [isEditOpen, setIsEditOpen] = useState(false);
+    const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+
+    const [selectedItem, setSelectedItem] = useState(null);
+
+    const openEditModal = (demo) => {
+        setSelectedItem(demo);
+        setIsEditOpen(true);
+    };
+
+    const openDeleteModal = (demo) => {
+        setSelectedItem(demo);
+        setIsDeleteOpen(true);
+    };
 
     const { isBookmarked, toggleBookmark, isPending } = useBookmarks(
         BOOKMARK_TYPES.VIDEO
@@ -240,6 +259,28 @@ export default function VideoLibrary() {
         }
     };
 
+    const handleEditSave = (e) => {
+        if (e && e.preventDefault) {
+            e.preventDefault();
+            const form = e.target;
+            const data = new FormData(form);
+            const updated = {
+                ...selectedItem,
+                title: data.get("title"),
+                description: data.get("description"),
+            };
+            console.log("Edited item (placeholder):", updated);
+        } else {
+            console.log("Edited item (placeholder):", e);
+        }
+        setIsEditOpen(false);
+    };
+
+    const handleConfirmDelete = () => {
+        console.log("Delete confirmed for:", selectedItem);
+        setIsDeleteOpen(false);
+    };
+
     /* -----------------------------------------------------------------------------------
         RENDER
     ----------------------------------------------------------------------------------- */
@@ -262,32 +303,30 @@ export default function VideoLibrary() {
             <div className="flex justify-between items-center mb-6 pt-6">
                 <h1 className="text-4xl font-bold ml-4">{entry?.title}</h1>
 
-                <div className="flex items-center gap-3 mr-4">
-
-                    {/* Add Video Button */}
+                <div className="flex items-center gap-2 mr-4">
                     <button
                         type="button"
                         onClick={() => setIsOpen(true)}
-                        className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 font-medium rounded-md text-sm px-4 py-2"
+                        className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
                     >
                         Add Video
                     </button>
 
-                    {/* Search */}
                     <div className="relative w-full max-w-sm dark:text-black">
                         <input
                             type="text"
                             placeholder="Search videos..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 pl-10 text-sm"
+                            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 pl-10 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
                         />
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
-                            className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
                             fill="none"
                             viewBox="0 0 24 24"
                             strokeWidth="1.5"
+                            stroke="currentColor"
+                            className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
                         >
                             <path
                                 strokeLinecap="round"
@@ -297,114 +336,161 @@ export default function VideoLibrary() {
                         </svg>
                     </div>
 
-                    {/* Modal */}
                     <AnimatePresence>
                         {isOpen && (
                             <Dialog
                                 className="fixed inset-0 z-50"
                                 open={isOpen}
-                                onClose={() => setIsOpen(false)}
+                                onClose={() => (setIsOpen(false))}
+
                             >
                                 <motion.div
                                     className="fixed inset-0 bg-black/50"
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.4 }}
+                                    aria-hidden="true"
                                 />
 
                                 <div className="fixed inset-0 flex items-center justify-center p-6">
                                     <motion.div
-                                        className="w-full max-w-lg mx-auto"
                                         initial={{ opacity: 0, scale: 0.96, y: -8 }}
                                         animate={{ opacity: 1, scale: 1, y: 0 }}
                                         exit={{ opacity: 0, scale: 0.96, y: -8 }}
+                                        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                                        className="w-full max-w-3xl mx-auto"
                                     >
-                                        <Dialog.Panel className="w-full rounded-2xl bg-white dark:bg-gray-700 shadow-2xl p-8">
-                                            <h4 className="font-bold text-2xl mb-4 text-gray-900 dark:text-gray-100">
-                                                Add A Video
-                                            </h4>
+                                        <Dialog.Panel className="w-full rounded-xl bg-white dark:bg-gray-800 p-8 shadow-2xl">
+                                            <div className="flex justify-between items-center mb-6">
+                                                <Dialog.Title className="font-bold text-2xl">
+                                                    Add Video
+                                                </Dialog.Title>
+                                                <button onClick={() => (setIsOpen(false))}>
+                                                    <X className="h-6 w-6 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300" />
+                                                </button>
+                                            </div>
 
-                                            {/* FORM */}
                                             <form onSubmit={handleSubmit} className="space-y-5">
-                                                {/* TITLE */}
-                                                <div>
-                                                    <label className="block text-sm font-medium">Title</label>
-                                                    <input
-                                                        type="text"
-                                                        name="title"
-                                                        className="w-full rounded-lg border px-4 py-2"
-                                                    />
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="block text-sm font-medium dark:text-gray-200 mb-1">
+                                                            Title
+                                                        </label>
+                                                        <input
+                                                            name="title"
+                                                            className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                                                            required
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium dark:text-gray-200 mb-1">
+                                                            Date Posted
+                                                        </label>
+                                                        <input
+                                                            name="date_posted"
+                                                            type="date"
+                                                            className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                                                        />
+                                                    </div>
                                                 </div>
 
-                                                {/* DESCRIPTION */}
-                                                <div>
-                                                    <label className="block text-sm font-medium">
-                                                        Video Description
-                                                    </label>
-                                                    <textarea
-                                                        name="description"
-                                                        rows="3"
-                                                        className="w-full rounded-lg border px-4 py-2 resize-none"
-                                                    ></textarea>
-                                                </div>
-
-                                                {/* DATE */}
-                                                <div>
-                                                    <label className="block text-sm font-medium">Date Posted</label>
-                                                    <input type="date" name="date_posted" className="w-full rounded-lg border px-4 py-2" />
-                                                </div>
-
-                                                {/* SE NAME */}
-                                                <div>
-                                                    <label className="block text-sm font-medium">SE Name</label>
-                                                    <input type="text" name="se_name" className="w-full rounded-lg border px-4 py-2" />
-                                                </div>
-
-                                                {/* FILE OR URL */}
-                                                <div>
-                                                    <label className="block text-sm font-medium mb-1">
-                                                        Add Video File
-                                                    </label>
-                                                    <input type="file" name="video_file" accept="video/*" className="w-full rounded-lg border px-2 py-2" />
-
-                                                    {/* Divider */}
-                                                    <div className="flex items-center my-4">
-                                                        <div className="flex-grow border-t border-gray-300"></div>
-                                                        <span className="mx-3 text-xs text-gray-500 uppercase tracking-wide">or</span>
-                                                        <div className="flex-grow border-t border-gray-300"></div>
+                                                <div className="flex items-center gap-4">
+                                                    <div className="flex-1">
+                                                        <div>
+                                                            <label className="block text-sm font-medium dark:text-gray-200 mb-1">
+                                                                Video File
+                                                            </label>
+                                                            <input
+                                                                name="video_file"
+                                                                type="file"
+                                                                accept="video/*"
+                                                                className="w-full text-sm text-gray-700 dark:text-gray-200
+                          file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0
+                          file:text-sm file:font-medium file:bg-gray-400 file:text-white
+                          hover:file:bg-gray-500 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700
+                          rounded-lg px-2 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500
+                          outline-none transition"/>
+                                                            <small className="text-gray-600">File will remain unchanged if left blank.</small>
+                                                        </div>
+                                                    </div>
+                                                    <div className="relative flex items-center justify-center w-12">
+                                                        {/* Divider aligned with input center */}
+                                                        <div className="absolute top-1/2 transform -translate-y-1/3 left-0 right-0 border-t border-gray-300 dark:border-gray-600"></div>
+                                                        <span className="relative px-2 text-xs font-medium text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800">
+                                                or
+                                            </span>
                                                     </div>
 
-                                                    <label className="block text-sm font-medium mb-1">
-                                                        Input URL Link
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        name="video_url"
-                                                        placeholder="https://youtube.com/watch?v=VIDEO"
-                                                        className="w-full rounded-lg border px-4 py-2"
-                                                    />
+                                                    <div className="flex-1">
+                                                        <label className="block text-sm font-medium dark:text-gray-200 mb-1">
+                                                            Video URL
+                                                        </label>
+                                                        <input
+                                                            name="link"
+                                                            type="url"
+                                                            placeholder="https://youtube.com/watch?v=VIDEO"
+                                                            className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                                                        />
+                                                    </div>
                                                 </div>
 
-                                                {/* THUMBNAIL */}
-                                                <div>
-                                                    <label className="block text-sm font-medium">Thumbnail File</label>
-                                                    <input type="file" name="thumbnail" accept="image/*" className="w-full rounded-lg border px-2 py-2" />
+
+                                                <div className="space-y-4">
+                                                    <div>
+                                                        <label className="block text-sm font-medium dark:text-gray-200 mb-1">
+                                                            SE Name
+                                                        </label>
+                                                        <input
+                                                            name="se_name"
+                                                            className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                                                        />
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block text-sm font-medium dark:text-gray-200 mb-1">
+                                                            Description
+                                                        </label>
+                                                        <textarea
+                                                            name="description"
+                                                            rows={3}
+                                                            className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none transition resize-none"
+                                                        />
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block text-sm font-medium dark:text-gray-200">
+                                                            Thumbnail
+                                                        </label>
+                                                        <input
+                                                            name="thumbnail"
+                                                            type="file"
+                                                            accept="image/*"
+                                                            className="w-full text-sm text-gray-700 dark:text-gray-200
+                          file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0
+                          file:text-sm file:font-medium file:bg-gray-400 file:text-white
+                          hover:file:bg-gray-500 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700
+                          rounded-lg px-2 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500
+                          outline-none transition"
+                                                        />
+                                                    </div>
+                                                    <small className="text-gray-600">File will remain unchanged if left blank.</small>
                                                 </div>
 
-                                                {/* SUBMIT BUTTON */}
+                                                {/* Footer Buttons */}
                                                 <div className="flex justify-end gap-3 pt-4">
                                                     <button
                                                         type="button"
-                                                        onClick={() => setIsOpen(false)}
-                                                        className="px-5 py-2 rounded-lg border"
+                                                        onClick={() => (setIsOpen(false))}
+                                                        className="px-5 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
                                                     >
                                                         Cancel
                                                     </button>
                                                     <button
                                                         type="submit"
-                                                        className="px-4 py-2 bg-purple-600 text-white rounded-lg"
+                                                        className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition"
                                                     >
-                                                        Save Video
+                                                        Save Changes
                                                     </button>
                                                 </div>
                                             </form>
@@ -414,6 +500,7 @@ export default function VideoLibrary() {
                             </Dialog>
                         )}
                     </AnimatePresence>
+
                 </div>
             </div>
 
@@ -515,12 +602,15 @@ export default function VideoLibrary() {
 
                                             {/* ------------------ TEXT CONTENT ------------------ */}
                                             <CardHeader className="flex-grow">
-                                                <CardTitle className="truncate">{video.title}</CardTitle>
-                                                {video.description && (
-                                                    <CardDescription className="line-clamp-3">
-                                                        {video.description}
-                                                    </CardDescription>
-                                                )}
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <CardTitle className="text-lg font-semibold leading-tight line-clamp-1">
+                                                        {video.title}
+                                                    </CardTitle>
+                                                    <CardDropdown
+                                                        onEdit={() => openEditModal(video)}
+                                                        onDelete={() => openDeleteModal(video)}
+                                                    />
+                                                </div>
                                             </CardHeader>
 
                                             <CardFooter>
@@ -532,6 +622,7 @@ export default function VideoLibrary() {
                                                 )}
                                             </CardFooter>
                                         </Card>
+
 
                                         {/* BOOKMARK BUTTON */}
                                         <BookmarkButton
@@ -569,6 +660,18 @@ export default function VideoLibrary() {
                     </div>
                 )}
             </div>
+            <EditVideoLibraryModal
+                isOpen={isEditOpen}
+                closeModal={() => setIsEditOpen(false)}
+                onSave={handleEditSave}
+                item={selectedItem}
+            />
+
+            <DeleteModal
+                isOpen={isDeleteOpen}
+                closeModal={() => setIsDeleteOpen(false)}
+                onDeleteConfirm={handleConfirmDelete}
+            />
         </div>
     );
 }
