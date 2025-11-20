@@ -116,20 +116,50 @@ export default function ArticleWithEditor({ params }) {
 
             <div className="flex gap-2">
               <Button
-                onClick={() => {
-                  if (editorRef.current) {
-                    const updatedHTML = editorRef.current.getHTML();
-                    setEntry((prev) => ({
-                      ...prev,
-                      blog_content: updatedHTML,
-                    }));
-                  }
-                  setIsOpen(false);
-                }}
-                className=""
-              >
-                Save
-              </Button>
+  onClick={async () => {
+    if (!editorRef.current) return;
+
+    const updatedHTML = editorRef.current.getHTML();
+    const title = entry.title; // keep existing title
+    const author = entry.author_name || "Author";
+
+    try {
+      // Call your API route that updates Contentstack
+      const res = await fetch("/api/demo-instructions/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uid: entry.uid,       // existing entry UID
+          title,
+          html: updatedHTML,
+          author,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        // Update local state so UI reflects changes immediately
+        setEntry((prev) => ({
+          ...prev,
+          blog_content: updatedHTML,
+          updated_at: new Date().toISOString(),
+        }));
+        setIsOpen(false);
+        console.log("Saved to Contentstack:", data);
+      } else {
+        console.error("Failed to save:", data.error, data.details);
+        alert("Failed to save content. Check console for details.");
+      }
+    } catch (err) {
+      console.error("Save error:", err);
+      alert("An unexpected error occurred while saving.");
+    }
+  }}
+>
+  Save
+</Button>
+
 
               <Button
                 onClick={() => setIsOpen(false)}
