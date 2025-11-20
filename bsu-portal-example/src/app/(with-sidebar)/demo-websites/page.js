@@ -18,8 +18,10 @@ import {
     CardTitle,
 } from "@/components/ui/card"
 import { Dialog } from "@headlessui/react";
+import CardDropdown from "@/components/cardDropdown.jsx";
 
-
+import EditDemoWebsiteModal from "@/components/editDemoWebsiteModal.jsx";
+import DeleteModal from "@/components/deleteModal";
 
 export default function Demos() {
     const [entry, setEntry] = useState({});
@@ -27,6 +29,10 @@ export default function Demos() {
     const [searchQuery, setSearchQuery] = useState("");
     const [showToast, setShowToast] = useState(false);
     const [isOpen, setIsOpen] = useState(false)
+    const [isEditOpen, setIsEditOpen] = useState(false);
+    const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+
+    const [selectedItem, setSelectedItem] = useState(null);
 
     const {
         isBookmarked,
@@ -66,6 +72,16 @@ export default function Demos() {
         demo?.link?.href ||
         demo?.title;
 
+    const openEditModal = (demo) => {
+        setSelectedItem(demo);
+        setIsEditOpen(true);
+    };
+
+    const openDeleteModal = (demo) => {
+        setSelectedItem(demo);
+        setIsDeleteOpen(true);
+    };
+
     const handleBookmarkToggle = async (demo) => {
         const resourceId = getDemoId(demo);
         if (!resourceId) {
@@ -90,92 +106,110 @@ export default function Demos() {
     };
 
     const handleSubmit = async (e) => {
-    e.preventDefault();
+        e.preventDefault();
 
-    const form = e.target;
-    const data = new FormData(form);
-    const json_data = {};
+        const form = e.target;
+        const data = new FormData(form);
+        const json_data = {};
 
-    // Step 1: Collect all form fields
-    for (let [key, value] of data.entries()) {
-        if (value instanceof File && value.size > 0) {
-        json_data[key] = value.name;
-        } else {
-        json_data[key] = value;
-        }
-    }
-
-    try {
-        const thumbnailFile = data.get("image");
-
-        // Require a title and a valid video file
-        const titleProvided = json_data.title?.trim()?.length > 0;
-
-        if (!titleProvided) {
-        alert("Please provide both a title.");
-        return;
+        for (let [key, value] of data.entries()) {
+            if (value instanceof File && value.size > 0) {
+                json_data[key] = value.name;
+            } else {
+                json_data[key] = value;
+            }
         }
 
-        // Step 2: Upload thumbnail assets
+        try {
+            const thumbnailFile = data.get("image");
 
-        const uploadedThumb =
-        thumbnailFile && thumbnailFile.size > 0
-            ? await postAsset(
-                thumbnailFile,
-                `${json_data.title} Thumbnail`,
-                "Video thumbnail",
-                null,
-                "video-thumbnails"
-            )
-            : null;
+            const titleProvided = json_data.title?.trim()?.length > 0;
 
-        // Step 3: Build the new video object
-        const newDemo = {
-            link: {
-                title: json_data.title || "Demo Link",
-                href: json_data.url || "",
-            },
-            image: uploadedThumb?.asset?.uid || null,
-            title: json_data.title,
-            description: json_data.description,
-            se_name: json_data.se_name,
-            date_posted: json_data.date_posted || new Date().toISOString(),
-        };
+            if (!titleProvided) {
+                alert("Please provide both a title.");
+                return;
+            }
+
+            // Step 2: Upload thumbnail assets
+
+            const uploadedThumb =
+                thumbnailFile && thumbnailFile.size > 0
+                    ? await postAsset(
+                        thumbnailFile,
+                        `${json_data.title} Thumbnail`,
+                        "Video thumbnail",
+                        null,
+                        "video-thumbnails"
+                    )
+                    : null;
+
+            // Step 3: Build the new video object
+            const newDemo = {
+                link: {
+                    title: json_data.title || "Demo Link",
+                    href: json_data.url || "",
+                },
+                image: uploadedThumb?.asset?.uid || null,
+                title: json_data.title,
+                description: json_data.description,
+                se_name: json_data.se_name,
+                date_posted: json_data.date_posted || new Date().toISOString(),
+            };
 
 
-        const updatedDemoWebsites = appendDemoWebsite(entry, newDemo);
+            const updatedDemoWebsites = appendDemoWebsite(entry, newDemo);
 
-        const response = await fetch("/api/update-demo-web-in-cs", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            entryUid: entry.uid,
-            demos: updatedDemoWebsites,
-        }),
-        });
+            const response = await fetch("/api/update-demo-web-in-cs", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    entryUid: entry.uid,
+                    demos: updatedDemoWebsites,
+                }),
+            });
 
-        if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`Update failed: ${response.status} ${text}`);
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(`Update failed: ${response.status} ${text}`);
+            }
+
+            const updatedEntry = await response.json();
+            setEntry(updatedEntry.entry);
+
+
+            setIsOpen(false);
+            setShowToast(true);
+
+            setTimeout(() => {
+                setShowToast(false);
+            }, 2000);
+        } catch (error) {
+            console.error("Upload failed:", error);
+            alert("Failed to add demo. Check console for details.");
         }
-
-        const updatedEntry = await response.json();
-        setEntry(updatedEntry.entry);
-
-
-        setIsOpen(false);
-        setShowToast(true);
-
-        setTimeout(() => {
-            setShowToast(false);
-        }, 2000);
-    } catch (error) {
-        console.error("Upload failed:", error);
-        alert("Failed to add demo. Check console for details.");
-    }
     };
 
+    const handleEditSave = (e) => {
+        if (e && e.preventDefault) {
+            e.preventDefault();
+            const form = e.target;
+            const data = new FormData(form);
+            const updated = {
+                ...selectedItem,
+                title: data.get("title"),
+                description: data.get("description"),
+            };
+            console.log("Edited item (placeholder):", updated);
+        } else {
+            console.log("Edited item (placeholder):", e);
+        }
+        setIsEditOpen(false);
+    };
 
+    const handleConfirmDelete = () => {
+        console.log("Delete confirmed for:", selectedItem);
+        setIsDeleteOpen(false);
+    };
 
     if(isLoading) return <div></div>
 
@@ -339,29 +373,39 @@ export default function Demos() {
                                 const key = demoId ? `${demoId}-${idx}` : `demo-${idx}`;
                                 return (
                                     <div key={key} className="relative group">
-                                        <Link target={"_blank"} rel="noopener noreferrer" href={demo?.link?.href || "#"} className="group block h-full">
-                                            <Card className="h-[340px] flex flex-col shadow-md hover:shadow-lg transition-shadow duration-200">
-                                                {demo?.image?.url && (
-                                                    <div className="relative w-full h-[250px]">
+                                        <Card className="h-[340px] flex flex-col rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 bg-white dark:bg-gray-800">
+                                            {demo?.image?.url && (
+                                                <div className="relative w-full h-[200px]">
+                                                    <Link href={demo?.link?.href || "#"} target="_blank" rel="noopener noreferrer">
                                                         <Image
                                                             src={demo.image.url}
-                                                            sizes={500}
                                                             alt={demo.title || "Demo image"}
                                                             fill
-                                                            className="object-cover rounded-t-lg group-hover:opacity-90 transition-opacity"
+                                                            className="object-cover rounded-t-xl"
                                                         />
-                                                    </div>
-                                                )}
-                                                <CardHeader className="flex-grow flex flex-col justify-between">
-                                                    <div>
-                                                        <CardTitle className="text-lg font-semibold">{demo?.title}</CardTitle>
-                                                        <CardDescription className="line-clamp-3 text-gray-600 dark:text-gray-300">
-                                                            {demo?.description}
-                                                        </CardDescription>
-                                                    </div>
-                                                </CardHeader>
-                                            </Card>
-                                        </Link>
+                                                    </Link>
+                                                </div>
+                                            )}
+
+                                            <CardHeader className="p-4 flex flex-col flex-grow">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <CardTitle className="text-lg font-semibold leading-tight line-clamp-1">
+                                                        {demo?.title}
+                                                    </CardTitle>
+                                                    <CardDropdown
+                                                        onEdit={() => openEditModal(demo)}
+                                                        onDelete={() => openDeleteModal(demo)}
+                                                    />
+                                                </div>
+                                                <CardDescription
+                                                    className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed overflow-y-auto pr-2"
+                                                    style={{ maxHeight: "85px" }}
+                                                >
+                                                    {demo?.description}
+                                                </CardDescription>
+                                            </CardHeader>
+                                        </Card>
+
                                         <BookmarkButton
                                             active={demoId ? isBookmarked(demoId) : false}
                                             disabled={!demoId || isPending(demoId)}
@@ -377,16 +421,16 @@ export default function Demos() {
                         {hasMore && (
                             <div ref={ref} className="flex flex-col justify-center items-center py-8 mt-6">
                                 <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                                <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-                                <span className="text-sm">{isLoading ? "Loading more demos..." : "Loading more demos..."}</span>
+                                    <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                                    <span className="text-sm">{isLoading ? "Loading more demos..." : "Loading more demos..."}</span>
                                 </div>
                                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                                Showing {visibleDemos.length} of {demos.length} demos
+                                    Showing {visibleDemos.length} of {demos.length} demos
                                 </p>
                                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
                                 </p>
                             </div>
-                            )}
+                        )}
                     </>
                 ) : (
                     <div className="flex items-center justify-center py-12 mt-6">
@@ -394,6 +438,19 @@ export default function Demos() {
                     </div>
                 )}
             </div>
+
+            <EditDemoWebsiteModal
+                isOpen={isEditOpen}
+                closeModal={() => setIsEditOpen(false)}
+                onSave={handleEditSave}
+                item={selectedItem}
+            />
+
+            <DeleteModal
+                isOpen={isDeleteOpen}
+                closeModal={() => setIsDeleteOpen(false)}
+                onDeleteConfirm={handleConfirmDelete}
+            />
         </div>
     );
 }
