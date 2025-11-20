@@ -146,12 +146,12 @@ export default function DemoInstructions() {
 
                                                         const html = editorRef.current?.getHTML();
                                                         const title = document.querySelector("input[name='title']").value;
-                                                        const author = "Your Name"; // OR pull from logged-in user
+                                                    
 
                                                         const res = await fetch("/api/demo-instructions", {
                                                             method: "POST",
                                                             headers: { "Content-Type": "application/json" },
-                                                            body: JSON.stringify({ title, html, author }),
+                                                            body: JSON.stringify({ title, html }),
                                                         });
 
                                                         const data = await res.json();
