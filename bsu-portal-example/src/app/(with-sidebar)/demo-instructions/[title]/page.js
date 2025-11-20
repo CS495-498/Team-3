@@ -2,7 +2,7 @@
 
 import Stack, { onEntryChange } from "@/lib/cstack";
 import { useState, useEffect, useRef } from "react";
-
+import SuccessToast from "@/components/ui/success-toast.jsx";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogPanel, DialogTitle, Description } from "@headlessui/react";
 import DOMPurify from "isomorphic-dompurify";
@@ -11,18 +11,20 @@ import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor
 export default function ArticleWithEditor({ params }) {
   const [entry, setEntry] = useState({});
   const [isOpen, setIsOpen] = useState(false);
+  const [showToast, setShowToast] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogEditorContent, setDialogEditorContent] = useState("");
   const editorRef = useRef(null);
+
   const getContent = async () => {
     const { title } = await params;
-    const entry = await Stack.getElementByUrlWithRefs(
+    const fetchedEntry = await Stack.getElementByUrlWithRefs(
       "demo_instruction",
       "/demo-instructions/" + title,
       "en-us",
       []
     );
-    setEntry(entry);
+    setEntry(fetchedEntry);
     setIsLoading(false);
   };
 
@@ -30,6 +32,55 @@ export default function ArticleWithEditor({ params }) {
     onEntryChange(getContent);
     getContent();
   }, []);
+
+  const safeHTML = DOMPurify.sanitize(
+    entry?.blog_content ||
+      `<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px 20px; color: #6b7280; font-size: 1rem;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 12px;">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="22" y1="22" x2="16.65" y2="16.65"></line>
+          <line x1="8" y1="10" x2="14" y2="10"></line>
+          <line x1="8" y1="14" x2="12" y2="14"></line>
+        </svg>
+        <p style="max-width: 300px;">There’s no content here yet. Check back later or add some!</p>
+      </div>`
+  );
+
+  const handleSave = async () => {
+    if (!editorRef.current) return;
+
+    const updatedHTML = editorRef.current.getHTML();
+    setEntry((prev) => ({ ...prev, blog_content: updatedHTML }));
+
+    try {
+      const response = await fetch("/api/demo-instructions/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uid: entry.uid,
+          title: entry.title,
+          html: updatedHTML,
+          author: entry.author_name,
+        }),
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Failed to save: ${text}`);
+      }
+
+      
+
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save. Check console for details.");
+    }
+    setIsOpen(false);
+    setShowToast(true);
+    setTimeout(() => {
+            setShowToast(false);
+        }, 2000);
+  };
 
   if (isLoading) {
     return (
@@ -39,36 +90,14 @@ export default function ArticleWithEditor({ params }) {
     );
   }
 
-  const safeHTML = DOMPurify.sanitize(
-    entry?.blog_content ||
-    `
-      <div style="
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        padding: 40px 20px;
-        color: #6b7280;
-        font-size: 1rem;
-      ">
-        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 12px;">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="22" y1="22" x2="16.65" y2="16.65"></line>
-          <line x1="8" y1="10" x2="14" y2="10"></line>
-          <line x1="8" y1="14" x2="12" y2="14"></line>
-        </svg>
-
-        <p style="max-width: 300px;">
-          There’s no content here yet.  
-          Check back later or add some!
-        </p>
-      </div>
-    `
-  );
-
   return (
     <div className="p-6">
+      <SuccessToast
+        message="Article saved!"
+        isOpen={showToast}
+        onClose={() => setShowToast(false)}
+      />
+
       {/* Header */}
       {entry?.title && (
         <header className="max-w-4xl mx-auto mb-6 text-center">
@@ -91,23 +120,20 @@ export default function ArticleWithEditor({ params }) {
       <Button
         className="fixed bottom-6 right-6 z-50"
         onClick={() => {
-          setDialogEditorContent(entry.blog_content || safeHTML); // load current content
+          setDialogEditorContent(entry.blog_content || safeHTML);
           setIsOpen(true);
         }}
       >
         Edit
       </Button>
 
-      {/* Empty Dialog */}
+      {/* Dialog */}
       <Dialog
         open={isOpen}
         onClose={() => setIsOpen(false)}
         className="fixed inset-0 z-50 flex items-center justify-center p-0"
       >
-        {/* Overlay */}
         <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
-
-        {/* Panel */}
         <DialogPanel className="relative w-full max-w-[95vw] md:max-w-[80vw] lg:max-w-[80vw] max-h-[95vh] overflow-auto rounded-xl bg-white shadow-lg p-6 z-50 dark:bg-gray-700">
           <div className="flex items-center justify-between mb-4">
             <DialogTitle className="text-2xl font-bold dark:bg-gray-700">
@@ -115,26 +141,8 @@ export default function ArticleWithEditor({ params }) {
             </DialogTitle>
 
             <div className="flex gap-2">
-              <Button
-                onClick={() => {
-                  if (editorRef.current) {
-                    const updatedHTML = editorRef.current.getHTML();
-                    setEntry((prev) => ({
-                      ...prev,
-                      blog_content: updatedHTML,
-                    }));
-                  }
-                  setIsOpen(false);
-                }}
-                className=""
-              >
-                Save
-              </Button>
-
-              <Button
-                onClick={() => setIsOpen(false)}
-                className="bg-red-400 text-white"
-              >
+              <Button onClick={handleSave}>Save</Button>
+              <Button onClick={() => setIsOpen(false)} className="bg-red-400 text-white">
                 Cancel
               </Button>
             </div>
@@ -144,14 +152,11 @@ export default function ArticleWithEditor({ params }) {
             Modify the content below.
           </Description>
 
-          {/* Editor container */}
-          <div className="w-full min-h-[400px]  rounded-md p-1 bg-white dark:bg-gray-700">
+          <div className="w-full min-h-[400px] rounded-md p-1 bg-white dark:bg-gray-700">
             <SimpleEditor html={dialogEditorContent} editorRef={editorRef} />
           </div>
-
         </DialogPanel>
       </Dialog>
     </div>
   );
 }
-
