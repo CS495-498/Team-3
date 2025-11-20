@@ -7,6 +7,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Dialog } from "@headlessui/react";
 import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor";
 import { useRef } from "react";
+import SuccessToast from "@/components/ui/success-toast.jsx";
+
 
 import { Card } from "@/components/ui/card";
 import BookmarkButton from "@/components/bookmark-button";
@@ -20,6 +22,7 @@ export default function DemoInstructions() {
     const [isOpen, setIsOpen] = useState(false)
     const [dialogEditorContent, setDialogEditorContent] = useState("");
     const editorRef = useRef(null);
+    const [showToast, setShowToast] = useState(false);
 
     const {
         isBookmarked,
@@ -80,6 +83,11 @@ export default function DemoInstructions() {
 
     return (
         <div className="pl-10 pt-6 min-h-screen flex flex-col w-full">
+            <SuccessToast
+                message="Demo instruction uploaded successfully!"
+                isOpen={showToast}
+                onClose={() => setShowToast(false)}
+            />
             <div className="flex justify-between items-center mb-6 pt-6">
                 <h1 className="text-4xl font-bold ml-4">{entry?.title}</h1>
                 <AnimatePresence>
@@ -142,11 +150,10 @@ export default function DemoInstructions() {
                                                 <button
                                                     type="button"
                                                     onClick={async () => {
-                                                        setUploadError(""); // reset error on new attempt
+                                                        setUploadError(""); // reset error
 
                                                         const html = editorRef.current?.getHTML();
                                                         const title = document.querySelector("input[name='title']").value;
-                                                    
 
                                                         const res = await fetch("/api/demo-instructions", {
                                                             method: "POST",
@@ -158,12 +165,14 @@ export default function DemoInstructions() {
 
                                                         if (data.success) {
                                                             console.log("Uploaded successfully:", data);
-                                                            setIsOpen(false); // close dialog
-                                                            setUploadError("");
-                                                            getContent(); // optionally refresh list
+                                                            setIsOpen(false);        // close dialog
+                                                            setShowToast(true);
+                                                            setTimeout(() => {
+                                                                setShowToast(false);
+                                                            }, 2000);      // show success toast
+                                                            getContent();            // refresh list
                                                         } else {
                                                             console.error("Upload failed:", data.error, data.details);
-                                                            // Check for Contentstack unique title error code 119
                                                             if (data.details?.error_code === 119) {
                                                                 setUploadError("Title must be unique. Please choose a different title.");
                                                             } else {
@@ -175,6 +184,7 @@ export default function DemoInstructions() {
                                                 >
                                                     Upload
                                                 </button>
+
 
                                             </div>
                                         </div>
