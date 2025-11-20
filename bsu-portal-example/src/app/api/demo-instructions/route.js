@@ -19,8 +19,19 @@ export async function POST(req) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     // or redirect("/login") if desired
   }
+   const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("id, full_name")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profileError || !profile) {
+      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+    }
+
+    const author = profile.full_name || "Unknown";
   try {
-    const { title, html, author } = await req.json();
+    const { title, html } = await req.json();
 
     if (!title || !html) {
       return NextResponse.json({ error: "Missing title or HTML" }, { status: 400 });
