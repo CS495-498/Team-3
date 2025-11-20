@@ -13,6 +13,7 @@ import BookmarkButton from "@/components/bookmark-button";
 import { BOOKMARK_TYPES, useBookmarks } from "@/hooks/use-bookmarks";
 
 export default function DemoInstructions() {
+    const [uploadError, setUploadError] = useState("");
     const [entry, setEntry] = useState({});
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
@@ -124,6 +125,9 @@ export default function DemoInstructions() {
                                         {/* Sticky Header */}
                                         <div className="sticky top-0 bg-white dark:bg-gray-700 px-4 py-3 border-b border-gray-200 dark:border-gray-600 z-10 flex items-center justify-between">
                                             <Dialog.Title className="font-bold text-2xl">Add Instructions</Dialog.Title>
+                                            {uploadError && (
+                                                <p className="text-red-500 text-sm mb-2">{uploadError}</p>
+                                            )}
 
                                             <div className="flex items-center gap-3">
                                                 {/* Cancel button moved to top */}
@@ -135,10 +139,11 @@ export default function DemoInstructions() {
                                                     Cancel
                                                 </button>
 
-                                                {/* Upload button */}
                                                 <button
                                                     type="button"
                                                     onClick={async () => {
+                                                        setUploadError(""); // reset error on new attempt
+
                                                         const html = editorRef.current?.getHTML();
                                                         const title = document.querySelector("input[name='title']").value;
                                                         const author = "Your Name"; // OR pull from logged-in user
@@ -154,9 +159,16 @@ export default function DemoInstructions() {
                                                         if (data.success) {
                                                             console.log("Uploaded successfully:", data);
                                                             setIsOpen(false); // close dialog
+                                                            setUploadError("");
+                                                            getContent(); // optionally refresh list
                                                         } else {
                                                             console.error("Upload failed:", data.error, data.details);
-
+                                                            // Check for Contentstack unique title error code 119
+                                                            if (data.details?.error_code === 119) {
+                                                                setUploadError("Title must be unique. Please choose a different title.");
+                                                            } else {
+                                                                setUploadError("Failed to upload demo instruction. Please try again.");
+                                                            }
                                                         }
                                                     }}
                                                     className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
