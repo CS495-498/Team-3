@@ -93,69 +93,96 @@ export default function Page() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-100 flex flex-col items-center">
-            {/* Profile Banner */}
-            <div className="w-full h-40 bg-gradient-to-r from-indigo-500 to-purple-500 relative">
-                <div className="absolute bottom-[5px] left-79 transform -translate-x-1/2 flex items-center gap-5 text-left">
+        <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col items-center">
+
+            {/* Banner */}
+            <div className="w-full h-44 bg-gradient-to-r from-purple-600 to-purple-700 dark:from-purple-700 dark:to-purple-800 relative">
+                <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex flex-col items-center">
+
                     <img
-                        src={
-                            // profile.avatar_url ||
-                            'https://avatar.iran.liara.run/public/4'
-                        }
+                        src="https://avatar.iran.liara.run/public/4"
+                        className="w-36 h-36 rounded-full border-4 border-white dark:border-gray-900 shadow-xl mb-4"
                         alt="Avatar"
-                        className="w-37 h-37 rounded-full border-7 border-white-600 mx-auto"
                     />
-                    <div className="flex flex-col gap-3">
-                        <h2 className="text-5xl font-bold text-shadow-lg text-white">
-                            {profile.full_name}
-                        </h2>
-                        <p className="bottom-[50px] text-white text-shadow-lg text-2xl">
-                            {profile.username}
-                        </p>
-                    </div>
+
+                    <h1 className="text-gray-900 text-3xl font-bold dark:text-white drop-shadow">
+                        {profile.full_name || "Full Name"}
+                    </h1>
+
+                    <p className="text-gray-900 dark:text-white/90 drop-shadow text-lg">
+                        @{profile.username || "username"}
+                    </p>
+
                 </div>
             </div>
 
-            {/* Profile Info + Form */}
-            <div className="mt-16 w-full flex justify-center px-6">
-                {/* Edit Profile Form */}
-                <div className="bg-white p-6 rounded-2xl shadow-md w-full max-w-xl">
-                    <h3 className="text-lg font-semibold mb-4 text-gray-800">
+            <div className="mt-24 w-full max-w-xl px-6">
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 space-y-6">
+
+                    <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
                         Edit Profile
-                    </h3>
+                    </h2>
+
                     <div className="space-y-4">
                         <div>
-                            <label className="text-sm text-gray-600">Full Name</label>
+                            <label className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                                Full Name
+                            </label>
                             <input
                                 type="text"
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring focus:ring-indigo-300"
-                                value={profile.full_name ?? ''}
-                                onChange={(e) =>
-                                    handleChange('full_name', e.target.value)
-                                }
+                                value={profile.full_name ?? ""}
+                                onChange={(e) => handleChange("full_name", e.target.value)}
+                                className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-700
+                       bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                       px-3 py-2 focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-600 outline-none"
                             />
                         </div>
+
                         <div>
-                            <label className="text-sm text-gray-600">Username</label>
+                            <label className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                                Username
+                            </label>
                             <input
                                 type="text"
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring focus:ring-indigo-300"
-                                value={profile.username ?? ''}
-                                onChange={(e) =>
-                                    handleChange('username', e.target.value)
-                                }
+                                value={profile.username ?? ""}
+                                onChange={(e) => handleChange("username", e.target.value)}
+                                className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-700
+                       bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                       px-3 py-2 focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-600 outline-none"
                             />
                         </div>
-                        <button
-                            onClick={updateProfile}
-                            disabled={loading}
-                            className="w-full bg-indigo-600 text-white py-2 rounded-md hover:bg-indigo-700 transition"
-                        >
-                            {loading ? 'Saving...' : 'Update Profile'}
-                        </button>
+                    </div>
+
+                    <button
+                        onClick={updateProfile}
+                        disabled={loading}
+                        className="w-full py-2.5 rounded-lg text-white font-medium text-center
+                   bg-gradient-to-r from-purple-600 to-purple-700
+                   hover:from-purple-700 hover:to-purple-800
+                   dark:from-purple-700 dark:to-purple-800 dark:hover:from-purple-800 dark:hover:to-purple-900
+                   transition-all shadow-md disabled:opacity-50"
+                    >
+                        {loading ? "Saving..." : "Update Profile"}
+                    </button>
+                </div>
+            </div>
+
+            <div className="mt-10 w-full max-w-xl px-6 mb-20">
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl shadow-inner p-6 border border-gray-200 dark:border-gray-700">
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
+                        Your Account Information
+                    </h3>
+
+                    <div className="space-y-3 text-gray-700 dark:text-gray-300">
+                        <p><span className="font-medium">Full Name:</span> {profile.full_name}</p>
+                        <p><span className="font-medium">Username:</span> {profile.username}</p>
+                        <p><span className="font-medium">Email:</span> {profile.email || "N/A"}</p>
+                        <p><span className="font-medium">Member Since:</span> {profile.created_at ? new Date(profile.created_at).toLocaleDateString() : "N/A"}</p>
                     </div>
                 </div>
             </div>
         </div>
+
+
     )
 }
