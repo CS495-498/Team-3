@@ -324,11 +324,12 @@ export default function DemoInstructions() {
                                             overflow: "hidden",
                                         }}
                                     >
+                                        <article className="prose prose-stone dark:prose-invert mx-auto my-0 max-w-4xl">
                                         <div
-                                            className="prose prose-sm max-w-none text-gray-700"
                                             dangerouslySetInnerHTML={{ __html: previewHTML }}
+                                        
                                         />
-
+                                        </article>
                                         <div
                                             className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none"
                                             style={{
