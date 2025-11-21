@@ -3,7 +3,7 @@
 import postAsset from "@/app/api/helper/postAsset";
 import appendVideo from "@/app/api/helper/appendVideo";
 
-import React, { useState, useEffect, Fragment } from "react";
+import React, { useState, useEffect, Fragment, useMemo } from "react";
 import Stack, { onEntryChange } from "@/lib/cstack";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import { AnimatePresence, motion } from "framer-motion";
@@ -167,7 +167,17 @@ export default function VideoLibrary() {
             );
         }) || [];
 
-    const { items: visibleVideos, hasMore, ref } = useInfiniteScroll(videos, 6);
+    const sortedVideos = useMemo(() => {
+        if (!videos.length) return [];
+        return [...videos].sort((a, b) => {
+            const aBookmarked = isBookmarked(getVideoId(a));
+            const bBookmarked = isBookmarked(getVideoId(b));
+            if (aBookmarked === bBookmarked) return 0;
+            return aBookmarked ? -1 : 1;
+        });
+    }, [videos, isBookmarked]);
+
+    const { items: visibleVideos, hasMore, ref } = useInfiniteScroll(sortedVideos, 6);
 
     /* -----------------------------------------------------------------------------------
         FORM SUBMIT (FILE OR URL)

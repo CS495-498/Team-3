@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, Fragment } from "react";
+import React, { useState, useEffect, Fragment, useMemo } from "react";
 import Stack, { onEntryChange } from "@/lib/cstack";
 import Link from "next/link";
 import Image from "next/image";
@@ -61,6 +61,12 @@ export default function Demos() {
         onEntryChange(getContent);
     }, []);
 
+    const getDemoId = (demo) =>
+        demo?.uid ||
+        demo?.system?.uid ||
+        demo?.link?.href ||
+        demo?.title;
+
     const demos = entry?.demos?.filter((demo) => {
         const query = searchQuery.toLowerCase();
         return (
@@ -68,13 +74,18 @@ export default function Demos() {
             demo.description?.toLowerCase().includes(query)
         );
     }) || [];
-    const { items: visibleDemos, hasMore, ref } = useInfiniteScroll(demos, 8);
 
-    const getDemoId = (demo) =>
-        demo?.uid ||
-        demo?.system?.uid ||
-        demo?.link?.href ||
-        demo?.title;
+    const sortedDemos = useMemo(() => {
+        if (!demos.length) return [];
+        return [...demos].sort((a, b) => {
+            const aBookmarked = isBookmarked(getDemoId(a));
+            const bBookmarked = isBookmarked(getDemoId(b));
+            if (aBookmarked === bBookmarked) return 0;
+            return aBookmarked ? -1 : 1;
+        });
+    }, [demos, isBookmarked]);
+
+    const { items: visibleDemos, hasMore, ref } = useInfiniteScroll(sortedDemos, 8);
 
     const openEditModal = (demo) => {
         setSelectedItem(demo);

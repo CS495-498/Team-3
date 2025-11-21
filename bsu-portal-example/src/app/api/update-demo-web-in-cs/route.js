@@ -13,6 +13,7 @@ export async function PUT(req) {
 
   if (userError || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // or redirect("/login") if desired
   }
 
   try {
