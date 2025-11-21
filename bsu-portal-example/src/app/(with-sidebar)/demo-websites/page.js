@@ -33,6 +33,8 @@ export default function Demos() {
     const [isOpen, setIsOpen] = useState(false)
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+    const [toastMessage, setToastMessage] = useState("");
+
 
     const [selectedItem, setSelectedItem] = useState(null);
 
@@ -180,6 +182,7 @@ export default function Demos() {
 
 
             setIsOpen(false);
+            setToastMessage("Demo website added!");
             setShowToast(true);
 
             setTimeout(() => {
@@ -241,7 +244,9 @@ export default function Demos() {
 
             // 5. Close modal + success toast
             setIsDeleteOpen(false);
+            setToastMessage("Demo deleted successfully!");
             setShowToast(true);
+
             setTimeout(() => setShowToast(false), 2000);
 
         } catch (error) {
@@ -257,7 +262,7 @@ export default function Demos() {
     return (
         <div className="pl-10 pt-6 min-h-screen flex flex-col">
             <SuccessToast
-                message="Demo website added!"
+                message={toastMessage}
                 isOpen={showToast}
                 onClose={() => setShowToast(false)}
             />
