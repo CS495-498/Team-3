@@ -3,6 +3,14 @@ import { createClient } from "@/utils/Supabase/server";
 
 export async function GET() {
   const supabase = await createClient();
+  const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+  
+    if (userError || !user) {
+      redirect("/login");
+    }
 
   const { data, error } = await supabase
       .from("feature_requests")
