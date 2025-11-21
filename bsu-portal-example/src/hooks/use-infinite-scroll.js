@@ -13,22 +13,30 @@ export function useInfiniteScroll(items = [], itemsPerPage = 8, delay = 300) {
     const sentinelRef = useRef(null);
 
     useEffect(() => {
-        itemsRef.current = items;
-    }, [items]);
+        const prev = itemsRef.current;
+        const hasChanged =
+            prev.length !== items.length ||
+            prev.some((item, idx) => item !== items[idx]);
 
-    useEffect(() => {
-        const count = items.length;
-        if (count === 0) {
-            setDisplayedItems([]);
-            setPage(1);
-            setIsLoading(false);
+        itemsRef.current = items;
+
+        if (items.length === 0) {
+            // Avoid infinite updates when already empty.
+            if (displayedItems.length !== 0) {
+                setDisplayedItems([]);
+            }
+            if (page !== 1) setPage(1);
+            if (isLoading) setIsLoading(false);
             return;
         }
+
+        if (!hasChanged && displayedItems.length) return;
+
         const initial = items.slice(0, itemsPerPage);
         setDisplayedItems(initial);
-        setPage(1);
-        setIsLoading(false);
-    }, [items.length, itemsPerPage]);
+        if (page !== 1) setPage(1);
+        if (isLoading) setIsLoading(false);
+    }, [items, itemsPerPage, displayedItems.length, page, isLoading]);
 
     const hasMore = items.length > displayedItems.length;
 

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Stack, { onEntryChange } from "@/lib/cstack";
 import Link from "next/link";
 import DOMPurify from "isomorphic-dompurify";
@@ -52,6 +52,9 @@ export default function DemoInstructions() {
         onEntryChange(getContent);
     }, []);
 
+    const getInstructionId = (demo) =>
+        demo?.uid || demo?.url || demo?.title;
+
     const handleSubmit = async (e) => { };
 
     const filteredDemos = entry?.demo_instructions?.filter((demo) => {
@@ -62,8 +65,15 @@ export default function DemoInstructions() {
         );
     }) || [];
 
-    const getInstructionId = (demo) =>
-        demo?.uid || demo?.url || demo?.title;
+    const sortedInstructions = useMemo(() => {
+        if (!filteredDemos.length) return [];
+        return [...filteredDemos].sort((a, b) => {
+            const aBookmarked = isBookmarked(getInstructionId(a));
+            const bBookmarked = isBookmarked(getInstructionId(b));
+            if (aBookmarked === bBookmarked) return 0;
+            return aBookmarked ? -1 : 1;
+        });
+    }, [filteredDemos, isBookmarked]);
 
     const openEditModal = (demo) => {
         setSelectedItem(demo);
@@ -294,7 +304,7 @@ export default function DemoInstructions() {
 
             <div className="flex-1">
                 <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6 me-10">
-                    {filteredDemos.map((demo, idx) => {
+                    {sortedInstructions.map((demo, idx) => {
                         const instructionId = getInstructionId(demo);
                         const key = instructionId ? `${instructionId}-${idx}` : `instruction-${idx}`;
 
