@@ -22,6 +22,7 @@ export default function Home() {
   const [requests, setRequests] = useState([]);
   const [votes, setVotes] = useState({});
   const [isLoading, setIsLoading] = useState(true);
+  const [deleteToast, setDeleteToast] = useState(false);
 
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [comments, setComments] = useState([]);
@@ -30,7 +31,6 @@ export default function Home() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [featureRequests, setFeatureRequests] = useState([]);
 
   useEffect(() => {
     Promise.all([getFeatureRequests(), getUserVotes()])
@@ -97,30 +97,31 @@ export default function Home() {
 
 
   const handleConfirmDelete = async () => {
-  if (!selectedItem?.id) return;
+    try {
+      const res = await fetch(`/api/feature-requests/${selectedItem.id}`, {
+        method: "DELETE",
+      });
 
-  try {
-    const res = await fetch(`/api/feature-requests/${selectedItem.id}`, {
-      method: "DELETE",
-    });
+      if (!res.ok) {
+        const err = await res.json();
+        console.error("Failed to delete feature request:", err.error || err);
+        return;
+      }
 
-    if (!res.ok) {
-      const err = await res.json();
-      console.error("Failed to delete feature request:", err.error || err);
-      return;
+      // Remove deleted item from state
+      setRequests((prev) => prev.filter((r) => r.id !== selectedItem.id));
+
+      // Close modal
+      setIsDeleteOpen(false);
+
+      // Show toast
+      setDeleteToast(true);
+      setTimeout(() => setDeleteToast(false), 2000);
+    } catch (error) {
+      console.error("Error deleting feature request:", error);
     }
+  };
 
-    // Remove the deleted request from the state so the UI updates immediately
-    setRequests((prev) =>
-      prev.filter((r) => r.id !== selectedItem.id)
-    );
-
-    setIsDeleteOpen(false);
-    setSelectedItem(null);
-  } catch (error) {
-    console.error("Error deleting feature request:", error);
-  }
-};
 
 
   const handleAddComment = async (content) => {
@@ -184,40 +185,46 @@ export default function Home() {
         isOpen={showToast}
         onClose={() => setShowToast(false)}
       />
+      <SuccessToast
+        message="Feature request deleted!"
+        isOpen={deleteToast}
+        onClose={() => setDeleteToast(false)}
+      />
+
       <div className="flex justify-between items-center mb-6 pt-6">
         <h1 className="text-4xl font-bold ml-4">Feature Requests</h1>
-<AddFeatureRequest
-  onAdded={async ({ title, content }) => {
-    try {
-      const res = await fetch("/api/feature-requests", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, content }),
-      });
+        <AddFeatureRequest
+          onAdded={async ({ title, content }) => {
+            try {
+              const res = await fetch("/api/feature-requests", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title, content }),
+              });
 
-      if (!res.ok) {
-        const err = await res.json();
-        console.error("Failed to add feature request:", err.error || err);
-        return;
-      }
+              if (!res.ok) {
+                const err = await res.json();
+                console.error("Failed to add feature request:", err.error || err);
+                return;
+              }
 
-      const newRequest = await res.json();
+              const newRequest = await res.json();
 
-      // Use the username returned from API
-      const requestWithExtras = {
-        ...newRequest,
-        username: newRequest.username || newRequest.user?.username,
-        commentCount: 0,
-      };
+              // Use the username returned from API
+              const requestWithExtras = {
+                ...newRequest,
+                username: newRequest.username || newRequest.user?.username,
+                commentCount: 0,
+              };
 
-      setRequests((prev) => [requestWithExtras, ...prev]);
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 2000);
-    } catch (error) {
-      console.error("Error adding feature request:", error);
-    }
-  }}
-/>
+              setRequests((prev) => [requestWithExtras, ...prev]);
+              setShowToast(true);
+              setTimeout(() => setShowToast(false), 2000);
+            } catch (error) {
+              console.error("Error adding feature request:", error);
+            }
+          }}
+        />
 
 
 
