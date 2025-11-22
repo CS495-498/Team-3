@@ -14,38 +14,27 @@ export default function AddFeatureRequest({ onAdded }) {
     e.preventDefault();
     setError("");
 
-    if (!title.trim() || !content.trim()) {
-      setError("Please fill out both fields.");
+    if (!title.trim()) {
+      setError("Title is required.");
+      return;
+    }
+
+    if (!content.trim()) {
+      setError("Content is required.");
       return;
     }
 
     try {
       setIsSubmitting(true);
 
-      const res = await fetch("/api/feature-requests", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: title.trim(),   // lowercase keys!
-          content: content.trim(),
-        }),
-      });
+      // Call the onAdded callback instead of calling fetch here
+      await onAdded({ title: title.trim(), content: content.trim() });
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to submit feature request.");
-      }
-
-      const newRequest = await res.json(); // Get the created feature request
-
-      // Notify parent so it can update UI immediately
-      if (onAdded) onAdded(newRequest);
-
-      setIsOpen(false);
       setTitle("");
       setContent("");
+      setIsOpen(false);
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Failed to submit feature request.");
     } finally {
       setIsSubmitting(false);
     }
@@ -63,18 +52,12 @@ export default function AddFeatureRequest({ onAdded }) {
 
       <AnimatePresence>
         {isOpen && (
-          <Dialog
-            className="fixed inset-0 z-50"
-            open={isOpen}
-            onClose={() => setIsOpen(false)}
-          >
+          <Dialog open={isOpen} onClose={() => setIsOpen(false)} className="fixed inset-0 z-50">
             <motion.div
               className="fixed inset-0 bg-black/50"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.5 }}
-              aria-hidden="true"
             />
             <div className="fixed inset-0 flex items-center justify-center p-6">
               <motion.div
@@ -82,7 +65,6 @@ export default function AddFeatureRequest({ onAdded }) {
                 initial={{ opacity: 0, scale: 0.96, y: -8 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96, y: -8 }}
-                transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
               >
                 <Dialog.Panel className="w-full rounded-2xl bg-white dark:bg-gray-700 shadow-2xl p-8">
                   <h4 className="font-bold text-2xl mb-4 text-gray-900 dark:text-gray-100">
@@ -116,9 +98,7 @@ export default function AddFeatureRequest({ onAdded }) {
                       ></textarea>
                     </div>
 
-                    {error && (
-                      <p className="text-red-500 text-sm font-medium">{error}</p>
-                    )}
+                    {error && <p className="text-red-500 text-sm font-medium">{error}</p>}
 
                     <div className="flex justify-end gap-3 pt-4">
                       <button
@@ -132,7 +112,7 @@ export default function AddFeatureRequest({ onAdded }) {
                         type="submit"
                         disabled={isSubmitting}
                         className={`text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition ${
-                          isSubmitting && "opacity-70 cursor-not-allowed"
+                          isSubmitting ? "opacity-70 cursor-not-allowed" : ""
                         }`}
                       >
                         {isSubmitting ? "Submitting..." : "Submit Feature"}
