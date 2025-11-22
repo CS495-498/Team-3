@@ -96,10 +96,32 @@ export default function Home() {
 
 
 
-  const handleConfirmDelete = () => {
-    console.log("Delete confirmed for:", selectedItem);
+  const handleConfirmDelete = async () => {
+  if (!selectedItem?.id) return;
+
+  try {
+    const res = await fetch(`/api/feature-requests/${selectedItem.id}`, {
+      method: "DELETE",
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      console.error("Failed to delete feature request:", err.error || err);
+      return;
+    }
+
+    // Remove the deleted request from the state so the UI updates immediately
+    setRequests((prev) =>
+      prev.filter((r) => r.id !== selectedItem.id)
+    );
+
     setIsDeleteOpen(false);
-  };
+    setSelectedItem(null);
+  } catch (error) {
+    console.error("Error deleting feature request:", error);
+  }
+};
+
 
   const handleAddComment = async (content) => {
     const newComment = await addComment(selectedRequest.id, content);
