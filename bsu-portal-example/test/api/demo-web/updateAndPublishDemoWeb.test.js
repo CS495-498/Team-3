@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import sinon from "sinon";
-import { updateAndPublishDemoWeb } from "../../src/app/api/update-demo-web-in-cs/updateAndPublishDemoWeb.js";
+import { updateAndPublishDemoWeb } from "../../../src/app/api/update-demo-web-in-cs/updateAndPublishDemoWeb.js";
 
 describe("updateAndPublishDemoWeb()", () => {
   let fetchStub;
@@ -35,7 +35,7 @@ describe("updateAndPublishDemoWeb()", () => {
       text: async () =>
         JSON.stringify({
           entry: {
-            demos: [mockDemo], 
+            demos: [mockDemo],
           },
         }),
     });
