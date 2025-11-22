@@ -165,10 +165,34 @@ export default function Home() {
       <div className="flex justify-between items-center mb-6 pt-6">
         <h1 className="text-4xl font-bold ml-4">Feature Requests</h1>
         <AddFeatureRequest
-          onAdded={() =>
-            getFeatureRequests().then((reqs) => setRequests(reqs))
-          }
+          onAdded={async ({ title, content }) => {
+            try {
+              const res = await fetch("/api/feature-requests", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title, content }), // only title and content
+              });
+
+              if (!res.ok) {
+                const err = await res.json();
+                console.error("Failed to add feature request:", err.error || err);
+                return;
+              }
+
+              const newRequest = await res.json();
+
+              // Update UI state immediately
+              setRequests((prev) => [newRequest, ...prev]);
+              setShowToast(true);
+              setTimeout(() => {
+                setShowToast(false);
+              }, 2000);
+            } catch (error) {
+              console.error("Error adding feature request:", error);
+            }
+          }}
         />
+
       </div>
 
       {requests.length === 0 ? (
