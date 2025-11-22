@@ -75,3 +75,52 @@ export async function POST(req, { params }) {
     );
   }
 }
+
+export async function PUT(req, { params }) {
+  const { id } = await params;
+  const supabase = await createClient();
+
+  // Authenticate user
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Parse request body
+  const body = await req.json();
+  const { title, content, status } = body;
+
+  if (!title || title.trim() === "") {
+    return NextResponse.json(
+      { error: "Title is required" },
+      { status: 400 }
+    );
+  }
+
+  // Update the feature request
+  const { data, error } = await supabase
+    .from("feature_requests")
+    .update({
+      title,
+      content,
+      status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .eq("user_id", user.id) // ensures users can only edit their own requests
+    .select("*")
+    .single();
+
+  if (error) {
+    console.error(error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json(data, { status: 200 });
+}
+
+

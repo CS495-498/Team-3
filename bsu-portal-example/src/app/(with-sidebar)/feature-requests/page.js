@@ -14,7 +14,6 @@ import { castVote } from "@/lib/featureRequests/votes/castVote";
 import { addComment } from "@/lib/featureRequests/comments/addComments";
 import { getComments } from "@/lib/featureRequests/comments/getComments";
 import CardDropdown from "@/components/cardDropdown.jsx";
-import EditDemoInstructionModal from "@/components/editDemoInstructions.jsx";
 import DeleteModal from "@/components/deleteModal.jsx";
 import EditFeatureRequestModal from "@/components/editFeatureRequestModal.jsx";
 
@@ -31,6 +30,7 @@ export default function Home() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [featureRequests, setFeatureRequests] = useState([]);
 
   useEffect(() => {
     Promise.all([getFeatureRequests(), getUserVotes()])
@@ -58,22 +58,43 @@ export default function Home() {
     setIsDeleteOpen(true);
   };
 
-  const handleEditSave = (e) => {
-    if (e && e.preventDefault) {
-      e.preventDefault();
-      const form = e.target;
-      const data = new FormData(form);
-      const updated = {
-        ...selectedItem,
-        title: data.get("title"),
-        description: data.get("description"),
-      };
-      console.log("Edited item (placeholder):", updated);
-    } else {
-      console.log("Edited item (placeholder):", e);
+  async function handleEditSave(updatedItem) {
+    if (!updatedItem.id) return;
+
+    const res = await fetch(`/api/feature-requests/${updatedItem.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updatedItem),
+    });
+
+    if (!res.ok) {
+      let errorMessage = "Unknown error";
+      try {
+        const err = await res.json();
+        errorMessage = err.error || JSON.stringify(err);
+      } catch { }
+      console.error("Error saving feature request:", errorMessage);
+      return;
     }
+
+    const updated = await res.json();
+
+    // ✅ Update the requests state (the array actually used in the UI)
+    setRequests((prev) =>
+      prev.map((req) =>
+        req.id === updated.id
+          ? { ...updated, username: req.username, commentCount: req.commentCount }
+          : req
+      )
+    );
+
+
     setIsEditOpen(false);
-  };
+  }
+
+
+
+
 
   const handleConfirmDelete = () => {
     console.log("Delete confirmed for:", selectedItem);
@@ -165,8 +186,8 @@ export default function Home() {
                 <div className="flex flex-col items-center space-y-2 ml-2">
                   <button
                     className={`p-1 rounded-md transition ${voteState === "up"
-                        ? "text-green-600"
-                        : "text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
+                      ? "text-green-600"
+                      : "text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
                       }`}
                     onClick={() => handleVote(req.id, "up")}
                   >
@@ -179,8 +200,8 @@ export default function Home() {
 
                   <button
                     className={`p-1 rounded-md transition ${voteState === "down"
-                        ? "text-red-600"
-                        : "text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
+                      ? "text-red-600"
+                      : "text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
                       }`}
                     onClick={() => handleVote(req.id, "down")}
                   >
