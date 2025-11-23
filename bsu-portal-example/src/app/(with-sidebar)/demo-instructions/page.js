@@ -281,8 +281,13 @@ export default function DemoInstructions() {
                             placeholder="Search instructions..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 pl-10 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
+                            className="w-full rounded-lg border border-gray-300 dark:border-gray-700 
+             bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 
+             px-4 py-2 pl-10 text-sm 
+             focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400 
+             outline-none transition"
                         />
+
 
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -307,14 +312,13 @@ export default function DemoInstructions() {
                     {sortedInstructions.map((demo, idx) => {
                         const instructionId = getInstructionId(demo);
                         const key = instructionId ? `${instructionId}-${idx}` : `instruction-${idx}`;
-
-                        const previewHTML = DOMPurify.sanitize(
-                            demo?.blog_content || "<p>No preview available.</p>"
-                        );
+                        const previewHTML = DOMPurify.sanitize(demo?.blog_content || "<p>No preview available.</p>");
 
                         return (
-                            <div key={key} className="relative group bg-white rounded-xl shadow-md hover:shadow-xl transition-all border border-gray-200">
-
+                            <div
+                                key={key}
+                                className="relative group bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl transition-all border border-gray-200 dark:border-gray-700"
+                            >
                                 <Link href={demo?.url || "#"} className="block">
                                     <div
                                         className="relative"
@@ -324,22 +328,17 @@ export default function DemoInstructions() {
                                             overflow: "hidden",
                                         }}
                                     >
+                                        <article className="prose prose-stone dark:prose-invert mx-auto my-0 max-w-4xl">
+                                            <div dangerouslySetInnerHTML={{ __html: previewHTML }} />
+                                        </article>
                                         <div
-                                            className="prose prose-sm max-w-none text-gray-700"
-                                            dangerouslySetInnerHTML={{ __html: previewHTML }}
-                                        />
-
-                                        <div
-                                            className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none"
-                                            style={{
-                                                background:
-                                                    "linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 85%)",
-                                            }}
+                                            className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none
+                       bg-gradient-to-b from-transparent to-white dark:to-gray-800"
                                         />
                                     </div>
                                 </Link>
 
-                                <div className="px-4 py-3 bg-white flex flex-col gap-1 rounded-b-xl">
+                                <div className="px-4 py-3 bg-white dark:bg-gray-900 flex flex-col gap-1 rounded-b-xl">
                                     <div className="flex justify-between items-center">
                                         <div className="flex items-center gap-2">
                                             <svg
@@ -352,7 +351,7 @@ export default function DemoInstructions() {
                                                 strokeWidth="2"
                                                 strokeLinecap="round"
                                                 strokeLinejoin="round"
-                                                className="shrink-0"
+                                                className="shrink-0 dark:stroke-purple-400"
                                             >
                                                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                                                 <polyline points="14 2 14 8 20 8" />
@@ -360,8 +359,7 @@ export default function DemoInstructions() {
                                                 <line x1="9" y1="17" x2="15" y2="17" />
                                                 <line x1="9" y1="9" x2="11" y2="9" />
                                             </svg>
-
-                                            <h2 className="text-base font-semibold leading-tight line-clamp-1">
+                                            <h2 className="text-base font-semibold leading-tight line-clamp-1 text-gray-900 dark:text-gray-100">
                                                 {demo?.title}
                                             </h2>
                                         </div>
@@ -371,35 +369,33 @@ export default function DemoInstructions() {
                                         />
                                     </div>
 
-                                    <div className="flex items-center gap-1 text-gray-500 mt-1">
+                                    <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400 mt-1">
                                         <svg
                                             xmlns="http://www.w3.org/2000/svg"
                                             width="16"
                                             height="16"
                                             viewBox="0 0 24 24"
-                                            fill="#7C3AED"
-                                            className="shrink-0"
+                                            className="shrink-0 fill-purple-600 dark:fill-purple-400"
                                         >
                                             <circle cx="12" cy="8" r="4" />
                                             <path d="M4 20c0-4 4-6 8-6s8 2 8 6v1H4v-1z" />
                                         </svg>
-
-                                        <p className="text-xs line-clamp-1">
-                                            {demo?.author_name || ""}
-                                        </p>
+                                        <p className="text-xs line-clamp-1">{demo?.author_name || ""}</p>
                                     </div>
                                 </div>
+
                                 <BookmarkButton
                                     active={instructionId ? isBookmarked(instructionId) : false}
                                     disabled={!instructionId || isPending(instructionId)}
                                     onToggle={() => handleBookmarkToggle(demo)}
-                                    className="absolute top-3 right-3 shadow-md"
+                                    className="absolute top-3 right-3 shadow-md dark:shadow-gray-900"
                                     titleWhenActive="Remove instruction from bookmarks"
                                     titleWhenInactive="Save instruction to bookmarks"
                                 />
                             </div>
                         );
                     })}
+
                 </div>
             </div>
             <EditDemoInstructionModal
