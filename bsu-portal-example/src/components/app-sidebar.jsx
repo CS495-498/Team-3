@@ -63,7 +63,7 @@ class ErrorBoundary extends React.Component {
       return <NavProjectsSkeleton />; // Fallback UI
     }
 
-    return this.props.children;
+    return this.props.children; 
   }
 }
 
@@ -79,20 +79,18 @@ function NavProjectsSkeleton() {
   )
 }
 function NavProjects() {
-  const [entry, setEntry] = useState({});
-  const [isLoading, setIsLoading] = useState(true);
-  const pathname = usePathname(); // ✅ Get current path
+    const [entry, setEntry] = useState({});
+    const [isLoading, setIsLoading] = useState(true);
+    const pathname = usePathname(); // ✅ Get current path
+    const supabase = createClient()
 
-  const getContent = async () => {
-    const entry = await Stack.getElementByTypeWithRefs("header", "en-us", []);
-    setEntry(entry[0][0]);
-    console.log("Sidebar Entry:", entry);
-    setIsLoading(false);
-  };
+    const getContent = async () => {
+        const entry = await Stack.getElementByTypeWithRefs("header", "en-us", []);
+        setEntry(entry[0][0]);
+        console.log("Sidebar Entry:", entry);
+        setIsLoading(false);
+    };
 
-  useEffect(() => {
-    onEntryChange(getContent);
-  }, []);
     const [user, setUser] = useState(null)
     const usernamePlaceHolder = {
         username: "Username",
@@ -142,150 +140,97 @@ function NavProjects() {
         );
 
 
-  if (isLoading)
     return (
-      <SidebarMenu>
-        {Array.from({ length: 5 }).map((_, index) => (
-          <SidebarMenuItem key={index}>
-            <SidebarMenuSkeleton showIcon />
-          </SidebarMenuItem>
-        ))}
-      </SidebarMenu>
-        <Sidebar side={entry?.side_of_screen} collapsible="none">
-            {/* Header */}
-            <SidebarHeader className="p-0 mb-0">
-                <img
-                    className="w-15 h-13 p-3"
-                    src={entry?.logo?.url}
-                    alt="Logo"
-                />
-            </SidebarHeader>
+    <Sidebar
+        side={entry?.side_of_screen}
+        collapsible="none"
+        className="dark:bg-[#0f0f11] bg-white transition-colors"
+    >
+        {/* Header */}
+        <SidebarHeader className="p-0 mb-0 border-b dark:border-gray-800">
+            <img
+                className="w-15 h-13 p-3"
+                src={entry?.logo?.url}
+                alt="Logo"
+            />
+        </SidebarHeader>
 
-            {/* Sidebar content */}
-            <SidebarContent>
-                <SidebarGroup>
-                    <SidebarGroupContent className="mt-4">
-                        <SidebarMenu>
-                            {entry?.navigation_menu.map((item, index) => {
-                                const isActive = pathname === item.call_to_action.href; // ✅ Highlight active
+        {/* Sidebar content */}
+        <SidebarContent>
+            <SidebarGroup>
+                <SidebarGroupContent className="mt-4">
+                    <SidebarMenu>
+                        {entry?.navigation_menu.map((item, index) => {
+                            const isActive = pathname === item.call_to_action.href;
 
-                                return (
-                                    <SidebarMenuItem key={index}>
-                                        <SidebarMenuButton
-                                            asChild
-                                            className={`dark:text-white dark:hover:bg-white dark:hover:text-black transition-colors duration-200 flex items-center gap-2 ${
-                                                isActive
-                                                    ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800"
-                                                    : "text-gray-800 hover:bg-gray-100"
-                                            }`}
-                                        >
-                                            <Link href={item.call_to_action.href}>
-                                                {iconMapper[item.icon] || <Search/>}
-                                                <span>{item.call_to_action.title}</span>
-                                            </Link>
-                                        </SidebarMenuButton>
-                                    </SidebarMenuItem>
-                                );
-                            })}
-                        </SidebarMenu>
-                    </SidebarGroupContent>
-                </SidebarGroup>
-            </SidebarContent>
+                            return (
+                                <SidebarMenuItem key={index}>
+                                    <SidebarMenuButton
+                                        asChild
+                                        className={`
+                                            flex items-center gap-2 transition-all duration-200
 
-            <SidebarFooter>
-                <ModeToggle/>
-                <SidebarMenu>
-                    <SidebarMenuItem>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <SidebarMenuButton>
-                                    <User2/> {user?.username ?? "Username"}
-                                    <ChevronUp className="ml-auto"/>
-                                </SidebarMenuButton>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                                side="top"
-                                className="w-[--radix-popper-anchor-width]"
-                            >
-                                <AccountPageButton />
-                                <SignOutButton />
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </SidebarMenuItem>
-                </SidebarMenu>
-            </SidebarFooter>
-        </Sidebar>
-    );
+                                            /* Light mode */
+                                            ${isActive
+                                                ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800"
+                                                : "text-gray-800 hover:bg-gray-100"
+                                            }
 
+                                            /* Dark mode improved */
+                                            dark:text-gray-200
+                                            dark:hover:bg-[#1b1b1f]
+                                            dark:hover:text-white
+                                            ${isActive && "dark:bg-purple-700 dark:text-white dark:hover:bg-purple-800"}
+                                        `}
+                                    >
+                                        <Link href={item.call_to_action.href}>
+                                            {iconMapper[item.icon] || <Search />}
+                                            <span>{item.call_to_action.title}</span>
+                                        </Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            );
+                        })}
+                    </SidebarMenu>
+                </SidebarGroupContent>
+            </SidebarGroup>
+        </SidebarContent>
 
-  return (
-    <Sidebar side={entry?.side_of_screen} collapsible="none">
-      {/* Header */}
-      <SidebarHeader className="p-0 mb-0">
-        <img
-          className="w-15 h-13 p-3"
-          src={entry?.logo?.url}
-          alt="Logo"
-        />
-      </SidebarHeader>
-
-      {/* Sidebar content */}
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent className="mt-4">
+        <SidebarFooter className="border-t dark:border-gray-800">
+            <ModeToggle />
             <SidebarMenu>
-              {entry?.navigation_menu.map((item, index) => {
-                const isActive = pathname === item.call_to_action.href; // ✅ Highlight active
+                <SidebarMenuItem>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <SidebarMenuButton
+                                className="
+                                    dark:text-gray-200 
+                                    dark:hover:bg-[#1b1b1f]
+                                "
+                            >
+                                <User2 /> {user?.username ?? "Username"}
+                                <ChevronUp className="ml-auto" />
+                            </SidebarMenuButton>
+                        </DropdownMenuTrigger>
 
-                return (
-                  <SidebarMenuItem key={index}>
-                    <SidebarMenuButton
-                      asChild
-                      className={`flex items-center gap-2 transition-colors duration-200
-    ${isActive
-                          ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800"
-                          : "text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:text-white"
-                        }
-  `}
-                    >
-                      <Link href={item.call_to_action.href}>
-                        {iconMapper[item.icon] || <Search />}
-                        <span>{item.call_to_action.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-
-                  </SidebarMenuItem>
-                );
-              })}
+                        <DropdownMenuContent
+                            side="top"
+                            className="
+                                w-[--radix-popper-anchor-width]
+                                dark:bg-[#18181b]
+                                dark:border-gray-800
+                            "
+                        >
+                            <AccountPageButton />
+                            <SignOutButton />
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </SidebarMenuItem>
             </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-
-      <SidebarFooter>
-        <ModeToggle />
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton>
-                  <User2 /> Username
-                  <ChevronUp className="ml-auto" />
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                side="top"
-                className="w-[--radix-popper-anchor-width]"
-              >
-                <AccountPageButton />
-                <SignOutButton />
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
+        </SidebarFooter>
     </Sidebar>
-  );
+);
+
 }
 
 export function AppSidebar({ children }) {
@@ -296,5 +241,5 @@ export function AppSidebar({ children }) {
         {children}
       </React.Suspense>
     </ErrorBoundary>
-  );
+  )
 }
