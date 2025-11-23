@@ -10,6 +10,8 @@ import appendDemoWebsite from "@/app/api/helper/appendDemoWebsite";
 import postAsset from "@/app/api/helper/postAsset";
 import SuccessToast from "@/components/ui/success-toast.jsx";
 import { AnimatePresence, motion } from "framer-motion";
+import normalizeDemoWebArray from "@/app/api/helper/normalizeDemoWebArray";
+
 
 import {
     Card,
@@ -31,6 +33,8 @@ export default function Demos() {
     const [isOpen, setIsOpen] = useState(false)
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+    const [toastMessage, setToastMessage] = useState("");
+
 
     const [selectedItem, setSelectedItem] = useState(null);
 
@@ -189,6 +193,7 @@ export default function Demos() {
 
 
             setIsOpen(false);
+            setToastMessage("Demo website added!");
             setShowToast(true);
 
             setTimeout(() => {
@@ -217,17 +222,58 @@ export default function Demos() {
         setIsEditOpen(false);
     };
 
-    const handleConfirmDelete = () => {
-        console.log("Delete confirmed for:", selectedItem);
-        setIsDeleteOpen(false);
+    const handleConfirmDelete = async () => {
+        try {
+            if (!selectedItem) return;
+
+            // 1. Remove the selected demo
+            const filtered = entry.demos.filter(
+                (demo) => getDemoId(demo) !== getDemoId(selectedItem)
+            );
+
+            // 2. Normalize array using shared helper
+            const normalizedDemos = normalizeDemoWebArray(filtered);
+
+            // 3. Send DELETE request
+            const response = await fetch("/api/update-demo-web-in-cs", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    entryUid: entry.uid,
+                    demos: normalizedDemos,
+                }),
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(`Delete failed: ${response.status} ${text}`);
+            }
+
+            // 4. Update UI with returned entry
+            const result = await response.json();
+            setEntry(result.entry);
+
+            // 5. Close modal + success toast
+            setIsDeleteOpen(false);
+            setToastMessage("Demo deleted successfully!");
+            setShowToast(true);
+
+            setTimeout(() => setShowToast(false), 2000);
+
+        } catch (error) {
+            console.error("Delete failed:", error);
+            alert("Failed to delete demo. Check console for details.");
+        }
     };
 
-    if(isLoading) return <div></div>
+
+
+    if (isLoading) return <div></div>
 
     return (
         <div className="pl-10 pt-6 min-h-screen flex flex-col">
             <SuccessToast
-                message="Demo website added!"
+                message={toastMessage}
                 isOpen={showToast}
                 onClose={() => setShowToast(false)}
             />

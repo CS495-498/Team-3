@@ -27,6 +27,7 @@ import { useState, useEffect } from "react";
 import Stack, { onEntryChange } from "@/lib/cstack";
 import SignOutButton from "./signout-button";
 import AccountPageButton from "@/components/account-page-button.jsx";
+import {createClient} from "../utils/Supabase/client.js";
 
 const iconMapper = {
   Home: <Home />,
@@ -92,6 +93,53 @@ function NavProjects() {
   useEffect(() => {
     onEntryChange(getContent);
   }, []);
+    const [user, setUser] = useState(null)
+    const usernamePlaceHolder = {
+        username: "Username",
+    }
+
+    useEffect(() => {
+        const fetchUsername = async () => {
+            setIsLoading(true);
+            const {data: { user }, error: userError,} = await supabase.auth.getUser()
+            if (userError || !user) {
+                console.error('No logged-in user:', userError)
+                setIsLoading(false)
+            }
+            setUser(user);
+            try {
+                const { data, error } = await supabase.from('profiles').select('username').eq('id', user.id).single()
+                if (error) throw error
+
+                if (data){
+                    setUser({username: data.username ?? 'Username'})
+                } else {
+                    setUser(usernamePlaceHolder)
+                }
+                setIsLoading(false)
+
+            } catch (err) {
+                console.error('Error loading user data:', err)
+                alert('Error loading user data!')
+            } finally {
+                setIsLoading(false)
+            }
+        }
+        onEntryChange(getContent);
+        fetchUsername()
+    }, []);
+
+
+    if (isLoading)
+        return (
+            <SidebarMenu>
+                {Array.from({length: 5}).map((_, index) => (
+                    <SidebarMenuItem key={index}>
+                        <SidebarMenuSkeleton showIcon/>
+                    </SidebarMenuItem>
+                ))}
+            </SidebarMenu>
+        );
 
 
   if (isLoading)
@@ -103,6 +151,70 @@ function NavProjects() {
           </SidebarMenuItem>
         ))}
       </SidebarMenu>
+        <Sidebar side={entry?.side_of_screen} collapsible="none">
+            {/* Header */}
+            <SidebarHeader className="p-0 mb-0">
+                <img
+                    className="w-15 h-13 p-3"
+                    src={entry?.logo?.url}
+                    alt="Logo"
+                />
+            </SidebarHeader>
+
+            {/* Sidebar content */}
+            <SidebarContent>
+                <SidebarGroup>
+                    <SidebarGroupContent className="mt-4">
+                        <SidebarMenu>
+                            {entry?.navigation_menu.map((item, index) => {
+                                const isActive = pathname === item.call_to_action.href; // ✅ Highlight active
+
+                                return (
+                                    <SidebarMenuItem key={index}>
+                                        <SidebarMenuButton
+                                            asChild
+                                            className={`dark:text-white dark:hover:bg-white dark:hover:text-black transition-colors duration-200 flex items-center gap-2 ${
+                                                isActive
+                                                    ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800"
+                                                    : "text-gray-800 hover:bg-gray-100"
+                                            }`}
+                                        >
+                                            <Link href={item.call_to_action.href}>
+                                                {iconMapper[item.icon] || <Search/>}
+                                                <span>{item.call_to_action.title}</span>
+                                            </Link>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                );
+                            })}
+                        </SidebarMenu>
+                    </SidebarGroupContent>
+                </SidebarGroup>
+            </SidebarContent>
+
+            <SidebarFooter>
+                <ModeToggle/>
+                <SidebarMenu>
+                    <SidebarMenuItem>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <SidebarMenuButton>
+                                    <User2/> {user?.username ?? "Username"}
+                                    <ChevronUp className="ml-auto"/>
+                                </SidebarMenuButton>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                                side="top"
+                                className="w-[--radix-popper-anchor-width]"
+                            >
+                                <AccountPageButton />
+                                <SignOutButton />
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </SidebarMenuItem>
+                </SidebarMenu>
+            </SidebarFooter>
+        </Sidebar>
     );
 
 
