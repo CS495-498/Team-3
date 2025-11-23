@@ -4,15 +4,16 @@ import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import React, { useState } from "react";
 
-export default function EditFeatureRequestModal({ isOpen, closeModal, item }) {
+export default function EditFeatureRequestModal({ isOpen, closeModal, item, onSave }) {
     return (
         <AnimatePresence>
             {isOpen && (
                 <Dialog
                     className="fixed inset-0 z-50"
                     open={isOpen}
-                    onClose={() => setIsOpen(false)}
+                    onClose={closeModal}
                 >
+
                     <motion.div
                         className="fixed inset-0 bg-black/50"
                         initial={{ opacity: 0 }}
@@ -41,9 +42,11 @@ export default function EditFeatureRequestModal({ isOpen, closeModal, item }) {
                                         const formData = new FormData(e.target);
 
                                         const updatedItem = {
+                                            id: item?.id,               // ✅ include the id
                                             title: formData.get("title"),
-                                            description: formData.get("description")
-                                        }
+                                            content: formData.get("content"),
+                                            status: formData.get("status"),
+                                        };
 
                                         onSave(updatedItem);
                                     }}
@@ -70,6 +73,22 @@ export default function EditFeatureRequestModal({ isOpen, closeModal, item }) {
                                             defaultValue={item?.content || ""}
                                             className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-4 py-2 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 outline-none transition resize-none"
                                         />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium dark:text-gray-200 mb-1">
+                                            Status
+                                        </label>
+
+                                        <select
+                                            name="status"
+                                            defaultValue={item?.status || "open"}
+                                            className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-4 py-2 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 outline-none transition"
+                                        >
+                                            <option value="open">Open</option>
+                                            <option value="in_progress">In Progress</option>
+                                            <option value="completed">Completed</option>
+                                            <option value="closed">Closed</option>
+                                        </select>
                                     </div>
                                     <div className="flex justify-end gap-3 pt-4">
                                         <button
