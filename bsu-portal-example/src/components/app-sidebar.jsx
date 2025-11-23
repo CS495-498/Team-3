@@ -27,6 +27,7 @@ import { useState, useEffect } from "react";
 import Stack, { onEntryChange } from "@/lib/cstack";
 import SignOutButton from "./signout-button";
 import AccountPageButton from "@/components/account-page-button.jsx";
+import {createClient} from "../utils/Supabase/client.js";
 
 const iconMapper = {
   Home: <Home />,
@@ -81,6 +82,7 @@ function NavProjects() {
     const [entry, setEntry] = useState({});
     const [isLoading, setIsLoading] = useState(true);
     const pathname = usePathname(); // ✅ Get current path
+    const supabase = createClient()
 
     const getContent = async () => {
         const entry = await Stack.getElementByTypeWithRefs("header", "en-us", []);
@@ -89,8 +91,40 @@ function NavProjects() {
         setIsLoading(false);
     };
 
+    const [user, setUser] = useState(null)
+    const usernamePlaceHolder = {
+        username: "Username",
+    }
+
     useEffect(() => {
+        const fetchUsername = async () => {
+            setIsLoading(true);
+            const {data: { user }, error: userError,} = await supabase.auth.getUser()
+            if (userError || !user) {
+                console.error('No logged-in user:', userError)
+                setIsLoading(false)
+            }
+            setUser(user);
+            try {
+                const { data, error } = await supabase.from('profiles').select('username').eq('id', user.id).single()
+                if (error) throw error
+
+                if (data){
+                    setUser({username: data.username ?? 'Username'})
+                } else {
+                    setUser(usernamePlaceHolder)
+                }
+                setIsLoading(false)
+
+            } catch (err) {
+                console.error('Error loading user data:', err)
+                alert('Error loading user data!')
+            } finally {
+                setIsLoading(false)
+            }
+        }
         onEntryChange(getContent);
+        fetchUsername()
     }, []);
 
 
@@ -155,7 +189,7 @@ function NavProjects() {
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <SidebarMenuButton>
-                                    <User2/> Username
+                                    <User2/> {user?.username ?? "Username"}
                                     <ChevronUp className="ml-auto"/>
                                 </SidebarMenuButton>
                             </DropdownMenuTrigger>
