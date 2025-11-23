@@ -9,7 +9,6 @@ import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor
 import { useRef } from "react";
 import SuccessToast from "@/components/ui/success-toast.jsx";
 
-
 import { Card } from "@/components/ui/card";
 import BookmarkButton from "@/components/bookmark-button";
 import { BOOKMARK_TYPES, useBookmarks } from "@/hooks/use-bookmarks";
@@ -17,13 +16,14 @@ import CardDropdown from "@/components/cardDropdown.jsx";
 import EditDemoWebsiteModal from "@/components/editDemoWebsiteModal.jsx";
 import DeleteModal from "@/components/deleteModal.jsx";
 import EditDemoInstructionModal from "@/components/editDemoInstructions.jsx";
+import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 
 export default function DemoInstructions() {
     const [uploadError, setUploadError] = useState("");
     const [entry, setEntry] = useState({});
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
-    const [isOpen, setIsOpen] = useState(false)
+    const [isOpen, setIsOpen] = useState(false);
     const [dialogEditorContent, setDialogEditorContent] = useState("");
     const editorRef = useRef(null);
     const [showToast, setShowToast] = useState(false);
@@ -74,6 +74,8 @@ export default function DemoInstructions() {
             return aBookmarked ? -1 : 1;
         });
     }, [filteredDemos, isBookmarked]);
+
+    const { items: visibleInstructions, hasMore, ref } = useInfiniteScroll(sortedInstructions, 8);
 
     const openEditModal = (demo) => {
         setSelectedItem(demo);
@@ -230,8 +232,6 @@ export default function DemoInstructions() {
                                                 >
                                                     Upload
                                                 </button>
-
-
                                             </div>
                                         </div>
                                         <div className="flex-1 overflow-y-auto p-8">
@@ -256,10 +256,8 @@ export default function DemoInstructions() {
                                                         <SimpleEditor html={dialogEditorContent} editorRef={editorRef} />
                                                     </div>
                                                 </div>
-
                                             </form>
                                         </div>
-
                                     </Dialog.Panel>
                                 </motion.div>
                             </div>
@@ -303,105 +301,125 @@ export default function DemoInstructions() {
             </div>
 
             <div className="flex-1">
-                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6 me-10">
-                    {sortedInstructions.map((demo, idx) => {
-                        const instructionId = getInstructionId(demo);
-                        const key = instructionId ? `${instructionId}-${idx}` : `instruction-${idx}`;
+                {visibleInstructions.length > 0 ? (
+                    <>
+                        <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6 me-10">
+                            {visibleInstructions.map((demo, idx) => {
+                                const instructionId = getInstructionId(demo);
+                                const key = instructionId ? `${instructionId}-${idx}` : `instruction-${idx}`;
 
-                        const previewHTML = DOMPurify.sanitize(
-                            demo?.blog_content || "<p>No preview available.</p>"
-                        );
+                                const previewHTML = DOMPurify.sanitize(
+                                    demo?.blog_content || "<p>No preview available.</p>"
+                                );
 
-                        return (
-                            <div key={key} className="relative group bg-white rounded-xl shadow-md hover:shadow-xl transition-all border border-gray-200">
-
-                                <Link href={demo?.url || "#"} className="block">
-                                    <div
-                                        className="relative"
-                                        style={{
-                                            height: "300px",
-                                            padding: "20px",
-                                            overflow: "hidden",
-                                        }}
-                                    >
-                                        <div
-                                            className="prose prose-sm max-w-none text-gray-700"
-                                            dangerouslySetInnerHTML={{ __html: previewHTML }}
-                                        />
-
-                                        <div
-                                            className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none"
-                                            style={{
-                                                background:
-                                                    "linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 85%)",
-                                            }}
-                                        />
-                                    </div>
-                                </Link>
-
-                                <div className="px-4 py-3 bg-white flex flex-col gap-1 rounded-b-xl">
-                                    <div className="flex justify-between items-center">
-                                        <div className="flex items-center gap-2">
-                                            <svg
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                width="18"
-                                                height="18"
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                                stroke="#7C3AED"
-                                                strokeWidth="2"
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                className="shrink-0"
+                                return (
+                                    <div key={key} className="relative group bg-white rounded-xl shadow-md hover:shadow-xl transition-all border border-gray-200">
+                                        <Link href={demo?.url || "#"} className="block">
+                                            <div
+                                                className="relative"
+                                                style={{
+                                                    height: "300px",
+                                                    padding: "20px",
+                                                    overflow: "hidden",
+                                                }}
                                             >
-                                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                                <polyline points="14 2 14 8 20 8" />
-                                                <line x1="9" y1="13" x2="15" y2="13" />
-                                                <line x1="9" y1="17" x2="15" y2="17" />
-                                                <line x1="9" y1="9" x2="11" y2="9" />
-                                            </svg>
+                                                <div
+                                                    className="prose prose-sm max-w-none text-gray-700"
+                                                    dangerouslySetInnerHTML={{ __html: previewHTML }}
+                                                />
 
-                                            <h2 className="text-base font-semibold leading-tight line-clamp-1">
-                                                {demo?.title}
-                                            </h2>
+                                                <div
+                                                    className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none"
+                                                    style={{
+                                                        background:
+                                                            "linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 85%)",
+                                                    }}
+                                                />
+                                            </div>
+                                        </Link>
+
+                                        <div className="px-4 py-3 bg-white flex flex-col gap-1 rounded-b-xl">
+                                            <div className="flex justify-between items-center">
+                                                <div className="flex items-center gap-2">
+                                                    <svg
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        width="18"
+                                                        height="18"
+                                                        viewBox="0 0 24 24"
+                                                        fill="none"
+                                                        stroke="#7C3AED"
+                                                        strokeWidth="2"
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        className="shrink-0"
+                                                    >
+                                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                                        <polyline points="14 2 14 8 20 8" />
+                                                        <line x1="9" y1="13" x2="15" y2="13" />
+                                                        <line x1="9" y1="17" x2="15" y2="17" />
+                                                        <line x1="9" y1="9" x2="11" y2="9" />
+                                                    </svg>
+
+                                                    <h2 className="text-base font-semibold leading-tight line-clamp-1">
+                                                        {demo?.title}
+                                                    </h2>
+                                                </div>
+                                                <CardDropdown
+                                                    onEdit={() => openEditModal(demo)}
+                                                    onDelete={() => openDeleteModal(demo)}
+                                                />
+                                            </div>
+
+                                            <div className="flex items-center gap-1 text-gray-500 mt-1">
+                                                <svg
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    width="16"
+                                                    height="16"
+                                                    viewBox="0 0 24 24"
+                                                    fill="#7C3AED"
+                                                    className="shrink-0"
+                                                >
+                                                    <circle cx="12" cy="8" r="4" />
+                                                    <path d="M4 20c0-4 4-6 8-6s8 2 8 6v1H4v-1z" />
+                                                </svg>
+
+                                                <p className="text-xs line-clamp-1">
+                                                    {demo?.author_name || ""}
+                                                </p>
+                                            </div>
                                         </div>
-                                        <CardDropdown
-                                            onEdit={() => openEditModal(demo)}
-                                            onDelete={() => openDeleteModal(demo)}
+                                        <BookmarkButton
+                                            active={instructionId ? isBookmarked(instructionId) : false}
+                                            disabled={!instructionId || isPending(instructionId)}
+                                            onToggle={() => handleBookmarkToggle(demo)}
+                                            className="absolute top-3 right-3 shadow-md"
+                                            titleWhenActive="Remove instruction from bookmarks"
+                                            titleWhenInactive="Save instruction to bookmarks"
                                         />
                                     </div>
+                                );
+                            })}
+                        </div>
 
-                                    <div className="flex items-center gap-1 text-gray-500 mt-1">
-                                        <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            width="16"
-                                            height="16"
-                                            viewBox="0 0 24 24"
-                                            fill="#7C3AED"
-                                            className="shrink-0"
-                                        >
-                                            <circle cx="12" cy="8" r="4" />
-                                            <path d="M4 20c0-4 4-6 8-6s8 2 8 6v1H4v-1z" />
-                                        </svg>
-
-                                        <p className="text-xs line-clamp-1">
-                                            {demo?.author_name || ""}
-                                        </p>
-                                    </div>
+                        {hasMore && (
+                            <div ref={ref} className="flex flex-col justify-center items-center py-8 mt-6">
+                                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                                    <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                                    <span className="text-sm">Loading more instructions...</span>
                                 </div>
-                                <BookmarkButton
-                                    active={instructionId ? isBookmarked(instructionId) : false}
-                                    disabled={!instructionId || isPending(instructionId)}
-                                    onToggle={() => handleBookmarkToggle(demo)}
-                                    className="absolute top-3 right-3 shadow-md"
-                                    titleWhenActive="Remove instruction from bookmarks"
-                                    titleWhenInactive="Save instruction to bookmarks"
-                                />
+                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                                    Showing {visibleInstructions.length} of {sortedInstructions.length} instructions
+                                </p>
                             </div>
-                        );
-                    })}
-                </div>
+                        )}
+                    </>
+                ) : (
+                    <div className="flex items-center justify-center py-12 mt-6">
+                        <p className="text-gray-500 dark:text-gray-400">No instructions found.</p>
+                    </div>
+                )}
             </div>
+
             <EditDemoInstructionModal
                 isOpen={isEditOpen}
                 closeModal={() => setIsEditOpen(false)}
