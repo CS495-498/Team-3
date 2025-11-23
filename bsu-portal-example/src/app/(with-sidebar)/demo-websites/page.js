@@ -266,6 +266,8 @@ export default function Demos() {
         }
     };
 
+
+
     if (isLoading) return <div></div>
 
     return (
@@ -291,16 +293,11 @@ export default function Demos() {
                     <div className="relative w-full max-w-sm dark:text-black">
                         <input
                             type="text"
-                            placeholder="Search websites..."
+                            placeholder="Search demos..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full rounded-lg border border-gray-300 dark:border-gray-700 
-             bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 
-             px-4 py-2 pl-10 text-sm 
-             focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400 
-             outline-none transition"
+                            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 pl-10 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
                         />
-
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
                             fill="none"

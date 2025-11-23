@@ -5,15 +5,6 @@ export async function GET(req, { params }) {
   const { id } = await params;
   const supabase = await createClient();
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const { data, error } = await supabase
       .from("feature_request_comments")
       .select(`
@@ -35,7 +26,7 @@ export async function GET(req, { params }) {
 }
 
 export async function POST(req, { params }) {
-  const { id } = params; // feature_request_id
+  const { id } = await params; // feature_request_id
   const supabase = await createClient();
 
   // Authenticate user
@@ -45,7 +36,7 @@ export async function POST(req, { params }) {
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    redirect("/login");
   }
 
   // Parse request body
