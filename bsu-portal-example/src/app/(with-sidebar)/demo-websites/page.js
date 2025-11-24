@@ -280,6 +280,10 @@ export default function Demos() {
             setEntry(updatedEntry.entry);
             setIsEditOpen(false);
 
+            setToastMessage("Demo updated successfully!");
+            setShowToast(true);
+            setTimeout(() => setShowToast(false), 2000);
+
         } catch (error) {
             console.error("Edit failed:", error);
             alert("Failed to update demo.");
