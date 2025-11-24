@@ -2,9 +2,55 @@
 import { Dialog } from "@headlessui/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+
 
 export default function EditModal({ isOpen, closeModal, onSave, item }) {
+
+
+    const [isDirty, setIsDirty] = useState(false);
+
+    // Store initial values for check
+    const [initialValues, setInitialValues] = useState({
+        title: item?.title || "",
+        description: item?.description || "",
+        linkTitle: item?.link?.title || "",
+        linkHref: item?.link?.href || "",
+        imageUid: item?.image?.uid || item?.image || null
+    });
+
+    // Reset state to initial values when modal opens
+    useEffect(() => {
+        if (isOpen && item) {
+            setIsDirty(false);
+
+            setInitialValues({
+                title: item?.title || "",
+                description: item?.description || "",
+                linkHref: item?.link?.href || "",
+                imageUid: item?.image?.uid || item?.image || null,
+            });
+        }
+    }, [isOpen, item]);
+
+    // Check if form is has been modified
+    function checkDirty(form) {
+        const title = form.title.value;
+        const description = form.description.value;
+        const linkHref = form.link.value;
+        const image = form.image.files?.[0];
+
+        const textChanged =
+            title !== initialValues.title ||
+            description !== initialValues.description ||
+            linkHref !== initialValues.linkHref;
+
+        const imageChanged = image && image.size > 0;
+
+        setIsDirty(textChanged || imageChanged);
+    }
+
+
     return (
         <AnimatePresence>
             {isOpen && (
@@ -40,25 +86,8 @@ export default function EditModal({ isOpen, closeModal, onSave, item }) {
                                     </button>
                                 </div>
 
-                                <form
-                                    onSubmit={(e) => {
-                                        e.preventDefault();
-                                        const formData = new FormData(e.target);
+                                <form onSubmit={onSave} className="space-y-5">
 
-                                        const updatedItem = {
-                                            title: formData.get("title"),
-                                            description: formData.get("description"),
-                                            link: formData.get("link") || "",
-                                            image:
-                                                formData.get("image")?.size > 0
-                                                    ? formData.get("image")
-                                                    : null,
-                                        };
-
-                                        onSave(updatedItem);
-                                    }}
-                                    className="space-y-5"
-                                >
                                     <div>
                                         <label className="block text-sm font-medium dark:text-gray-200 mb-1">
                                             Title
@@ -66,6 +95,7 @@ export default function EditModal({ isOpen, closeModal, onSave, item }) {
                                         <input
                                             name="title"
                                             defaultValue={item?.title || ""}
+                                            onChange={(e) => checkDirty(e.target.form)}
                                             required
                                             className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none transition"
                                         />
@@ -79,6 +109,7 @@ export default function EditModal({ isOpen, closeModal, onSave, item }) {
                                             name="description"
                                             rows={4}
                                             defaultValue={item?.description || ""}
+                                            onChange={(e) => checkDirty(e.target.form)}
                                             className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none transition resize-none"
                                         />
                                     </div>
@@ -90,6 +121,7 @@ export default function EditModal({ isOpen, closeModal, onSave, item }) {
                                         <input
                                             name="link"
                                             defaultValue={item?.link.href || ""}
+                                            onChange={(e) => checkDirty(e.target.form)}
                                             type="url"
                                             placeholder="https://example.com"
                                             className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none transition"
@@ -113,6 +145,7 @@ export default function EditModal({ isOpen, closeModal, onSave, item }) {
                                             name="image"
                                             type="file"
                                             accept="image/*"
+                                            onChange={(e) => checkDirty(e.target.form)}
                                             className="w-full text-sm text-gray-700 dark:text-gray-200
                                                     file:mr-4 file:py-2 file:px-4
                                                     file:rounded-lg file:border-0
@@ -136,7 +169,11 @@ export default function EditModal({ isOpen, closeModal, onSave, item }) {
                                         </button>
                                         <button
                                             type="submit"
-                                            className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition"
+                                            disabled={!isDirty}
+                                            className={`text-white bg-gradient-to-r from-purple-500 to-purple-700
+                                            hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none
+                                            focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition
+                                            whitespace-nowrap ${!isDirty ? "opacity-50 cursor-not-allowed" : ""}`}
                                         >
                                             Save Changes
                                         </button>

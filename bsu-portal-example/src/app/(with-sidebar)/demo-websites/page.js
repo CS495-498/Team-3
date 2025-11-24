@@ -37,6 +37,7 @@ export default function Demos() {
 
 
     const [selectedItem, setSelectedItem] = useState(null);
+    const [selectedIndex, setSelectedIndex] = useState(null);
 
     const {
         isBookmarked,
@@ -87,13 +88,15 @@ export default function Demos() {
 
     const { items: visibleDemos, hasMore, ref } = useInfiniteScroll(sortedDemos, 8);
 
-    const openEditModal = (demo) => {
+    const openEditModal = (demo, index) => {
         setSelectedItem(demo);
+        setSelectedIndex(index);
         setIsEditOpen(true);
     };
 
-    const openDeleteModal = (demo) => {
+    const openDeleteModal = (demo, index) => {
         setSelectedItem(demo);
+        setSelectedIndex(index);
         setIsDeleteOpen(true);
     };
 
@@ -205,66 +208,127 @@ export default function Demos() {
         }
     };
 
-    const handleEditSave = (e) => {
-        if (e && e.preventDefault) {
-            e.preventDefault();
+    const handleEditSave = async (e) => {
+        e.preventDefault();
+
+        try {
+            if (selectedItem == null || selectedIndex == null) return;
+
             const form = e.target;
             const data = new FormData(form);
-            const updated = {
+
+            const newTitle = data.get("title");
+            const newDescription = data.get("description");
+            const newLinkTitle = data.get("link");
+            const newImageFile = data.get("image");
+
+            // CASE: Start with the existing UID
+            // selectedItem.image might be:
+            // { uid, url } OR just the uid string
+            let imageUid = selectedItem.image?.uid || selectedItem.image || null;
+
+            // CASE: User selected a new file → upload a new asset
+            if (newImageFile && newImageFile.size > 0) {
+                const uploaded = await postAsset(
+                    newImageFile,
+                    `${newTitle} Thumbnail`,
+                    "Demo thumbnail",
+                    null,                     // parent folder UID (null = root)
+                    "demo-thumbnails"         // tag applied to asset
+                );
+
+                imageUid = uploaded?.asset?.uid || null;
+            }
+
+            // Build updated item
+            const updatedItem = {
                 ...selectedItem,
-                title: data.get("title"),
-                description: data.get("description"),
+                title: newTitle,
+                description: newDescription,
+                link: {
+                    title: newTitle,
+                    href: newLinkTitle,
+                },
+                image: imageUid, // ALWAYS a UID (string)
             };
-            console.log("Edited item (placeholder):", updated);
-        } else {
-            console.log("Edited item (placeholder):", e);
-        }
-        setIsEditOpen(false);
-    };
 
-    const handleConfirmDelete = async () => {
-        try {
-            if (!selectedItem) return;
+            console.log("Updated Item:", updatedItem);
 
-            // 1. Remove the selected demo
-            const filtered = entry.demos.filter(
-                (demo) => getDemoId(demo) !== getDemoId(selectedItem)
-            );
+            // Replace in array
+            const updatedArray = [...entry.demos];
+            updatedArray[selectedIndex] = updatedItem;
 
-            // 2. Normalize array using shared helper
-            const normalizedDemos = normalizeDemoWebArray(filtered);
+            // Normalize for Contentstack (convert image object → uid)
+            const normalized = normalizeDemoWebArray(updatedArray);
 
-            // 3. Send DELETE request
+            // Send update
             const response = await fetch("/api/update-demo-web-in-cs", {
-                method: "DELETE",
+                method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     entryUid: entry.uid,
-                    demos: normalizedDemos,
+                    demos: normalized,
                 }),
             });
 
             if (!response.ok) {
                 const text = await response.text();
-                throw new Error(`Delete failed: ${response.status} ${text}`);
+                throw new Error(text);
+            }
+
+            const updatedEntry = await response.json();
+            setEntry(updatedEntry.entry);
+            setIsEditOpen(false);
+
+        } catch (error) {
+            console.error("Edit failed:", error);
+            alert("Failed to update demo.");
+        }
+    };
+
+
+    const handleConfirmDelete = async () => {
+        try {
+            if (selectedIndex == null) return;
+
+            // 1. Remove the item by index
+            const updatedArray = [...entry.demos];
+            updatedArray.splice(selectedIndex, 1);
+
+            // 2. Normalize for Contentstack
+            const normalized = normalizeDemoWebArray(updatedArray);
+
+            // 3. Send update to CS
+            const response = await fetch("/api/update-demo-web-in-cs", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    entryUid: entry.uid,
+                    demos: normalized,
+                }),
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(text);
             }
 
             // 4. Update UI with returned entry
             const result = await response.json();
             setEntry(result.entry);
 
-            // 5. Close modal + success toast
+            // 5. Close modal + toast
             setIsDeleteOpen(false);
             setToastMessage("Demo deleted successfully!");
             setShowToast(true);
-
             setTimeout(() => setShowToast(false), 2000);
 
         } catch (error) {
             console.error("Delete failed:", error);
-            alert("Failed to delete demo. Check console for details.");
+            alert("Failed to delete demo.");
         }
     };
+
 
     if (isLoading) return <div></div>
 
@@ -453,8 +517,8 @@ export default function Demos() {
                                                         {demo?.title}
                                                     </CardTitle>
                                                     <CardDropdown
-                                                        onEdit={() => openEditModal(demo)}
-                                                        onDelete={() => openDeleteModal(demo)}
+                                                        onEdit={() => openEditModal(demo, idx)}
+                                                        onDelete={() => openDeleteModal(demo, idx)}
                                                     />
                                                 </div>
                                                 <CardDescription
@@ -504,6 +568,7 @@ export default function Demos() {
                 closeModal={() => setIsEditOpen(false)}
                 onSave={handleEditSave}
                 item={selectedItem}
+                index={selectedIndex}
             />
 
             <DeleteModal
