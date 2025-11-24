@@ -19,6 +19,7 @@ import DeleteModal from "@/components/deleteModal.jsx";
 import EditFeatureRequestModal from "@/components/editFeatureRequestModal.jsx";
 
 export default function Home() {
+    const [currentUser, setCurrentUser] = useState(null);
     const [requests, setRequests] = useState([]);
     const [votes, setVotes] = useState({});
     const [isLoading, setIsLoading] = useState(true);
