@@ -1,6 +1,7 @@
 'use client'
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { createClient } from '@/utils/Supabase/client.js'
+import SuccessToast from "@/components/ui/success-toast.jsx";
 
 export default function Page() {
     const supabase = createClient()
@@ -8,6 +9,7 @@ export default function Page() {
     // State
     const [loading, setLoading] = useState(true)
     const [user, setUser] = useState(null)
+    const [showToast, setShowToast] = useState(false);
     const emptyProfile = {
         full_name: '',
         username: '',
@@ -77,12 +79,15 @@ export default function Page() {
                 const { error } = await supabase.from('profiles').upsert(updates)
                 if (error) throw error
 
-                alert('Profile updated successfully!')
             } catch (err) {
                 console.error('Error updating profile:', err)
                 alert('Error updating profile.')
             } finally {
+                setShowToast(true)
                 setLoading(false)
+                setTimeout(() => {
+                    setShowToast(false);
+                }, 3000);
             }
         }
     }
@@ -94,7 +99,11 @@ export default function Page() {
 
     return (
         <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col items-center">
-
+            <SuccessToast
+                message="Account Updated Successfully"
+                isOpen={showToast}
+                onClose={() => setShowToast(false)}
+            />
             {/* Banner */}
             <div className="w-full h-44 bg-gradient-to-r from-purple-600 to-purple-700 dark:from-purple-700 dark:to-purple-800 relative">
                 <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex flex-col items-center">
@@ -166,23 +175,6 @@ export default function Page() {
                     </button>
                 </div>
             </div>
-
-            <div className="mt-10 w-full max-w-xl px-6 mb-20">
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl shadow-inner p-6 border border-gray-200 dark:border-gray-700">
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
-                        Your Account Information
-                    </h3>
-
-                    <div className="space-y-3 text-gray-700 dark:text-gray-300">
-                        <p><span className="font-medium">Full Name:</span> {profile.full_name}</p>
-                        <p><span className="font-medium">Username:</span> {profile.username}</p>
-                        <p><span className="font-medium">Email:</span> {profile.email || "N/A"}</p>
-                        <p><span className="font-medium">Member Since:</span> {profile.created_at ? new Date(profile.created_at).toLocaleDateString() : "N/A"}</p>
-                    </div>
-                </div>
-            </div>
         </div>
-
-
     )
 }
