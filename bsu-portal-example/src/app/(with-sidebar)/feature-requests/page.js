@@ -228,7 +228,7 @@ export default function Home() {
 
                 <div className="flex items-center justify-between mb-4 bg-secondary/40 p-4 rounded-lg">
                     <div className="flex items-center gap-8">
-                    <h1 className="text-4xl font-bold ml-4">Feature Requests</h1>
+                        <h1 className="text-4xl font-bold ml-4">Feature Requests</h1>
                         {/* Filter By */}
                         <div className="flex items-center gap-2">
                             <span className="text-sm text-muted-foreground">Filter by:</span>
@@ -285,10 +285,16 @@ export default function Home() {
                             const newRequest = await res.json();
 
                             const requestWithExtras = {
-                                ...newRequest,
-                                username: newRequest.username || newRequest.user?.username,
+                                id: newRequest.id,
+                                title: newRequest.title,
+                                content: newRequest.content,
+                                status: newRequest.status,
+                                created_at: newRequest.created_at,
+                                number_of_votes: 0,
                                 commentCount: 0,
+                                username: newRequest.user?.username,  // <-- critical fix
                             };
+
 
                             setRequests((prev) => [requestWithExtras, ...prev]);
                             setShowToast(true);
