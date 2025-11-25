@@ -1,6 +1,6 @@
 // /app/api/me/route.js  (Next.js App Router style)
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase-server"; // adjust path to your createClient helper
+import { createClient } from "@/utils/Supabase/server"; // adjust path to your createClient helper
 
 export async function GET() {
   try {

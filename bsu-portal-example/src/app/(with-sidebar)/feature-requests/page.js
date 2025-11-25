@@ -43,6 +43,27 @@ export default function Home() {
             .finally(() => setIsLoading(false));
     }, []);
 
+    useEffect(() => {
+        let mounted = true;
+        fetch("/api/profiles/me")
+            .then((r) => r.json())
+            .then((data) => {
+                if (!mounted) return;
+                if (!data || data?.error) {
+                    setCurrentUser(null);
+                } else {
+                    setCurrentUser(data); // { id, username }
+                }
+            })
+            .catch((err) => {
+                console.error("Failed to load current user:", err);
+                setCurrentUser(null);
+            });
+
+        return () => { mounted = false; };
+    }, []);
+
+
     const filteredSortedRequests = useMemo(() => {
         let list = [...requests];
 
@@ -285,17 +306,17 @@ export default function Home() {
 
                             const newRequest = await res.json();
 
-                            const requestWithExtras = {
-                                id: newRequest.id,
-                                title: newRequest.title,
-                                content: newRequest.content,
-                                status: newRequest.status,
-                                created_at: newRequest.created_at,
-                                number_of_votes: 0,
-                                commentCount: 0,
-                                username: newRequest.user?.username,  // <-- critical fix
-                            };
+                            const usernameFromServer = newRequest.username || newRequest.user?.username;
+                            const username = usernameFromServer || currentUser?.username || "Unknown";
 
+                            const requestWithExtras = {
+                                ...newRequest,
+                                username,
+                                // remove nested user object to keep shape consistent (optional)
+                                user: undefined,
+                                commentCount: 0,
+                                number_of_votes: newRequest.number_of_votes ?? 0, // make sure votes exist
+                            };
 
                             setRequests((prev) => [requestWithExtras, ...prev]);
                             setShowToast(true);
