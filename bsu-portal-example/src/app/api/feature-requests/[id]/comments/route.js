@@ -35,7 +35,7 @@ export async function GET(req, { params }) {
 }
 
 export async function POST(req, { params }) {
-  const { id } = params; // feature_request_id
+  const { id } = await params; // feature_request_id
   const supabase = await createClient();
 
   // Authenticate user
