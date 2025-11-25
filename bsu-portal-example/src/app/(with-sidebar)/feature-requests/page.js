@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { ChevronsUp, ChevronsDown, MessageSquare } from "lucide-react";
 import SuccessToast from "@/components/ui/success-toast.jsx";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
 
 import AddFeatureRequest from "@/components/featureRequestModal";
 import CommentsDialog from "@/components/commentsDialog";
@@ -18,11 +19,12 @@ import DeleteModal from "@/components/deleteModal.jsx";
 import EditFeatureRequestModal from "@/components/editFeatureRequestModal.jsx";
 
 export default function Home() {
+    const [currentUser, setCurrentUser] = useState(null);
     const [requests, setRequests] = useState([]);
     const [votes, setVotes] = useState({});
     const [isLoading, setIsLoading] = useState(true);
     const [deleteToast, setDeleteToast] = useState(false);
-
+    const [statusFilter, setStatusFilter] = useState("all");
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [comments, setComments] = useState([]);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -30,6 +32,7 @@ export default function Home() {
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
+    const [sortOption, setSortOption] = useState("votes_desc");
 
     useEffect(() => {
         Promise.all([getFeatureRequests(), getUserVotes()])
@@ -40,12 +43,68 @@ export default function Home() {
             .finally(() => setIsLoading(false));
     }, []);
 
-    const sortedRequests = useMemo(() => {
-        if (!requests.length) return [];
-        return [...requests].sort((a, b) => b.number_of_votes - a.number_of_votes);
-    }, [requests]);
+    useEffect(() => {
+        let mounted = true;
+        fetch("/api/profiles/me")
+            .then((r) => r.json())
+            .then((data) => {
+                if (!mounted) return;
+                if (!data || data?.error) {
+                    setCurrentUser(null);
+                } else {
+                    setCurrentUser(data); // { id, username }
+                }
+            })
+            .catch((err) => {
+                console.error("Failed to load current user:", err);
+                setCurrentUser(null);
+            });
 
-    const { items: visibleRequests, hasMore, ref } = useInfiniteScroll(sortedRequests, 6);
+        return () => { mounted = false; };
+    }, []);
+
+
+    const filteredSortedRequests = useMemo(() => {
+        let list = [...requests];
+
+        // FILTER
+        if (statusFilter !== "all") {
+            list = list.filter((req) => req.status === statusFilter);
+        }
+
+        // SORT
+        switch (sortOption) {
+            case "votes_desc":
+                list.sort((a, b) => b.number_of_votes - a.number_of_votes);
+                break;
+
+            case "votes_asc":
+                list.sort((a, b) => a.number_of_votes - b.number_of_votes);
+                break;
+
+            case "newest":
+                list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                break;
+
+            case "oldest":
+                list.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+                break;
+
+            case "title_asc":
+                list.sort((a, b) => a.title.localeCompare(b.title));
+                break;
+
+            case "title_desc":
+                list.sort((a, b) => b.title.localeCompare(a.title));
+                break;
+        }
+
+        return list;
+    }, [requests, statusFilter, sortOption]);
+
+
+
+    const { items: visibleRequests, hasMore, ref } = useInfiniteScroll(filteredSortedRequests, 6);
 
     const openCommentsDialog = async (req) => {
         const data = await getComments(req.id);
@@ -186,8 +245,50 @@ export default function Home() {
                 onClose={() => setDeleteToast(false)}
             />
 
+
             <div className="flex justify-between items-center mb-6 pt-6">
-                <h1 className="text-4xl font-bold ml-4">Feature Requests</h1>
+
+                <div className="flex items-center justify-between mb-4 bg-secondary/40 p-4 rounded-lg">
+                    <div className="flex items-center gap-8">
+                        <h1 className="text-4xl font-bold ml-4">Feature Requests</h1>
+                        {/* Filter By */}
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">Filter by:</span>
+                            <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                <SelectTrigger className="w-40">
+                                    <SelectValue placeholder="Status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All</SelectItem>
+                                    <SelectItem value="open">Open</SelectItem>
+                                    <SelectItem value="in_progress">In Progress</SelectItem>
+                                    <SelectItem value="completed">Completed</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* Sort By */}
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">Sort by:</span>
+                            <Select value={sortOption} onValueChange={setSortOption}>
+                                <SelectTrigger className="w-40">
+                                    <SelectValue placeholder="Sort" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="votes_desc">Most Votes</SelectItem>
+                                    <SelectItem value="votes_asc">Fewest Votes</SelectItem>
+                                    <SelectItem value="newest">Newest</SelectItem>
+                                    <SelectItem value="oldest">Oldest</SelectItem>
+                                    <SelectItem value="title_asc">Title A → Z</SelectItem>
+                                    <SelectItem value="title_desc">Title Z → A</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                    </div>
+                </div>
+
+
                 <AddFeatureRequest
                     onAdded={async ({ title, content }) => {
                         try {
@@ -205,10 +306,16 @@ export default function Home() {
 
                             const newRequest = await res.json();
 
+                            const usernameFromServer = newRequest.username || newRequest.user?.username;
+                            const username = usernameFromServer || currentUser?.username || "Unknown";
+
                             const requestWithExtras = {
                                 ...newRequest,
-                                username: newRequest.username || newRequest.user?.username,
+                                username,
+                                // remove nested user object to keep shape consistent (optional)
+                                user: undefined,
                                 commentCount: 0,
+                                number_of_votes: newRequest.number_of_votes ?? 0, // make sure votes exist
                             };
 
                             setRequests((prev) => [requestWithExtras, ...prev]);
@@ -238,21 +345,21 @@ export default function Home() {
                                         className={`p-1 rounded-md transition ${voteState === "up"
                                             ? "text-green-600"
                                             : "text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
-                                        }`}
+                                            }`}
                                         onClick={() => handleVote(req.id, "up")}
                                     >
                                         <ChevronsUp className="w-5 h-5" />
                                     </button>
 
                                     <span className="text-sm font-medium text-gray-800 dark:text-gray-50">
-                    {req.number_of_votes}
-                  </span>
+                                        {req.number_of_votes}
+                                    </span>
 
                                     <button
                                         className={`p-1 rounded-md transition ${voteState === "down"
                                             ? "text-red-600"
                                             : "text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
-                                        }`}
+                                            }`}
                                         onClick={() => handleVote(req.id, "down")}
                                     >
                                         <ChevronsDown className="w-5 h-5" />
@@ -267,17 +374,17 @@ export default function Home() {
                                                 className={`
         px-2 py-0.5 text-xs font-medium rounded-full
         ${req.status === "open"
-                                                    ? "bg-blue-100 text-blue-700"
-                                                    : req.status === "in_progress"
-                                                        ? "bg-yellow-100 text-yellow-700"
-                                                        : req.status === "completed"
-                                                            ? "bg-green-100 text-green-700"
-                                                            : "bg-gray-200 text-gray-700"
-                                                }
+                                                        ? "bg-blue-100 text-blue-700"
+                                                        : req.status === "in_progress"
+                                                            ? "bg-yellow-100 text-yellow-700"
+                                                            : req.status === "completed"
+                                                                ? "bg-green-100 text-green-700"
+                                                                : "bg-gray-200 text-gray-700"
+                                                    }
       `}
                                             >
-                        {req.status.replace("_", " ")}
-                      </span>
+                                                {req.status.replace("_", " ")}
+                                            </span>
                                         )}
                                         <span className="text-sm text-gray-500">— {req.username}</span>
                                     </h3>

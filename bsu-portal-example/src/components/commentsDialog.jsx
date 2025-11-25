@@ -106,7 +106,7 @@ export default function CommentsDialog({
                                             isSubmitting ? "opacity-70 cursor-not-allowed" : ""
                                         }`}
                                     >
-                                        {isSubmitting ? "Posting..." : "Post Comement"}
+                                        {isSubmitting ? "Posting..." : "Post Comment"}
                                     </button>
                                 </div>
                             </Dialog.Panel>
