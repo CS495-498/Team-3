@@ -7,6 +7,7 @@ import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import appendNotification from "@/app/api/helper/appendNotification.js";
 import { motion, AnimatePresence } from "framer-motion";
 import SuccessToast from "@/components/ui/success-toast.jsx";
+import LoadingIndicator from "@/components/ui/loading-indicator.jsx";
 
 export default function Home() {
     const [entry, setEntry] = useState({});
@@ -110,7 +111,9 @@ export default function Home() {
         }
     };
 
-    if (isLoading) return <div></div>;
+    if (isLoading) {
+        return <LoadingIndicator label="Loading dashboard..." />;
+    }
 
     return (
         <main className="relative w-full min-h-screen overflow-hidden">

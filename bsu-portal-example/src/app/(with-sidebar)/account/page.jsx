@@ -1,7 +1,8 @@
 'use client'
 import React, { useEffect, useState } from 'react'
 import { createClient } from '@/utils/Supabase/client.js'
-import SuccessToast from "@/components/ui/success-toast.jsx";
+import SuccessToast from '@/components/ui/success-toast.jsx'
+import LoadingIndicator from '@/components/ui/loading-indicator.jsx'
 
 export default function Page() {
     const supabase = createClient()
@@ -15,6 +16,7 @@ export default function Page() {
         username: '',
     }
     const [profile, setProfile] = useState(emptyProfile)
+    const isInitialLoading = loading && !user
 
     // Fetch profile on mount
     useEffect(() => {
@@ -95,6 +97,10 @@ export default function Page() {
     // Controlled input handler
     const handleChange = (field, value) => {
         setProfile((prev) => ({ ...prev, [field]: value }))
+    }
+
+    if (isInitialLoading) {
+        return <LoadingIndicator label="Loading account..." />;
     }
 
     return (
