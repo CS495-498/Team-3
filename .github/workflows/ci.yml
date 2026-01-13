@@ -23,6 +23,13 @@ jobs:
       - name: Install deps
         run: npm ci
 
+      - name: Print Working Directory
+        run: pwd
+
+      - name: List Files
+        working-directory: bsu-portal-example
+        run: ls -la
+
       - name: Run tests
         working-directory: bsu-portal-example
         run: npm test
