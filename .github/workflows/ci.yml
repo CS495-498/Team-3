@@ -14,6 +14,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Debug repo root
+        run: |
+          pwd
+          ls -la
+          echo "----"
+          test -f package-lock.json && echo "lockfile exists" || echo "lockfile MISSING"
+
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
