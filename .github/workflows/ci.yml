@@ -10,6 +10,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: bsu-portal-example
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,10 +23,10 @@ jobs:
         with:
           node-version: "20"
           cache: npm
+          cache-dependency-path: bsu-portal-example/package-lock.json
 
       - name: Install deps
         run: npm ci
 
       - name: Run tests
-        working-directory: bsu-portal-example
         run: npm test
