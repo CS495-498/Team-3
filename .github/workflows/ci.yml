@@ -14,29 +14,30 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Debug repo root
+      - name: Verify files exist
         run: |
-          pwd
+          echo "Repository contents:"
           ls -la
-          echo "----"
-          test -f package-lock.json && echo "lockfile exists" || echo "lockfile MISSING"
-
+          echo "---"
+          echo "bsu-portal-example contents:"
+          ls -la bsu-portal-example/
+          echo "---"
+          if [ -f "bsu-portal-example/package-lock.json" ]; then
+            echo "✓ Lock file found in bsu-portal-example"
+          else
+            echo "✗ Lock file NOT found in bsu-portal-example"
+          fi
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: npm
+          cache: "npm"
+          cache-dependency-path: "./bsu-portal-example/package-lock.json"
 
       - name: Install dependencies
-        run: npm ci
-
-      - name: Print Working Directory
-        run: pwd
-
-      - name: List Files
         working-directory: bsu-portal-example
-        run: ls -la
+        run: npm ci
 
       - name: Run tests
         working-directory: bsu-portal-example
