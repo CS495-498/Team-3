@@ -39,12 +39,12 @@ export default function Home() {
             .then(([reqs, userVotes]) => {
                 console.log("reqs", reqs);
                 setRequests(reqs);
-                
+
                 setVotes(userVotes);
             })
             .finally(() => setIsLoading(false));
     }, []);
-    
+
     useEffect(() => {
         let mounted = true;
         fetch("/api/profiles/me")
@@ -107,7 +107,7 @@ export default function Home() {
 
 
     const { items: visibleRequests, hasMore, ref } = useInfiniteScroll(filteredSortedRequests, 6);
-    
+
 
     const openCommentsDialog = async (req) => {
         const data = await getComments(req.id);
@@ -343,8 +343,18 @@ export default function Home() {
                     {visibleRequests.map((req) => {
                         const voteState = votes[req.id];
 
-                        const isImage = (url) => url && /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
-                        const isPDF = (url) => url && /\.pdf$/i.test(url);
+                        const isImage = (url) => {
+                            if (!url) return false;
+                            const path = url.split("?")[0]; // remove ?token=...
+                            return /\.(jpg|jpeg|png|gif|webp)$/i.test(path);
+                        };
+
+                        const isPDF = (url) => {
+                            if (!url) return false;
+                            const path = url.split("?")[0];
+                            return /\.pdf$/i.test(path);
+                        };
+
                         console.log("isImage check for", req.signed_file_url, ":", isImage(req.signed_file_url));
 
                         return (
@@ -386,12 +396,12 @@ export default function Home() {
                                         {req.status && (
                                             <span
                                                 className={`px-2 py-0.5 text-xs font-medium rounded-full ${req.status === "open"
-                                                        ? "bg-blue-100 text-blue-700"
-                                                        : req.status === "in_progress"
-                                                            ? "bg-yellow-100 text-yellow-700"
-                                                            : req.status === "completed"
-                                                                ? "bg-green-100 text-green-700"
-                                                                : "bg-gray-200 text-gray-700"
+                                                    ? "bg-blue-100 text-blue-700"
+                                                    : req.status === "in_progress"
+                                                        ? "bg-yellow-100 text-yellow-700"
+                                                        : req.status === "completed"
+                                                            ? "bg-green-100 text-green-700"
+                                                            : "bg-gray-200 text-gray-700"
                                                     }`}
                                             >
                                                 {req.status.replace("_", " ")}
