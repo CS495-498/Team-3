@@ -359,110 +359,99 @@ export default function Home() {
 
                         return (
                             <li
-  key={req.id}
-  className="flex items-start justify-between py-4 px-4 hover:bg-gray-100 dark:hover:bg-gray-800"
->
-  {/* Vote & File Column */}
-  <div className="flex flex-col items-center space-y-2 ml-2">
-    {/* Upvote */}
-    <button
-      className={`p-1 rounded-md transition ${voteState === "up"
-        ? "text-green-600"
-        : "text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
-        }`}
-      onClick={() => handleVote(req.id, "up")}
-    >
-      <ChevronsUp className="w-5 h-5" />
-    </button>
+                                key={req.id}
+                                className="flex items-start py-4 px-4 hover:bg-gray-100 dark:hover:bg-gray-800"
+                            >
+                                {/* Votes */}
+                                <div className="flex flex-col items-center space-y-2 mr-4">
+                                    <button
+                                        className={`p-1 rounded-md transition ${voteState === "up"
+                                                ? "text-green-600"
+                                                : "text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
+                                            }`}
+                                        onClick={() => handleVote(req.id, "up")}
+                                    >
+                                        <ChevronsUp className="w-5 h-5" />
+                                    </button>
+                                    <span className="text-sm font-medium text-gray-800 dark:text-gray-50">
+                                        {req.number_of_votes}
+                                    </span>
+                                    <button
+                                        className={`p-1 rounded-md transition ${voteState === "down"
+                                                ? "text-red-600"
+                                                : "text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
+                                            }`}
+                                        onClick={() => handleVote(req.id, "down")}
+                                    >
+                                        <ChevronsDown className="w-5 h-5" />
+                                    </button>
+                                </div>
 
-    {/* Vote count */}
-    <span className="text-sm font-medium text-gray-800 dark:text-gray-50">
-      {req.number_of_votes}
-    </span>
+                                {/* File */}
+                                {req.signed_file_url && (
+                                    <div className="flex-shrink-0 mr-4">
+                                        {isImage(req.signed_file_url) && (
+                                            <img
+                                                src={req.signed_file_url}
+                                                alt="Attached"
+                                                className="w-16 h-16 object-cover rounded-lg cursor-pointer border border-gray-200 dark:border-gray-700"
+                                                onClick={() => window.open(req.signed_file_url, "_blank")}
+                                            />
+                                        )}
+                                        {isPDF(req.signed_file_url) && (
+                                            <img
+                                                src="/pdf-icon.png"
+                                                alt="PDF"
+                                                className="w-16 h-16 object-cover rounded-lg cursor-pointer border border-gray-200 dark:border-gray-700"
+                                                onClick={() => window.open(req.signed_file_url, "_blank")}
+                                                title="Click to view PDF"
+                                            />
+                                        )}
+                                    </div>
+                                )}
 
-    {/* Downvote */}
-    <button
-      className={`p-1 rounded-md transition ${voteState === "down"
-        ? "text-red-600"
-        : "text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
-        }`}
-      onClick={() => handleVote(req.id, "down")}
-    >
-      <ChevronsDown className="w-5 h-5" />
-    </button>
+                                {/* Content */}
+                                <div className="flex-1 flex flex-col gap-2">
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-50 flex items-center gap-2">
+                                        <span>{req.title}</span>
+                                        {req.status && (
+                                            <span
+                                                className={`px-2 py-0.5 text-xs font-medium rounded-full ${req.status === "open"
+                                                        ? "bg-blue-100 text-blue-700"
+                                                        : req.status === "in_progress"
+                                                            ? "bg-yellow-100 text-yellow-700"
+                                                            : req.status === "completed"
+                                                                ? "bg-green-100 text-green-700"
+                                                                : "bg-gray-200 text-gray-700"
+                                                    }`}
+                                            >
+                                                {req.status.replace("_", " ")}
+                                            </span>
+                                        )}
+                                        <span className="text-sm text-gray-500">— {req.username}</span>
+                                    </h3>
 
-    {/* Uploaded file */}
-    {req.signed_file_url && (
-      <div className="mt-2">
-        {isImage(req.signed_file_url) && (
-          <img
-            src={req.signed_file_url}
-            alt="Attached"
-            className="w-16 h-16 rounded-lg object-cover cursor-pointer border border-gray-200 dark:border-gray-700"
-            onClick={() => window.open(req.signed_file_url, "_blank")}
-          />
-        )}
-        {isPDF(req.signed_file_url) && (
-          <div
-            className="w-16 h-16 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 cursor-pointer"
-            onClick={() => window.open(req.signed_file_url, "_blank")}
-            title="Click to view PDF"
-          >
-            <img
-              src="/pdf-icon.png" 
-              alt="PDF"
-              className="w-16 h-16 rounded-lg object-cover cursor-pointer border border-gray-200 dark:border-gray-700"
-            />
-          </div>
-        )}
-      </div>
-    )}
-  </div>
+                                    <p className="text-sm text-gray-600 dark:text-gray-200">{req.content}</p>
+                                    <p className="text-xs text-gray-400 mt-1">
+                                        Created: {new Date(req.created_at).toLocaleString()}
+                                    </p>
+                                </div>
 
-  {/* Feature request content */}
-  <div className="flex-1 ml-4 flex flex-col gap-2">
-    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-50 flex items-center gap-2">
-      <span>{req.title}</span>
-      {req.status && (
-        <span
-          className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-            req.status === "open"
-              ? "bg-blue-100 text-blue-700"
-              : req.status === "in_progress"
-              ? "bg-yellow-100 text-yellow-700"
-              : req.status === "completed"
-              ? "bg-green-100 text-green-700"
-              : "bg-gray-200 text-gray-700"
-          }`}
-        >
-          {req.status.replace("_", " ")}
-        </span>
-      )}
-      <span className="text-sm text-gray-500">— {req.username}</span>
-    </h3>
-
-    <p className="text-sm text-gray-600 dark:text-gray-200">{req.content}</p>
-    <p className="text-xs text-gray-400 mt-1">
-      Created: {new Date(req.created_at).toLocaleString()}
-    </p>
-  </div>
-
-  {/* Comments & dropdown */}
-  <div className="flex justify-between items-center">
-    <button
-      onClick={() => openCommentsDialog(req)}
-      className="flex items-center gap-1 px-3 py-2 rounded-md text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700"
-    >
-      <MessageSquare className="w-5 h-5" />
-      <span className="text-sm">{req.commentCount}</span>
-    </button>
-    <CardDropdown
-      onEdit={() => openEditModal(req)}
-      onDelete={() => openDeleteModal(req)}
-    />
-  </div>
-</li>
-
+                                {/* Comments & dropdown */}
+                                <div className="flex justify-between items-center ml-4">
+                                    <button
+                                        onClick={() => openCommentsDialog(req)}
+                                        className="flex items-center gap-1 px-3 py-2 rounded-md text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700"
+                                    >
+                                        <MessageSquare className="w-5 h-5" />
+                                        <span className="text-sm">{req.commentCount}</span>
+                                    </button>
+                                    <CardDropdown
+                                        onEdit={() => openEditModal(req)}
+                                        onDelete={() => openDeleteModal(req)}
+                                    />
+                                </div>
+                            </li>
                         );
                     })}
 
