@@ -355,19 +355,18 @@ export default function Home() {
                             return /\.pdf$/i.test(path);
                         };
 
-                        console.log("isImage check for", req.signed_file_url, ":", isImage(req.signed_file_url));
 
                         return (
                             <li
                                 key={req.id}
-                                className="flex items-start py-4 px-4 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                className="flex items-center py-4 px-4 hover:bg-gray-100 dark:hover:bg-gray-800"
                             >
                                 {/* Votes */}
                                 <div className="flex flex-col items-center space-y-2 mr-4">
                                     <button
                                         className={`p-1 rounded-md transition ${voteState === "up"
-                                                ? "text-green-600"
-                                                : "text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
+                                            ? "text-green-600"
+                                            : "text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
                                             }`}
                                         onClick={() => handleVote(req.id, "up")}
                                     >
@@ -378,8 +377,8 @@ export default function Home() {
                                     </span>
                                     <button
                                         className={`p-1 rounded-md transition ${voteState === "down"
-                                                ? "text-red-600"
-                                                : "text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
+                                            ? "text-red-600"
+                                            : "text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
                                             }`}
                                         onClick={() => handleVote(req.id, "down")}
                                     >
@@ -387,28 +386,41 @@ export default function Home() {
                                     </button>
                                 </div>
 
-                                {/* File */}
-                                {req.signed_file_url && (
-                                    <div className="flex-shrink-0 mr-4">
-                                        {isImage(req.signed_file_url) && (
-                                            <img
-                                                src={req.signed_file_url}
-                                                alt="Attached"
-                                                className="w-16 h-16 object-cover rounded-lg cursor-pointer border border-gray-200 dark:border-gray-700"
-                                                onClick={() => window.open(req.signed_file_url, "_blank")}
-                                            />
-                                        )}
-                                        {isPDF(req.signed_file_url) && (
-                                            <img
-                                                src="/pdf-icon.png"
-                                                alt="PDF"
-                                                className="w-16 h-16 object-cover rounded-lg cursor-pointer border border-gray-200 dark:border-gray-700"
-                                                onClick={() => window.open(req.signed_file_url, "_blank")}
-                                                title="Click to view PDF"
-                                            />
-                                        )}
-                                    </div>
-                                )}
+                                {/* File / Image / Placeholder */}
+                                <div className="flex-shrink-0 flex items-center justify-center mr-4">
+                                    {req.signed_file_url ? (
+                                        <>
+                                            {isImage(req.signed_file_url) && (
+                                                <img
+                                                    src={req.signed_file_url}
+                                                    alt="Attached"
+                                                    className="w-16 h-16 object-cover rounded-lg cursor-pointer border border-gray-200 dark:border-gray-700"
+                                                    onClick={() => window.open(req.signed_file_url, "_blank")}
+                                                    title="Click to enlarge image"
+                                                />
+                                            )}
+                                            {isPDF(req.signed_file_url) && (
+                                                <img
+                                                    src="/pdf-icon.png"
+                                                    alt="PDF"
+                                                    className="w-16 h-16 object-cover rounded-lg cursor-pointer border border-gray-200 dark:border-gray-700"
+                                                    onClick={() => window.open(req.signed_file_url, "_blank")}
+                                                    title="Click to view PDF"
+                                                />
+                                            )}
+                                        </>
+                                    ) : (
+                                        // Placeholder icon for requests without files
+                                        <button
+                                            onClick={() => openCommentsDialog(req)}
+                                            className="w-16 h-16 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                                            title="Add/view comments"
+                                        >
+                                            <MessageSquare className="w-10 h-10 text-gray-600 dark:text-gray-300" />
+                                        </button>
+                                    )}
+                                </div>
+
 
                                 {/* Content */}
                                 <div className="flex-1 flex flex-col gap-2">
@@ -417,12 +429,12 @@ export default function Home() {
                                         {req.status && (
                                             <span
                                                 className={`px-2 py-0.5 text-xs font-medium rounded-full ${req.status === "open"
-                                                        ? "bg-blue-100 text-blue-700"
-                                                        : req.status === "in_progress"
-                                                            ? "bg-yellow-100 text-yellow-700"
-                                                            : req.status === "completed"
-                                                                ? "bg-green-100 text-green-700"
-                                                                : "bg-gray-200 text-gray-700"
+                                                    ? "bg-blue-100 text-blue-700"
+                                                    : req.status === "in_progress"
+                                                        ? "bg-yellow-100 text-yellow-700"
+                                                        : req.status === "completed"
+                                                            ? "bg-green-100 text-green-700"
+                                                            : "bg-gray-200 text-gray-700"
                                                     }`}
                                             >
                                                 {req.status.replace("_", " ")}
@@ -452,6 +464,7 @@ export default function Home() {
                                     />
                                 </div>
                             </li>
+
                         );
                     })}
 
