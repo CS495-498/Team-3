@@ -108,7 +108,7 @@ export default function AddFeatureRequest({ onAdded }) {
                         type="file"
                         onChange={(e) => setFile(e.target.files?.[0] || null)}
                         className="w-full"
-                        accept=".png,.jpg,.jpeg,.pdf"
+                        accept=".png,.jpg,.jpeg,.pdf,.mp4,.webm,.ogg"
                       />
                     </div>
 

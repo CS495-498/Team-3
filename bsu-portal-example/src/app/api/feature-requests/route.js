@@ -3,7 +3,17 @@ import { createClient } from "@/utils/Supabase/server";
 import { fileTypeFromBuffer } from "file-type";
 import { createServiceRoleClient } from "@/utils/Supabase/server";
 
-const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "application/pdf"];
+const ALLOWED_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "application/pdf",
+  "video/mp4",
+  "video/webm",
+  "video/ogg"
+];
+
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
 export async function GET() {

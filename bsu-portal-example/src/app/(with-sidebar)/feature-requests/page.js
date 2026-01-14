@@ -355,6 +355,12 @@ export default function Home() {
                             return /\.pdf$/i.test(path);
                         };
 
+                        const isVideo = (url) => {
+                            if (!url) return false;
+                            const path = url.split("?")[0];
+                            return /\.(mp4|webm|ogg)$/i.test(path);
+                        }
+
 
                         return (
                             <li
@@ -386,7 +392,7 @@ export default function Home() {
                                     </button>
                                 </div>
 
-                                {/* File / Image / Placeholder */}
+                                {/* File / Image / Video / Placeholder */}
                                 <div className="flex-shrink-0 flex items-center justify-center mr-4">
                                     {req.signed_file_url ? (
                                         <>
@@ -406,6 +412,20 @@ export default function Home() {
                                                     className="w-16 h-16 object-cover rounded-lg cursor-pointer border border-gray-200 dark:border-gray-700"
                                                     onClick={() => window.open(req.signed_file_url, "_blank")}
                                                     title="Click to view PDF"
+                                                />
+                                            )}
+
+                                            {isVideo(req.signed_file_url) && (
+                                                <video
+                                                    src={req.signed_file_url}
+                                                    className="w-16 h-16 rounded-lg object-cover cursor-pointer border border-gray-200 dark:border-gray-700"
+                                                    onClick={(e) => {
+                                                        e.currentTarget.requestFullscreen?.();
+                                                    }}
+                                                    title="Click to fullscreen"
+                                                    muted
+                                                    loop
+                                                    playsInline
                                                 />
                                             )}
                                         </>
