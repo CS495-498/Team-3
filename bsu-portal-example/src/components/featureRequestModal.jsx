@@ -1,12 +1,12 @@
-"use client";
 import { useState } from "react";
 import { Dialog } from "@headlessui/react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function AddFeatureRequest({ onAdded }) {
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [file, setFile] = useState(null); // <-- new state for file
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -27,11 +27,12 @@ export default function AddFeatureRequest({ onAdded }) {
     try {
       setIsSubmitting(true);
 
-      // Call the onAdded callback instead of calling fetch here
-      await onAdded({ title: title.trim(), content: content.trim() });
+      // Call onAdded callback with file
+      await onAdded({ title: title.trim(), content: content.trim(), file });
 
       setTitle("");
       setContent("");
+      setFile(null);
       setIsOpen(false);
     } catch (err) {
       setError(err.message || "Failed to submit feature request.");
@@ -96,6 +97,19 @@ export default function AddFeatureRequest({ onAdded }) {
                         placeholder="Describe your feature request..."
                         className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-4 py-2 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 outline-none transition resize-none"
                       ></textarea>
+                    </div>
+
+                    {/* New File Input */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Attach a file (optional)
+                      </label>
+                      <input
+                        type="file"
+                        onChange={(e) => setFile(e.target.files?.[0] || null)}
+                        className="w-full"
+                        accept=".png,.jpg,.jpeg,.pdf"
+                      />
                     </div>
 
                     {error && <p className="text-red-500 text-sm font-medium">{error}</p>}

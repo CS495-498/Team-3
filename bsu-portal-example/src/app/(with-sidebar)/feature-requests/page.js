@@ -37,12 +37,14 @@ export default function Home() {
     useEffect(() => {
         Promise.all([getFeatureRequests(), getUserVotes()])
             .then(([reqs, userVotes]) => {
+                console.log("reqs", reqs);
                 setRequests(reqs);
+                
                 setVotes(userVotes);
             })
             .finally(() => setIsLoading(false));
     }, []);
-
+    
     useEffect(() => {
         let mounted = true;
         fetch("/api/profiles/me")
@@ -105,6 +107,7 @@ export default function Home() {
 
 
     const { items: visibleRequests, hasMore, ref } = useInfiniteScroll(filteredSortedRequests, 6);
+    
 
     const openCommentsDialog = async (req) => {
         const data = await getComments(req.id);
@@ -290,12 +293,17 @@ export default function Home() {
 
 
                 <AddFeatureRequest
-                    onAdded={async ({ title, content }) => {
+                    onAdded={async ({ title, content, file }) => {
                         try {
+                            // Use FormData instead of JSON
+                            const formData = new FormData();
+                            formData.append("title", title);
+                            formData.append("content", content);
+                            if (file) formData.append("file", file); // optional
+
                             const res = await fetch("/api/feature-requests", {
                                 method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ title, content }),
+                                body: formData, // no Content-Type header needed, browser sets it automatically
                             });
 
                             if (!res.ok) {
@@ -312,10 +320,9 @@ export default function Home() {
                             const requestWithExtras = {
                                 ...newRequest,
                                 username,
-                                // remove nested user object to keep shape consistent (optional)
                                 user: undefined,
                                 commentCount: 0,
-                                number_of_votes: newRequest.number_of_votes ?? 0, // make sure votes exist
+                                number_of_votes: newRequest.number_of_votes ?? 0,
                             };
 
                             setRequests((prev) => [requestWithExtras, ...prev]);
@@ -326,6 +333,7 @@ export default function Home() {
                         }
                     }}
                 />
+
             </div>
 
             {visibleRequests.length === 0 ? (
@@ -335,11 +343,16 @@ export default function Home() {
                     {visibleRequests.map((req) => {
                         const voteState = votes[req.id];
 
+                        const isImage = (url) => url && /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
+                        const isPDF = (url) => url && /\.pdf$/i.test(url);
+                        console.log("isImage check for", req.signed_file_url, ":", isImage(req.signed_file_url));
+
                         return (
                             <li
                                 key={req.id}
-                                className="flex items-center justify-between py-4 px-4 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                className="flex items-start justify-between py-4 px-4 hover:bg-gray-100 dark:hover:bg-gray-800"
                             >
+                                {/* Vote column */}
                                 <div className="flex flex-col items-center space-y-2 ml-2">
                                     <button
                                         className={`p-1 rounded-md transition ${voteState === "up"
@@ -366,22 +379,20 @@ export default function Home() {
                                     </button>
                                 </div>
 
-                                <div className="flex-1 ml-6">
+                                {/* Feature request content */}
+                                <div className="flex-1 ml-6 flex flex-col gap-2">
                                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-50 flex items-center gap-2">
                                         <span>{req.title}</span>
                                         {req.status && (
                                             <span
-                                                className={`
-        px-2 py-0.5 text-xs font-medium rounded-full
-        ${req.status === "open"
+                                                className={`px-2 py-0.5 text-xs font-medium rounded-full ${req.status === "open"
                                                         ? "bg-blue-100 text-blue-700"
                                                         : req.status === "in_progress"
                                                             ? "bg-yellow-100 text-yellow-700"
                                                             : req.status === "completed"
                                                                 ? "bg-green-100 text-green-700"
                                                                 : "bg-gray-200 text-gray-700"
-                                                    }
-      `}
+                                                    }`}
                                             >
                                                 {req.status.replace("_", " ")}
                                             </span>
@@ -389,15 +400,36 @@ export default function Home() {
                                         <span className="text-sm text-gray-500">— {req.username}</span>
                                     </h3>
 
-                                    <p className="text-sm text-gray-600 dark:text-gray-200">
-                                        {req.content}
-                                    </p>
+                                    {/* Render uploaded file */}
+                                    {req.signed_file_url && (
+                                        <>
+                                            {isImage(req.signed_file_url) && (
+                                                <img
+                                                    src={req.signed_file_url}
+                                                    alt="Attached"
+                                                    className="mt-2 max-h-48 rounded-lg object-contain border border-gray-200 dark:border-gray-700"
+                                                />
+                                            )}
+                                            {isPDF(req.signed_file_url) && (
+                                                <a
+                                                    href={req.signed_file_url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-blue-600 underline text-sm mt-1"
+                                                >
+                                                    View attached PDF
+                                                </a>
+                                            )}
+                                        </>
+                                    )}
 
+                                    <p className="text-sm text-gray-600 dark:text-gray-200">{req.content}</p>
                                     <p className="text-xs text-gray-400 mt-1">
                                         Created: {new Date(req.created_at).toLocaleString()}
                                     </p>
                                 </div>
 
+                                {/* Comments & dropdown */}
                                 <div className="flex justify-between items-center">
                                     <button
                                         onClick={() => openCommentsDialog(req)}
@@ -414,7 +446,9 @@ export default function Home() {
                             </li>
                         );
                     })}
+
                 </ul>
+
             )}
 
             {hasMore && (
