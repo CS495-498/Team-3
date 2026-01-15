@@ -17,6 +17,9 @@ import { getComments } from "@/lib/featureRequests/comments/getComments";
 import CardDropdown from "@/components/cardDropdown.jsx";
 import DeleteModal from "@/components/deleteModal.jsx";
 import EditFeatureRequestModal from "@/components/editFeatureRequestModal.jsx";
+import { motion, AnimatePresence } from "framer-motion";
+import { Dialog } from "@headlessui/react";
+
 
 export default function Home() {
     const [currentUser, setCurrentUser] = useState(null);
@@ -33,7 +36,10 @@ export default function Home() {
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
     const [sortOption, setSortOption] = useState("votes_desc");
-    const [error, setError] = useState(null);
+
+    const [videoModalOpen, setVideoModalOpen] = useState(false);
+    const [activeVideoSrc, setActiveVideoSrc] = useState(null);
+
 
     useEffect(() => {
         Promise.all([getFeatureRequests(), getUserVotes()])
@@ -414,17 +420,33 @@ export default function Home() {
                                             )}
 
                                             {isVideo(req.signed_file_url) && (
-                                                <video
-                                                    src={req.signed_file_url}
-                                                    className="w-16 h-16 rounded-lg object-cover cursor-pointer border border-gray-200 dark:border-gray-700"
-                                                    onClick={(e) => {
-                                                        e.currentTarget.requestFullscreen?.();
-                                                    }}
-                                                    title="Click to fullscreen"
-                                                    muted
-                                                    loop
-                                                    playsInline
-                                                />
+                                                <div className="relative w-16 h-16">
+                                                    <video
+                                                        src={req.signed_file_url}
+                                                        className="w-16 h-16 rounded-lg object-cover border border-gray-200 dark:border-gray-700"
+                                                        muted
+                                                        loop
+                                                        playsInline
+                                                        onMouseEnter={(e) => e.currentTarget.play()}
+                                                        onMouseLeave={(e) => {
+                                                            e.currentTarget.pause();
+                                                            e.currentTarget.currentTime = 0;
+                                                        }}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/40 text-white text-xl hover:bg-black/50 transition"
+                                                        title="Play video"
+                                                        onClick={() => {
+                                                            setActiveVideoSrc(req.signed_file_url);
+                                                            setVideoModalOpen(true);
+                                                        }}
+                                                    >
+                                                        ▶
+                                                    </button>
+                                                </div>
+
+
                                             )}
                                         </>
                                     ) : (
@@ -521,6 +543,43 @@ export default function Home() {
                 closeModal={() => setIsDeleteOpen(false)}
                 onDeleteConfirm={handleConfirmDelete}
             />
+            {/* Video Fullscreen Modal */}
+            <AnimatePresence>
+                {videoModalOpen && (
+                    <Dialog
+                        open={videoModalOpen}
+                        onClose={() => setVideoModalOpen(false)}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+                    >
+                        <motion.div
+                            className="w-full max-w-3xl"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                        >
+                            <Dialog.Panel className="relative w-full">
+                                {/* Close Button */}
+                                <button
+                                    className="absolute top-4 right-4 text-white text-2xl z-10"
+                                    onClick={() => setVideoModalOpen(false)}
+                                    title="Close video"
+                                >
+                                    ×
+                                </button>
+
+                                {/* Video */}
+                                <video
+                                    src={activeVideoSrc}
+                                    className="w-full h-auto max-h-screen rounded-lg"
+                                    controls
+                                    autoPlay
+                                />
+                            </Dialog.Panel>
+                        </motion.div>
+                    </Dialog>
+                )}
+            </AnimatePresence>
+
         </main>
     );
 }

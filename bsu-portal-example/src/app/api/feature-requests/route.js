@@ -14,7 +14,8 @@ const ALLOWED_MIME_TYPES = [
   "video/ogg"
 ];
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
+
 
 export async function GET() {
   
