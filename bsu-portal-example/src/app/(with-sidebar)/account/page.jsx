@@ -95,34 +95,24 @@ export default function Page() {
 
 
     const handleDeleteAccount = async () => {
-        if (!user) return
-
-        const confirmed = window.confirm(
-            "This will permanently delete your account and all data.\n\nThis action cannot be undone."
-        )
-
-        if (!confirmed) return
+        if (!user) return;
+        if (!window.confirm("Delete your account permanently? This cannot be undone.")) return;
 
         try {
-            setLoading(true)
+            setLoading(true);
 
-            const res = await fetch('/api/delete-account', {
-                method: 'POST',
-            })
+            const res = await fetch("/api/profiles/me", { method: "DELETE" });
+            if (!res.ok) throw new Error();
 
-            if (!res.ok) {
-                throw new Error('Failed to delete account')
-            }
-
-            await supabase.auth.signOut()
-            window.location.href = '/'
-        } catch (err) {
-            console.error(err)
-            alert('Error deleting account.')
+            await supabase.auth.signOut();
+            window.location.href = "/";
+        } catch {
+            alert("Error deleting account.");
         } finally {
-            setLoading(false)
+            setLoading(false);
         }
-    }
+    };
+
 
     // Controlled input handler
     const handleChange = (field, value) => {
