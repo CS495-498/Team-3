@@ -92,6 +92,38 @@ export default function Page() {
         }
     }
 
+
+
+    const handleDeleteAccount = async () => {
+        if (!user) return
+
+        const confirmed = window.confirm(
+            "This will permanently delete your account and all data.\n\nThis action cannot be undone."
+        )
+
+        if (!confirmed) return
+
+        try {
+            setLoading(true)
+
+            const res = await fetch('/api/delete-account', {
+                method: 'POST',
+            })
+
+            if (!res.ok) {
+                throw new Error('Failed to delete account')
+            }
+
+            await supabase.auth.signOut()
+            window.location.href = '/'
+        } catch (err) {
+            console.error(err)
+            alert('Error deleting account.')
+        } finally {
+            setLoading(false)
+        }
+    }
+
     // Controlled input handler
     const handleChange = (field, value) => {
         setProfile((prev) => ({ ...prev, [field]: value }))
@@ -172,6 +204,21 @@ export default function Page() {
                    transition-all shadow-md disabled:opacity-50"
                     >
                         {loading ? "Saving..." : "Update Profile"}
+                    </button>
+                </div>
+
+                <div className="pt-6 border-t border-red-200 dark:border-red-900">
+                    <h3 className="text-lg font-semibold text-red-600 dark:text-red-400">
+                        Danger Zone
+                    </h3>
+
+                    <button
+                        onClick={handleDeleteAccount}
+                        className="mt-4 w-full py-2.5 rounded-lg font-medium
+        bg-red-600 text-white hover:bg-red-700
+        transition-all shadow-md"
+                    >
+                        Delete My Account
                     </button>
                 </div>
             </div>
