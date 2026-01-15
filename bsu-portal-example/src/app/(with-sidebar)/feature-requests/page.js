@@ -18,6 +18,9 @@ import { getComments } from "@/lib/featureRequests/comments/getComments";
 import CardDropdown from "@/components/cardDropdown.jsx";
 import DeleteModal from "@/components/deleteModal.jsx";
 import EditFeatureRequestModal from "@/components/editFeatureRequestModal.jsx";
+import { motion, AnimatePresence } from "framer-motion";
+import { Dialog } from "@headlessui/react";
+
 
 export default function Home() {
     const [currentUser, setCurrentUser] = useState(null);
@@ -35,10 +38,16 @@ export default function Home() {
     const [selectedItem, setSelectedItem] = useState(null);
     const [sortOption, setSortOption] = useState("votes_desc");
 
+    const [videoModalOpen, setVideoModalOpen] = useState(false);
+    const [activeVideoSrc, setActiveVideoSrc] = useState(null);
+
+
     useEffect(() => {
         Promise.all([getFeatureRequests(), getUserVotes()])
             .then(([reqs, userVotes]) => {
+                console.log("reqs", reqs);
                 setRequests(reqs);
+
                 setVotes(userVotes);
             })
             .finally(() => setIsLoading(false));
@@ -106,6 +115,7 @@ export default function Home() {
 
 
     const { items: visibleRequests, hasMore, ref } = useInfiniteScroll(filteredSortedRequests, 6);
+
 
     const openCommentsDialog = async (req) => {
         const data = await getComments(req.id);
@@ -291,42 +301,44 @@ export default function Home() {
 
 
                 <AddFeatureRequest
-                    onAdded={async ({ title, content }) => {
-                        try {
-                            const res = await fetch("/api/feature-requests", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ title, content }),
-                            });
+                    onAdded={async ({ title, content, file }) => {
+                        // DO NOT set local error here — let modal handle it
+                        const formData = new FormData();
+                        formData.append("title", title);
+                        formData.append("content", content);
+                        if (file) formData.append("file", file);
 
-                            if (!res.ok) {
-                                const err = await res.json();
-                                console.error("Failed to add feature request:", err.error || err);
-                                return;
-                            }
+                        const res = await fetch("/api/feature-requests", {
+                            method: "POST",
+                            body: formData,
+                        });
 
-                            const newRequest = await res.json();
+                        const data = await res.json(); // ✅ parse ONCE
 
-                            const usernameFromServer = newRequest.username || newRequest.user?.username;
-                            const username = usernameFromServer || currentUser?.username || "Unknown";
-
-                            const requestWithExtras = {
-                                ...newRequest,
-                                username,
-                                // remove nested user object to keep shape consistent (optional)
-                                user: undefined,
-                                commentCount: 0,
-                                number_of_votes: newRequest.number_of_votes ?? 0, // make sure votes exist
-                            };
-
-                            setRequests((prev) => [requestWithExtras, ...prev]);
-                            setShowToast(true);
-                            setTimeout(() => setShowToast(false), 2000);
-                        } catch (error) {
-                            console.error("Error adding feature request:", error);
+                        if (!res.ok) {
+                            throw new Error(data.error || "Failed to add feature request");
                         }
+
+                        const usernameFromServer =
+                            data.username || data.user?.username;
+                        const username =
+                            usernameFromServer || currentUser?.username || "Unknown";
+
+                        const requestWithExtras = {
+                            ...data,
+                            username,
+                            user: undefined,
+                            commentCount: 0,
+                            number_of_votes: data.number_of_votes ?? 0,
+                        };
+
+                        setRequests(prev => [requestWithExtras, ...prev]);
+                        setShowToast(true);
+                        setTimeout(() => setShowToast(false), 2000);
                     }}
                 />
+
+
             </div>
 
             {visibleRequests.length === 0 ? (
@@ -336,12 +348,32 @@ export default function Home() {
                     {visibleRequests.map((req) => {
                         const voteState = votes[req.id];
 
+                        const isImage = (url) => {
+                            if (!url) return false;
+                            const path = url.split("?")[0]; // remove ?token=...
+                            return /\.(jpg|jpeg|png|gif|webp)$/i.test(path);
+                        };
+
+                        const isPDF = (url) => {
+                            if (!url) return false;
+                            const path = url.split("?")[0];
+                            return /\.pdf$/i.test(path);
+                        };
+
+                        const isVideo = (url) => {
+                            if (!url) return false;
+                            const path = url.split("?")[0];
+                            return /\.(mp4|webm|ogg)$/i.test(path);
+                        }
+
+
                         return (
                             <li
                                 key={req.id}
-                                className="flex items-center justify-between py-4 px-4 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                className="flex items-center py-4 px-4 hover:bg-gray-100 dark:hover:bg-gray-800"
                             >
-                                <div className="flex flex-col items-center space-y-2 ml-2">
+                                {/* Votes */}
+                                <div className="flex flex-col items-center space-y-2 mr-4">
                                     <button
                                         className={`p-1 rounded-md transition ${voteState === "up"
                                             ? "text-green-600"
@@ -351,11 +383,9 @@ export default function Home() {
                                     >
                                         <ChevronsUp className="w-5 h-5" />
                                     </button>
-
                                     <span className="text-sm font-medium text-gray-800 dark:text-gray-50">
                                         {req.number_of_votes}
                                     </span>
-
                                     <button
                                         className={`p-1 rounded-md transition ${voteState === "down"
                                             ? "text-red-600"
@@ -367,22 +397,86 @@ export default function Home() {
                                     </button>
                                 </div>
 
-                                <div className="flex-1 ml-6">
+                                {/* File / Image / Video / Placeholder */}
+                                <div className="flex-shrink-0 flex items-center justify-center mr-4">
+                                    {req.signed_file_url ? (
+                                        <>
+                                            {isImage(req.signed_file_url) && (
+                                                <img
+                                                    src={req.signed_file_url}
+                                                    alt="Attached"
+                                                    className="w-16 h-16 object-cover rounded-lg cursor-pointer border border-gray-200 dark:border-gray-700"
+                                                    onClick={() => window.open(req.signed_file_url, "_blank")}
+                                                    title="Click to enlarge image"
+                                                />
+                                            )}
+                                            {isPDF(req.signed_file_url) && (
+                                                <img
+                                                    src="/pdf-icon.png"
+                                                    alt="PDF"
+                                                    className="w-16 h-16 object-cover rounded-lg cursor-pointer border border-gray-200 dark:border-gray-700"
+                                                    onClick={() => window.open(req.signed_file_url, "_blank")}
+                                                    title="Click to view PDF"
+                                                />
+                                            )}
+
+                                            {isVideo(req.signed_file_url) && (
+                                                <div className="relative w-16 h-16">
+                                                    <video
+                                                        src={req.signed_file_url}
+                                                        className="w-16 h-16 rounded-lg object-cover border border-gray-200 dark:border-gray-700"
+                                                        muted
+                                                        loop
+                                                        playsInline
+                                                        onMouseEnter={(e) => e.currentTarget.play()}
+                                                        onMouseLeave={(e) => {
+                                                            e.currentTarget.pause();
+                                                            e.currentTarget.currentTime = 0;
+                                                        }}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/40 text-white text-xl hover:bg-black/50 transition"
+                                                        title="Play video"
+                                                        onClick={() => {
+                                                            setActiveVideoSrc(req.signed_file_url);
+                                                            setVideoModalOpen(true);
+                                                        }}
+                                                    >
+                                                        ▶
+                                                    </button>
+                                                </div>
+
+
+                                            )}
+                                        </>
+                                    ) : (
+                                        // Placeholder icon for requests without files
+                                        <button
+                                            onClick={() => openCommentsDialog(req)}
+                                            className="w-16 h-16 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                                            title="Add/view comments"
+                                        >
+                                            <MessageSquare className="w-10 h-10 text-gray-600 dark:text-gray-300" />
+                                        </button>
+                                    )}
+                                </div>
+
+
+                                {/* Content */}
+                                <div className="flex-1 flex flex-col gap-2">
                                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-50 flex items-center gap-2">
                                         <span>{req.title}</span>
                                         {req.status && (
                                             <span
-                                                className={`
-        px-2 py-0.5 text-xs font-medium rounded-full
-        ${req.status === "open"
-                                                        ? "bg-blue-100 text-blue-700"
-                                                        : req.status === "in_progress"
-                                                            ? "bg-yellow-100 text-yellow-700"
-                                                            : req.status === "completed"
-                                                                ? "bg-green-100 text-green-700"
-                                                                : "bg-gray-200 text-gray-700"
-                                                    }
-      `}
+                                                className={`px-2 py-0.5 text-xs font-medium rounded-full ${req.status === "open"
+                                                    ? "bg-blue-100 text-blue-700"
+                                                    : req.status === "in_progress"
+                                                        ? "bg-yellow-100 text-yellow-700"
+                                                        : req.status === "completed"
+                                                            ? "bg-green-100 text-green-700"
+                                                            : "bg-gray-200 text-gray-700"
+                                                    }`}
                                             >
                                                 {req.status.replace("_", " ")}
                                             </span>
@@ -390,16 +484,14 @@ export default function Home() {
                                         <span className="text-sm text-gray-500">— {req.username}</span>
                                     </h3>
 
-                                    <p className="text-sm text-gray-600 dark:text-gray-200">
-                                        {req.content}
-                                    </p>
-
+                                    <p className="text-sm text-gray-600 dark:text-gray-200">{req.content}</p>
                                     <p className="text-xs text-gray-400 mt-1">
                                         Created: {new Date(req.created_at).toLocaleString()}
                                     </p>
                                 </div>
 
-                                <div className="flex justify-between items-center">
+                                {/* Comments & dropdown */}
+                                <div className="flex justify-between items-center ml-4">
                                     <button
                                         onClick={() => openCommentsDialog(req)}
                                         className="flex items-center gap-1 px-3 py-2 rounded-md text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700"
@@ -413,9 +505,12 @@ export default function Home() {
                                     />
                                 </div>
                             </li>
+
                         );
                     })}
+
                 </ul>
+
             )}
 
             {hasMore && (
@@ -449,6 +544,43 @@ export default function Home() {
                 closeModal={() => setIsDeleteOpen(false)}
                 onDeleteConfirm={handleConfirmDelete}
             />
+            {/* Video Fullscreen Modal */}
+            <AnimatePresence>
+                {videoModalOpen && (
+                    <Dialog
+                        open={videoModalOpen}
+                        onClose={() => setVideoModalOpen(false)}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+                    >
+                        <motion.div
+                            className="w-full max-w-3xl"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                        >
+                            <Dialog.Panel className="relative w-full">
+                                {/* Close Button */}
+                                <button
+                                    className="absolute top-4 right-4 text-white text-2xl z-10"
+                                    onClick={() => setVideoModalOpen(false)}
+                                    title="Close video"
+                                >
+                                    ×
+                                </button>
+
+                                {/* Video */}
+                                <video
+                                    src={activeVideoSrc}
+                                    className="w-full h-auto max-h-screen rounded-lg"
+                                    controls
+                                    autoPlay
+                                />
+                            </Dialog.Panel>
+                        </motion.div>
+                    </Dialog>
+                )}
+            </AnimatePresence>
+
         </main>
     );
 }

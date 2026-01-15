@@ -1,12 +1,12 @@
-"use client";
 import { useState } from "react";
 import { Dialog } from "@headlessui/react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function AddFeatureRequest({ onAdded }) {
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [file, setFile] = useState(null); // <-- new state for file
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -27,11 +27,12 @@ export default function AddFeatureRequest({ onAdded }) {
     try {
       setIsSubmitting(true);
 
-      // Call the onAdded callback instead of calling fetch here
-      await onAdded({ title: title.trim(), content: content.trim() });
+      // Call onAdded callback with file
+      await onAdded({ title: title.trim(), content: content.trim(), file });
 
       setTitle("");
       setContent("");
+      setFile(null);
       setIsOpen(false);
     } catch (err) {
       setError(err.message || "Failed to submit feature request.");
@@ -98,6 +99,27 @@ export default function AddFeatureRequest({ onAdded }) {
                       ></textarea>
                     </div>
 
+                    {/* New File Input */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                        Attach a File (optional)
+                      </label>
+                      <input
+                        type="file"
+                        onChange={(e) => setFile(e.target.files?.[0] || null)}
+                        className="w-full text-sm text-gray-700 dark:text-gray-200
+                                                             file:mr-4 file:py-2 file:px-4
+                                                             file:rounded-lg file:border-0
+                                                             file:text-sm file:font-medium
+                                                             file:bg-gray-400 file:text-white
+                                                             hover:file:bg-gray-500
+                                                             bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700
+                                                             rounded-lg px-2 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500
+                                                             outline-none transition"
+                        accept=".png,.jpg,.jpeg,.pdf,.mp4,.webm,.ogg"
+                      />
+                    </div>
+
                     {error && <p className="text-red-500 text-sm font-medium">{error}</p>}
 
                     <div className="flex justify-end gap-3 pt-4">
@@ -111,9 +133,8 @@ export default function AddFeatureRequest({ onAdded }) {
                       <button
                         type="submit"
                         disabled={isSubmitting}
-                        className={`text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition ${
-                          isSubmitting ? "opacity-70 cursor-not-allowed" : ""
-                        }`}
+                        className={`text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition ${isSubmitting ? "opacity-70 cursor-not-allowed" : ""
+                          }`}
                       >
                         {isSubmitting ? "Submitting..." : "Submit Feature"}
                       </button>
