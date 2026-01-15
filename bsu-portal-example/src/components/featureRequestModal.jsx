@@ -101,13 +101,21 @@ export default function AddFeatureRequest({ onAdded }) {
 
                     {/* New File Input */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Attach a file (optional)
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                        Attach a File (optional)
                       </label>
                       <input
                         type="file"
                         onChange={(e) => setFile(e.target.files?.[0] || null)}
-                        className="w-full"
+                        className="w-full text-sm text-gray-700 dark:text-gray-200
+                                                             file:mr-4 file:py-2 file:px-4
+                                                             file:rounded-lg file:border-0
+                                                             file:text-sm file:font-medium
+                                                             file:bg-gray-400 file:text-white
+                                                             hover:file:bg-gray-500
+                                                             bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700
+                                                             rounded-lg px-2 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500
+                                                             outline-none transition"
                         accept=".png,.jpg,.jpeg,.pdf,.mp4,.webm,.ogg"
                       />
                     </div>
