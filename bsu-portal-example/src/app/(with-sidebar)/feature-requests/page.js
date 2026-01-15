@@ -33,6 +33,7 @@ export default function Home() {
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
     const [sortOption, setSortOption] = useState("votes_desc");
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         Promise.all([getFeatureRequests(), getUserVotes()])
@@ -294,45 +295,42 @@ export default function Home() {
 
                 <AddFeatureRequest
                     onAdded={async ({ title, content, file }) => {
-                        try {
-                            // Use FormData instead of JSON
-                            const formData = new FormData();
-                            formData.append("title", title);
-                            formData.append("content", content);
-                            if (file) formData.append("file", file); // optional
+                        // DO NOT set local error here — let modal handle it
+                        const formData = new FormData();
+                        formData.append("title", title);
+                        formData.append("content", content);
+                        if (file) formData.append("file", file);
 
-                            const res = await fetch("/api/feature-requests", {
-                                method: "POST",
-                                body: formData, // no Content-Type header needed, browser sets it automatically
-                            });
+                        const res = await fetch("/api/feature-requests", {
+                            method: "POST",
+                            body: formData,
+                        });
 
-                            if (!res.ok) {
-                                const err = await res.json();
-                                console.error("Failed to add feature request:", err.error || err);
-                                return;
-                            }
+                        const data = await res.json(); // ✅ parse ONCE
 
-                            const newRequest = await res.json();
-
-                            const usernameFromServer = newRequest.username || newRequest.user?.username;
-                            const username = usernameFromServer || currentUser?.username || "Unknown";
-
-                            const requestWithExtras = {
-                                ...newRequest,
-                                username,
-                                user: undefined,
-                                commentCount: 0,
-                                number_of_votes: newRequest.number_of_votes ?? 0,
-                            };
-
-                            setRequests((prev) => [requestWithExtras, ...prev]);
-                            setShowToast(true);
-                            setTimeout(() => setShowToast(false), 2000);
-                        } catch (error) {
-                            console.error("Error adding feature request:", error);
+                        if (!res.ok) {
+                            throw new Error(data.error || "Failed to add feature request");
                         }
+
+                        const usernameFromServer =
+                            data.username || data.user?.username;
+                        const username =
+                            usernameFromServer || currentUser?.username || "Unknown";
+
+                        const requestWithExtras = {
+                            ...data,
+                            username,
+                            user: undefined,
+                            commentCount: 0,
+                            number_of_votes: data.number_of_votes ?? 0,
+                        };
+
+                        setRequests(prev => [requestWithExtras, ...prev]);
+                        setShowToast(true);
+                        setTimeout(() => setShowToast(false), 2000);
                     }}
                 />
+
 
             </div>
 

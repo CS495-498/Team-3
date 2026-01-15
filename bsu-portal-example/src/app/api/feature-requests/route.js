@@ -76,6 +76,12 @@ export async function POST(req) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const contentLength = req.headers.get("content-length");
+
+  if (contentLength && Number(contentLength) > MAX_FILE_SIZE) {
+    return NextResponse.json({ error: "File too large" }, { status: 413 });
+  }
+
   const formData = await req.formData();
   const title = formData.get("title");
   const content = formData.get("content");
@@ -89,7 +95,7 @@ export async function POST(req) {
 
   if (file) {
     if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json({ error: "File too large" }, { status: 400 });
+      return NextResponse.json({ error: "File too large" }, { status: 413 });
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());

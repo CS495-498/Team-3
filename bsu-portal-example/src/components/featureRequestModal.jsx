@@ -125,9 +125,8 @@ export default function AddFeatureRequest({ onAdded }) {
                       <button
                         type="submit"
                         disabled={isSubmitting}
-                        className={`text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition ${
-                          isSubmitting ? "opacity-70 cursor-not-allowed" : ""
-                        }`}
+                        className={`text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition ${isSubmitting ? "opacity-70 cursor-not-allowed" : ""
+                          }`}
                       >
                         {isSubmitting ? "Submitting..." : "Submit Feature"}
                       </button>
