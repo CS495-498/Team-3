@@ -7,7 +7,7 @@ import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import appendNotification from "@/app/api/helper/appendNotification.js";
 import { motion, AnimatePresence } from "framer-motion";
 import SuccessToast from "@/components/ui/success-toast.jsx";
-import { AlertTimer, AlertCard } from "@/components/ui/alertTimer.jsx";
+import { AlertTimer, AlertCard } from "@/components/ui/alert.jsx";
 
 
 export default function Home() {
