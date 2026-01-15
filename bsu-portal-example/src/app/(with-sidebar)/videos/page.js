@@ -8,6 +8,7 @@ import Stack, { onEntryChange } from "@/lib/cstack";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import { AnimatePresence, motion } from "framer-motion";
 import SuccessToast from "@/components/ui/success-toast.jsx";
+import LoadingIndicator from "@/components/ui/loading-indicator.jsx";
 
 import BookmarkButton from "@/components/bookmark-button";
 import { BOOKMARK_TYPES, useBookmarks } from "@/hooks/use-bookmarks";
@@ -294,12 +295,9 @@ export default function VideoLibrary() {
     /* -----------------------------------------------------------------------------------
         RENDER
     ----------------------------------------------------------------------------------- */
-    if (isLoading)
-        return (
-            <div className="p-8 text-center text-muted-foreground">
-                Loading videos...
-            </div>
-        );
+    if (isLoading) {
+        return <LoadingIndicator label="Loading videos..." />;
+    }
 
     return (
         <div className="pl-10 pt-6 min-h-screen flex flex-col">

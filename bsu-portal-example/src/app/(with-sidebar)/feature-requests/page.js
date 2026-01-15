@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { ChevronsUp, ChevronsDown, MessageSquare } from "lucide-react";
 import SuccessToast from "@/components/ui/success-toast.jsx";
+import LoadingIndicator from "@/components/ui/loading-indicator.jsx";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
 
 import AddFeatureRequest from "@/components/featureRequestModal";
@@ -229,7 +230,7 @@ export default function Home() {
     };
 
     if (isLoading) {
-        return <div className="p-10 text-gray-500">Loading...</div>;
+        return <LoadingIndicator label="Loading feature requests..." />;
     }
 
     return (
