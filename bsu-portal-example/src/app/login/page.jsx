@@ -3,16 +3,35 @@
 import {useEffect, useState} from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/Supabase/client.js'
+import SuccessToast from "@/components/ui/success-toast.jsx";
+
 
 export default function LoginPage() {
-  const router = useRouter()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState('')
-  const [showRegister, setShowRegister] = useState(false);
+    const router = useRouter()
+    const [email, setEmail] = useState('')
+    const [password, setPassword] = useState('')
+    const [loading, setLoading] = useState(false)
+    const [message, setMessage] = useState('')
+    const [showRegister, setShowRegister] = useState(false);
     const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
+    const [toastMessage, setToastMessage] = useState("");
+
+    useEffect(() => {
+        const msg =
+            localStorage.getItem("toastMessage") ||
+            localStorage.getItem("loginMessage");
+
+        if (!msg) return;
+
+        setToastMessage(msg);
+        setShowToast(true);
+
+        localStorage.removeItem("toastMessage");
+        localStorage.removeItem("loginMessage");
+
+        const timer = setTimeout(() => setShowToast(false), 3000);
+        return () => clearTimeout(timer);
+    }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -52,8 +71,14 @@ export default function LoginPage() {
 
   return (
   <div className="flex h-screen w-screen bg-white dark:bg-gray-900">
+      <SuccessToast
+          message={toastMessage}
+          isOpen={showToast}
+          onClose={() => setShowToast(false)}
+      />
 
-    <div className="relative w-1/2 flex items-center justify-center px-10 bg-white dark:bg-gray-900">
+
+      <div className="relative w-1/2 flex items-center justify-center px-10 bg-white dark:bg-gray-900">
       <div className="w-full max-w-sm">
 
         {showRegister ? (

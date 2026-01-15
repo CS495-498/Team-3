@@ -2,6 +2,9 @@
 import React, { useEffect, useState } from 'react'
 import { createClient } from '@/utils/Supabase/client.js'
 import SuccessToast from "@/components/ui/success-toast.jsx";
+import {Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,} from "@/components/ui/collapsible"
 
 export default function Page() {
     const supabase = createClient()
@@ -95,14 +98,15 @@ export default function Page() {
 
 
     const handleDeleteAccount = async () => {
-        if (!user) return;
-        if (!window.confirm("Delete your account permanently? This cannot be undone.")) return;
+        if (!user || !confirm("Delete your account permanently?")) return;
 
         try {
             setLoading(true);
 
             const res = await fetch("/api/profiles/me", { method: "DELETE" });
             if (!res.ok) throw new Error();
+
+            localStorage.setItem("toastMessage", "Account deleted");
 
             await supabase.auth.signOut();
             window.location.href = "/";
@@ -198,18 +202,20 @@ export default function Page() {
                 </div>
 
                 <div className="pt-6 border-t border-red-200 dark:border-red-900">
-                    <h3 className="text-lg font-semibold text-red-600 dark:text-red-400">
-                        Danger Zone
-                    </h3>
-
-                    <button
-                        onClick={handleDeleteAccount}
-                        className="mt-4 w-full py-2.5 rounded-lg font-medium
+                    <Collapsible>
+                        <CollapsibleTrigger>Danger Zone! ↓</CollapsibleTrigger>
+                        <CollapsibleContent>
+                            <button
+                                onClick={handleDeleteAccount}
+                                className="mt-4 w-full py-2.5 rounded-lg font-medium
         bg-red-600 text-white hover:bg-red-700
         transition-all shadow-md"
-                    >
-                        Delete My Account
-                    </button>
+                            >
+                                Delete My Account
+                            </button>
+                        </CollapsibleContent>
+                    </Collapsible>
+
                 </div>
             </div>
         </div>

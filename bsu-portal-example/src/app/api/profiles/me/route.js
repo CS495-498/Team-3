@@ -30,7 +30,7 @@ export async function GET() {
             username: profile.username || null,
         });
     } catch (err) {
-        console.error("GET /api/me error:", err);
+        console.error("GET /api/profiles/me error:", err);
         return NextResponse.json({ error: "Server error" }, { status: 500 });
     }
 }
