@@ -28,6 +28,7 @@ import Stack, { onEntryChange } from "@/lib/cstack";
 import SignOutButton from "./signout-button";
 import AccountPageButton from "@/components/account-page-button.jsx";
 import {createClient} from "../utils/Supabase/client.js";
+import {useCurrentAvatar} from "@/hooks/use-current-avatar.js";
 
 const iconMapper = {
   Home: <Home />,
@@ -81,8 +82,9 @@ function NavProjectsSkeleton() {
 function NavProjects() {
     const [entry, setEntry] = useState({});
     const [isLoading, setIsLoading] = useState(true);
-    const pathname = usePathname(); // ✅ Get current path
-    const supabase = createClient()
+    const pathname = usePathname();
+    const supabase = createClient();
+
 
     const getContent = async () => {
         const entry = await Stack.getElementByTypeWithRefs("header", "en-us", []);
@@ -95,6 +97,9 @@ function NavProjects() {
     const usernamePlaceHolder = {
         username: "Username",
     }
+    const { signedAvatarUrl } = useCurrentAvatar(user);
+
+
 
     useEffect(() => {
         const fetchUsername = async () => {
@@ -208,8 +213,12 @@ function NavProjects() {
                                     dark:hover:bg-[#1b1b1f]
                                 "
                             >
-                                <User2 /> {user?.username ?? "Username"}
-                                <ChevronUp className="ml-auto" />
+                                <div className="w-10 h-10 rounded-full border-4 border-white dark:border-gray-900 shadow-xl overflow-hidden">{
+                                    <img
+                                        src={signedAvatarUrl}
+                                        className="w-full h-full object-cover"
+                                    />
+                                }</div>{user?.username ?? "Username"} <ChevronUp className="ml-auto" />
                             </SidebarMenuButton>
                         </DropdownMenuTrigger>
 

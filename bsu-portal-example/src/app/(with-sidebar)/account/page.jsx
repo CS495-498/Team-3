@@ -2,14 +2,16 @@
 import React, { useEffect, useState } from 'react'
 import { createClient } from '@/utils/Supabase/client.js'
 import SuccessToast from "@/components/ui/success-toast.jsx";
+import {useCurrentAvatar} from "@/hooks/use-current-avatar.js";
+
 
 export default function Page() {
     const supabase = createClient()
 
-    // State
     const [loading, setLoading] = useState(true)
     const [user, setUser] = useState(null)
     const [showToast, setShowToast] = useState(false);
+    const { signedAvatarUrl } = useCurrentAvatar(user);
     const emptyProfile = {
         full_name: '',
         username: '',
@@ -93,30 +95,6 @@ export default function Page() {
             }
         }
     }
-    useEffect(() => {
-        const fetchAvatar = async () => {
-            if (!user) return; // <-- early exit if user is not ready
-
-            try {
-                const res = await fetch(`/api/profiles/${user.id}`);
-                if (!res.ok) {
-                    console.error("Failed to fetch profile");
-                    return;
-                }
-
-                const data = await res.json();
-
-                if (data.signed_avatar_url) {
-                    document.getElementById('Avatar').src = data.signed_avatar_url;
-                    setProfile(prev => ({ ...prev, signed_avatar_url: data.signed_avatar_url }));
-                }
-            } catch (err) {
-                console.error("Error fetching avatar:", err);
-            }
-        }
-
-        fetchAvatar();
-    }, [user]);
 
 
     const handleAvatarUpdate = async (e) => {
@@ -177,7 +155,7 @@ export default function Page() {
                             className="w-36 h-36 rounded-full border-4 border-white dark:border-gray-900 shadow-xl overflow-hidden">
                             {
                                 <img
-                                    src={profile.signed_avatar_url}
+                                    src={signedAvatarUrl}
                                     className="w-full h-full object-cover"
                                 />
                             }
