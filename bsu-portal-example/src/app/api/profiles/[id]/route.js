@@ -115,7 +115,6 @@ export async function PUT(req, context) {
     }
   }
 
-  // -------- Update Profile --------
   const { data, error } = await supabase
       .from("profiles")
       .update({
@@ -133,7 +132,6 @@ export async function PUT(req, context) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // -------- Attach Signed Avatar URL --------
   let enriched = { ...data };
 
   if (data.avatar_url) {

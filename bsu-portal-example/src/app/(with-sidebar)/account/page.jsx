@@ -177,7 +177,7 @@ export default function Page() {
                             className="w-36 h-36 rounded-full border-4 border-white dark:border-gray-900 shadow-xl overflow-hidden">
                             {
                                 <img
-                                    src={profile.signed_avatar_url} // whatever you use for the image
+                                    src={profile.signed_avatar_url}
                                     className="w-full h-full object-cover"
                                 />
                             }
