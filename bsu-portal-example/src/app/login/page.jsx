@@ -161,7 +161,7 @@ export default function LoginPage() {
               </p>
 
               <p className="mt-4 text-center text-gray-700 dark:text-gray-300">
-                <a href="{{ .ConfirmationURL }}" className="text-[#88563b] font-semibold underline">Forgot Password?</a>
+                <a href="/login/forgot-password" className="text-[#88563b] font-semibold underline">Forgot Password?</a>
               </p>
             </>
           )}
