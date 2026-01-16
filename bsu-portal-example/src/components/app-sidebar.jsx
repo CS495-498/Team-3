@@ -215,7 +215,7 @@ function NavProjects() {
                             >
                                 <div className="w-10 h-10 rounded-full border-4 border-white dark:border-gray-900 shadow-xl overflow-hidden">{
                                     <img
-                                        src={signedAvatarUrl}
+                                        src={signedAvatarUrl ? signedAvatarUrl : "/DefaultProfile.png"}
                                         className="w-full h-full object-cover"
                                     />
                                 }</div>{user?.username ?? "Username"} <ChevronUp className="ml-auto" />
