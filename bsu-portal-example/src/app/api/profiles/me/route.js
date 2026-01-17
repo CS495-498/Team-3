@@ -14,7 +14,6 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Fetch profile from 'profiles' table (adjust column names if different)
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("username")
@@ -31,4 +30,53 @@ export async function GET() {
     console.error("GET /api/me error:", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
+}
+
+export async function DELETE() {
+    try {
+        const supabase = await createClient();
+
+        const {
+            data: { user },
+            error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError || !user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const supabaseAdmin = createAdminClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_ROLE_KEY
+        );
+
+        const { error: profileDeleteError } = await supabaseAdmin
+            .from("profiles")
+            .delete()
+            .eq("id", user.id);
+
+        if (profileDeleteError) {
+            console.error("Profile delete error:", profileDeleteError);
+            return NextResponse.json(
+                { error: "Failed to delete profile" },
+                { status: 500 }
+            );
+        }
+
+        const { error: authDeleteError } =
+            await supabaseAdmin.auth.admin.deleteUser(user.id);
+
+        if (authDeleteError) {
+            console.error("Auth delete error:", authDeleteError);
+            return NextResponse.json(
+                { error: "Failed to delete user" },
+                { status: 500 }
+            );
+        }
+
+        return new NextResponse(null, { status: 204 });
+    } catch (err) {
+        console.error("DELETE /api/profiles/me error:", err);
+        return NextResponse.json({ error: "Server error" }, { status: 500 });
+    }
 }
