@@ -11,6 +11,7 @@ export default function Page() {
     const [loading, setLoading] = useState(true)
     const [user, setUser] = useState(null)
     const [showToast, setShowToast] = useState(false);
+    const [toastMessage, setToastMessage] = useState("Account Updated Successfully");
     const { signedAvatarUrl } = useCurrentAvatar(user);
     const emptyProfile = {
         full_name: '',
@@ -100,7 +101,7 @@ export default function Page() {
         if (!confirm("Delete your account permanently? This cannot be undone.")) return;
 
         try {
-            await fetch("/api/me", { method: "DELETE" });
+            await fetch("/api/profiles/me", { method: "DELETE" });
             localStorage.setItem("toastMessage", "Account deleted");
             await supabase.auth.signOut();
             window.location.href = "/login";
@@ -155,7 +156,7 @@ export default function Page() {
     return (
         <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col items-center">
             <SuccessToast
-                message="Account Updated Successfully"
+                message={toastMessage}
                 isOpen={showToast}
                 onClose={() => setShowToast(false)}
             />
