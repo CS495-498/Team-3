@@ -9,6 +9,7 @@ import { BOOKMARK_TYPES, useBookmarks } from "@/hooks/use-bookmarks";
 import appendDemoWebsite from "@/app/api/helper/appendDemoWebsite";
 import postAsset from "@/app/api/helper/postAsset";
 import SuccessToast from "@/components/ui/success-toast.jsx";
+import LoadingIndicator from "@/components/ui/loading-indicator.jsx";
 import { AnimatePresence, motion } from "framer-motion";
 import normalizeDemoWebArray from "@/app/api/helper/normalizeDemoWebArray";
 
@@ -334,7 +335,9 @@ export default function Demos() {
     };
 
 
-    if (isLoading) return <div></div>
+    if (isLoading) {
+        return <LoadingIndicator label="Loading demo websites..." />;
+    }
 
     return (
         <div className="pl-10 pt-6 min-h-screen flex flex-col">

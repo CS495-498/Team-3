@@ -8,6 +8,7 @@ import { Dialog } from "@headlessui/react";
 import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor";
 import { useRef } from "react";
 import SuccessToast from "@/components/ui/success-toast.jsx";
+import LoadingIndicator from "@/components/ui/loading-indicator.jsx";
 
 import { Card } from "@/components/ui/card";
 import BookmarkButton from "@/components/bookmark-button";
@@ -129,8 +130,9 @@ export default function DemoInstructions() {
             alert("Could not update bookmark. Please try again.");
         }
     };
-
-    if (isLoading) return <div className="p-10">Loading…</div>;
+    if (isLoading) {
+        return <LoadingIndicator label="Loading instructions..." />;
+    }
 
     return (
         <div className="pl-10 pt-6 min-h-screen flex flex-col w-full">
@@ -430,3 +432,4 @@ export default function DemoInstructions() {
         </div>
     );
 }
+

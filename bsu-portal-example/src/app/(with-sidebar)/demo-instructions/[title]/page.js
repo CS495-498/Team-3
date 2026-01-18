@@ -3,6 +3,7 @@
 import Stack, { onEntryChange } from "@/lib/cstack";
 import { useState, useEffect, useRef } from "react";
 import SuccessToast from "@/components/ui/success-toast.jsx";
+import LoadingIndicator from "@/components/ui/loading-indicator.jsx";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogPanel, DialogTitle, Description } from "@headlessui/react";
 import DOMPurify from "isomorphic-dompurify";
@@ -83,11 +84,7 @@ export default function ArticleWithEditor({ params }) {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[200px]">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-black"></div>
-      </div>
-    );
+    return <LoadingIndicator label="Loading instruction..." />;
   }
 
   return (

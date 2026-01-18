@@ -2,17 +2,21 @@
 import React, { useEffect, useState } from 'react'
 import { createClient } from '@/utils/Supabase/client.js'
 import SuccessToast from "@/components/ui/success-toast.jsx";
+import {useCurrentAvatar} from "@/hooks/use-current-avatar.js";
+
 
 export default function Page() {
     const supabase = createClient()
 
-    // State
     const [loading, setLoading] = useState(true)
     const [user, setUser] = useState(null)
     const [showToast, setShowToast] = useState(false);
+    const [toastMessage, setToastMessage] = useState("Account Updated Successfully");
+    const { signedAvatarUrl } = useCurrentAvatar(user);
     const emptyProfile = {
         full_name: '',
         username: '',
+        avatar_url: '',
     }
     const [profile, setProfile] = useState(emptyProfile)
 
@@ -33,7 +37,7 @@ export default function Page() {
             try {
                 const { data, error } = await supabase
                     .from('profiles')
-                    .select('full_name, username')
+                    .select('full_name, username, avatar_url')
                     .eq('id', user.id)
                     .single()
 
@@ -43,6 +47,7 @@ export default function Page() {
                     setProfile({
                         full_name: data.full_name ?? '',
                         username: data.username ?? '',
+                        avatar_url: data.avatar_url ?? '',
                     })
                 } else {
                     setProfile(emptyProfile)
@@ -92,6 +97,57 @@ export default function Page() {
         }
     }
 
+    const handleDeleteAccount = async () => {
+        if (!confirm("Delete your account permanently? This cannot be undone.")) return;
+
+        try {
+            await fetch("/api/profiles/me", { method: "DELETE" });
+            localStorage.setItem("toastMessage", "Account deleted");
+            await supabase.auth.signOut();
+            window.location.href = "/login";
+        } catch {
+            alert("Error deleting account.");
+        }
+    };
+
+
+
+    const handleAvatarUpdate = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return alert("No file selected");
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return alert("Not authenticated");
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+            return alert("No auth session found");
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("username", profile.username || "");
+        formData.append("full_name", profile.full_name || "");
+
+        const res = await fetch(`/api/profiles/${user.id}`, {
+            method: "PUT",
+            headers: {
+                Authorization: `Bearer ${session.access_token}`,
+            },
+            body: formData,
+        });
+
+        const updatedProfile = await res.json();
+
+        if (!res.ok) {
+            return alert(updatedProfile?.error || "Upload failed");
+        }
+
+        setProfile(updatedProfile);
+    };
+
+
+
     // Controlled input handler
     const handleChange = (field, value) => {
         setProfile((prev) => ({ ...prev, [field]: value }))
@@ -100,7 +156,7 @@ export default function Page() {
     return (
         <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col items-center">
             <SuccessToast
-                message="Account Updated Successfully"
+                message={toastMessage}
                 isOpen={showToast}
                 onClose={() => setShowToast(false)}
             />
@@ -108,11 +164,34 @@ export default function Page() {
             <div className="w-full h-44 bg-gradient-to-r from-purple-600 to-purple-700 dark:from-purple-700 dark:to-purple-800 relative">
                 <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex flex-col items-center">
 
-                    <img
-                        src="https://avatar.iran.liara.run/public/4"
-                        className="w-36 h-36 rounded-full border-4 border-white dark:border-gray-900 shadow-xl mb-4"
-                        alt="Avatar"
-                    />
+                    <div className="relative group w-36 h-36 mb-4">
+                        {/* Avatar image / circle */}
+                        <div
+                            className="w-36 h-36 rounded-full border-4 border-white dark:border-gray-900 shadow-xl overflow-hidden">
+                            {
+                                <img
+                                    src={signedAvatarUrl ? signedAvatarUrl : "/DefaultProfile.png"}
+                                    className="w-full h-full object-cover"
+                                />
+                            }
+                        </div>
+
+                        {/* Hover overlay */}
+                        <div
+                            className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-sm font-medium transition-opacity cursor-pointer">
+                            Change Avatar
+                        </div>
+
+                        {/* Invisible file input on top */}
+                        <input
+                            type="file"
+                            accept="image/*"
+                            id="Avatar"
+                            onChange={handleAvatarUpdate}
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                        />
+                    </div>
+
 
                     <h1 className="text-gray-900 text-3xl font-bold dark:text-white drop-shadow">
                         {profile.full_name || "Full Name"}
@@ -174,6 +253,23 @@ export default function Page() {
                         {loading ? "Saving..." : "Update Profile"}
                     </button>
                 </div>
+                <div className="mt-6 w-full max-w-xl px-6">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-red-200 dark:border-red-900">
+                        <h3 className="text-lg font-semibold text-red-600 dark:text-red-400">
+                            Danger Zone
+                        </h3>
+
+                        <button
+                            onClick={handleDeleteAccount}
+                            className="mt-4 w-full py-2.5 rounded-lg font-medium
+            bg-red-600 text-white hover:bg-red-700
+            transition-all shadow-md"
+                        >
+                            Delete My Account
+                        </button>
+                    </div>
+                </div>
+
             </div>
         </div>
     )
