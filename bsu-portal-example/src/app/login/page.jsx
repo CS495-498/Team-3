@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/Supabase/client.js'
+import SuccessToast from "@/components/ui/success-toast.jsx";
 
 export default function LoginPage() {
   const router = useRouter()
@@ -31,6 +32,19 @@ export default function LoginPage() {
 
     setLoading(false)
   }
+
+    useEffect(() => {
+        const msg = localStorage.getItem("toastMessage");
+        if (!msg) return;
+
+        setToastMessage(msg);
+        setShowToast(true);
+
+        localStorage.removeItem("toastMessage");
+
+        const timer = setTimeout(() => setShowToast(false), 3000);
+        return () => clearTimeout(timer);
+    }, []);
 
   const handleSignUp = async (e) => {
     e.preventDefault()
