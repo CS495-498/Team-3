@@ -7,6 +7,8 @@ import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import appendNotification from "@/app/api/helper/appendNotification.js";
 import { motion, AnimatePresence } from "framer-motion";
 import SuccessToast from "@/components/ui/success-toast.jsx";
+import { AlertTimer, AlertCard } from "@/components/ui/alert.jsx";
+
 import LoadingIndicator from "@/components/ui/loading-indicator.jsx";
 
 export default function Home() {
@@ -46,20 +48,6 @@ export default function Home() {
         6
     );
 
-    const getBgColor = (critical) => {
-        switch (critical) {
-            case 4:
-                return "bg-red-500 text-white border-red-400";
-            case 3:
-                return "bg-orange-500 text-white border-orange-400";
-            case 2:
-                return "bg-yellow-500 text-white border-yellow-400";
-            case 1:
-                return "bg-green-500 text-white border-green-400";
-            default:
-                return "bg-green-500 text-white border-green-400";
-        }
-    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -244,32 +232,13 @@ export default function Home() {
                     </AnimatePresence>
                 </div>
                 <div className="w-full mb-24 mt-3">
-                    {visibleAlerts.length ? (
-                        visibleAlerts.map((note, idx) => {
-                            const bgColor = getBgColor(note?.critical_value);
-                            return (
-                                <div
-                                    key={idx}
-                                    className={`relative w-full rounded-xl border ${bgColor} p-5 mb-4 transition-transform duration-700 ease-in-out hover:scale-[1.02]`}
-                                >
-                                    <div className="flex items-start gap-3">
-                                        <CircleAlert className="mt-1 shrink-0" />
-                                        <div>
-                                            <div className="font-semibold text-sm p-1">
-                                                {note?.alert_title || "Untitled Notification"}
-                                            </div>
-                                            {note?.alert_description && (
-                                                <div className="text-sm opacity-90 mt-1">{note.alert_description}</div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })
-                    ) : (
-                        <div className="text-gray-500 italic mt-3">No notifications</div>
-                    )}
-
+                        {visibleAlerts.length ? (
+                            visibleAlerts.map((note, idx) => (
+                                <AlertCard key={idx} note={note} index={idx} />
+                            ))
+                        ) : (
+                            <div className="text-gray-500 italic mt-3">No notifications</div>
+                        )}
                     {hasMore && (
                         <div
                             ref={ref}
