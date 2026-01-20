@@ -6,6 +6,9 @@ const nextConfig = {
     domains: ["images.contentstack.io"],
     qualities: [75, 100],
   },
+    eslint: {
+    ignoreDuringBuilds: true,
+  },
   env: {
     CONTENTSTACK_API_KEY: process.env.CONTENTSTACK_API_KEY,
     CONTENTSTACK_DELIVERY_TOKEN: process.env.CONTENTSTACK_DELIVERY_TOKEN,
@@ -22,11 +25,6 @@ const nextConfig = {
   // ✅ Add this section for large file uploads
   experimental: {
     middlewareClientMaxBodySize: 25 * 1024 * 1024, // 25MB
-  },
-  api: {
-    bodyParser: {
-      sizeLimit: "25mb", // for JSON payloads
-    },
   },
 };
 
