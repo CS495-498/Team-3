@@ -18,7 +18,7 @@ jobs:
           echo "Root contents:"
           ls -la
           echo "Lock file check:"
-          ls -la bsu-portal-example/package-lock.json
+          package-lock.json
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -28,9 +28,9 @@ jobs:
           cache-dependency-path: "**/package-lock.json"
 
       - name: Install dependencies
-        working-directory: bsu-portal-example
+        working-directory: 
         run: npm ci
 
       - name: Run tests
-        working-directory: bsu-portal-example
+        working-directory: 
         run: npm test
