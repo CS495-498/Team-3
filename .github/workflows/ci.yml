@@ -18,7 +18,7 @@ jobs:
           echo "Root contents:"
           ls -la
           echo "Lock file check:"
-          package-lock.json
+          
 
       - name: Setup Node
         uses: actions/setup-node@v4
