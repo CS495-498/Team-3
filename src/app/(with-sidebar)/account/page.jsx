@@ -11,7 +11,14 @@ export default function Page() {
     const [loading, setLoading] = useState(true)
     const [user, setUser] = useState(null)
     const [showToast, setShowToast] = useState(false);
-    const [toastMessage, setToastMessage] = useState("Account Updated Successfully");
+    const [toastMessage] = useState("Account Updated Successfully");
+
+    const [newPersonaName, setNewPersonaName] = useState("")
+    const [addingPersona, setAddingPersona] = useState(false)
+    const [personas, setPersonas] = useState([])
+    const [activePersona, setActivePersona] = useState(null)
+
+
     const { signedAvatarUrl } = useCurrentAvatar(user);
     const emptyProfile = {
         full_name: '',
@@ -23,7 +30,6 @@ export default function Page() {
     // Fetch profile on mount
     useEffect(() => {
         const fetchProfile = async () => {
-
             setLoading(true)
             const {data: { user }, error: userError,} = await supabase.auth.getUser()
 
@@ -32,27 +38,50 @@ export default function Page() {
                 setLoading(false)
                 return
             }
+
+
             setUser(user)
 
             try {
-                const { data, error } = await supabase
+                const { data: profileData, error } = await supabase
                     .from('profiles')
-                    .select('full_name, username, avatar_url')
+                    .select('full_name, username, avatar_url, active_persona_id')
                     .eq('id', user.id)
                     .single()
 
                 if (error) throw error
 
-                if (data) {
+                if (profileData) {
                     setProfile({
-                        full_name: data.full_name ?? '',
-                        username: data.username ?? '',
-                        avatar_url: data.avatar_url ?? '',
+                        full_name: profileData.full_name ?? '',
+                        username: profileData.username ?? '',
+                        avatar_url: profileData.avatar_url ?? '',
                     })
                 } else {
                     setProfile(emptyProfile)
                 }
-                setLoading(false)
+
+
+
+                const { data: personasData, error: personasError } = await supabase
+                    .from("personas")
+                    .select("*")
+                    .eq("owner_id", user.id)
+
+                if (personasError) throw personasError
+
+                setPersonas(personasData || [])
+
+
+                if (profileData?.active_persona_id) {
+                    const active = personasData?.find(
+                        (p) => p.id === profileData.active_persona_id
+                    )
+                    setActivePersona(active || null)
+                } else {
+                    setActivePersona(null)
+                }
+
 
             } catch (err) {
                 console.error('Error loading user data:', err)
@@ -60,6 +89,7 @@ export default function Page() {
             } finally {
                 setLoading(false)
             }
+
         }
 
         fetchProfile()
@@ -96,6 +126,53 @@ export default function Page() {
             }
         }
     }
+
+
+    const switchPersona = async (personaId) => {
+        setLoading(true)
+
+        await supabase
+            .from("profiles")
+            .update({ active_persona_id: personaId })
+            .eq("id", user.id)
+
+        const selected = personas.find(p => p.id === personaId)
+        setActivePersona(selected)
+
+        setLoading(false)
+    }
+
+    const createPersona = async () => {
+        if (!newPersonaName.trim() || !user) return
+
+        setAddingPersona(true)
+
+        const { data, error } = await supabase
+            .from("personas")
+            .insert({
+                owner_id: user.id,
+                display_name: newPersonaName.trim(),
+            })
+            .select()
+            .single()
+
+        if (!error && data) {
+            setPersonas(prev => [...prev, data])
+            setActivePersona(data)
+
+            await supabase
+                .from("profiles")
+                .update({ active_persona_id: data.id })
+                .eq("id", user.id)
+
+            setNewPersonaName("")
+        } else {
+            alert("Failed to create persona")
+        }
+
+        setAddingPersona(false)
+    }
+
 
     const handleDeleteAccount = async () => {
         if (!confirm("Delete your account permanently? This cannot be undone.")) return;
@@ -191,15 +268,60 @@ export default function Page() {
                             className="absolute inset-0 opacity-0 cursor-pointer"
                         />
                     </div>
+                    <div className="mt-3">
+                        <select
+                            value={activePersona?.id || ""}
+                            onChange={(e) => switchPersona(e.target.value)}
+                            className="rounded-lg px-3 py-2 bg-white dark:bg-gray-700
+               border border-gray-300 dark:border-gray-600
+               text-sm text-gray-900 dark:text-gray-100"
+                        >
+                            <option value="" disabled>
+                                Select Persona
+                            </option>
+
+                            {personas.map(p => (
+                                <option key={p.id} value={p.id}>
+                                    {p.display_name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="mt-3 w-full max-w-xs flex gap-2">
+                        <input
+                            type="text"
+                            placeholder="New persona name"
+                            value={newPersonaName}
+                            onChange={(e) => setNewPersonaName(e.target.value)}
+                            className="flex-1 rounded-lg px-3 py-2
+                   border border-gray-300 dark:border-gray-600
+                   bg-white dark:bg-gray-700
+                   text-sm text-gray-900 dark:text-gray-100"
+                        />
+
+                        <button
+                            onClick={createPersona}
+                            disabled={addingPersona || !newPersonaName.trim()}
+                            className="px-3 py-2 rounded-lg text-sm font-medium
+                   bg-purple-600 text-white
+                   hover:bg-purple-700
+                   disabled:opacity-50"
+                        >
+                            {addingPersona ? "..." : "Add"}
+                        </button>
+                    </div>
 
 
-                    <h1 className="text-gray-900 text-3xl font-bold dark:text-white drop-shadow">
-                        {profile.full_name || "Full Name"}
+
+                    <h1>
+                        {activePersona?.display_name || profile.full_name || "Full Name"}
                     </h1>
 
-                    <p className="text-gray-900 dark:text-white/90 drop-shadow text-lg">
-                        @{profile.username || "username"}
+                    <p className="opacity-80">
+                        {activePersona?.role || "Standard User"}
                     </p>
+
 
                 </div>
             </div>
