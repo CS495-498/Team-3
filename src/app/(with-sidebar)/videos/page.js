@@ -28,6 +28,115 @@ import CardDropdown from "@/components/cardDropdown.jsx";
 
 import { X } from "lucide-react";
 
+
+async function extractThumbnailFromVideo(videoFile) {
+    return new Promise((resolve, reject) => {
+        const video = document.createElement('video');
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+
+        video.preload = 'metadata';
+        video.muted = true;
+        video.playsInline = true;
+
+        video.onloadedmetadata = () => {
+            // Seek to 1 second or 10% of video duration, whichever is smaller
+            const seekTime = Math.min(1, video.duration * 0.1);
+            video.currentTime = seekTime;
+        };
+
+        video.onseeked = () => {
+            try {
+                // Set canvas dimensions to video dimensions
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+
+                // Draw the current frame to canvas
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                // Convert canvas to blob
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        // Create a File object from the blob
+                        const thumbnailFile = new File(
+                            [blob],
+                            `${videoFile.name.replace(/\.[^/.]+$/, '')}_thumbnail.jpg`,
+                            { type: 'image/jpeg' }
+                        );
+                        resolve(thumbnailFile);
+                    } else {
+                        reject(new Error('Failed to create thumbnail blob'));
+                    }
+                }, 'image/jpeg', 0.9);
+
+                // Clean up
+                URL.revokeObjectURL(video.src);
+            } catch (error) {
+                reject(error);
+            }
+        };
+
+        video.onerror = () => {
+            reject(new Error('Failed to load video for thumbnail extraction'));
+        };
+
+        // Load the video file
+        video.src = URL.createObjectURL(videoFile);
+    });
+}
+
+/**
+ * Get YouTube thumbnail URL from video URL
+ * @param {string} url - YouTube video URL
+ * @returns {string|null} - Thumbnail URL or null if not a YouTube video
+ */
+function getYouTubeThumbnail(url) {
+    const youtubeMatch = url.match(
+        /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/
+    );
+    if (youtubeMatch) {
+        const videoId = youtubeMatch[1];
+        // Try maxresdefault first (1080p), fallback to hqdefault (720p)
+        return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+    }
+    return null;
+}
+
+/**
+ * Get Vimeo thumbnail URL from video URL
+ * @param {string} url - Vimeo video URL
+ * @returns {Promise<string|null>} - Thumbnail URL or null if failed
+ */
+async function getVimeoThumbnail(url) {
+    const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+    if (!vimeoMatch) return null;
+
+    try {
+        const response = await fetch(
+            `https://vimeo.com/api/oembed.json?url=${encodeURIComponent(url)}`
+        );
+        if (!response.ok) return null;
+        const data = await response.json();
+        return data.thumbnail_url || null;
+    } catch (error) {
+        console.error('Failed to fetch Vimeo thumbnail:', error);
+        return null;
+    }
+}
+
+
+async function downloadImageAsFile(imageUrl, filename = 'thumbnail.jpg') {
+    try {
+        const response = await fetch(imageUrl);
+        if (!response.ok) throw new Error('Failed to fetch image');
+        const blob = await response.blob();
+        return new File([blob], filename, { type: blob.type || 'image/jpeg' });
+    } catch (error) {
+        console.error('Failed to download image:', error);
+        throw error;
+    }
+}
+
 /* ---------------------------------------------------------------------------------------
    EMBED DETECTOR — NOW INCLUDED IN THIS FILE
 --------------------------------------------------------------------------------------- */
@@ -82,6 +191,12 @@ export default function VideoLibrary() {
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
     const [selectedItem, setSelectedItem] = useState(null);
+    
+    // New state for thumbnail generation
+    const [thumbnailPreview, setThumbnailPreview] = useState(null);
+    const [generatedThumbnail, setGeneratedThumbnail] = useState(null);
+    const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const openEditModal = (demo) => {
         setSelectedItem(demo);
@@ -181,6 +296,106 @@ export default function VideoLibrary() {
     const { items: visibleVideos, hasMore, ref } = useInfiniteScroll(sortedVideos, 6);
 
     /* -----------------------------------------------------------------------------------
+        THUMBNAIL GENERATION HANDLERS
+    ----------------------------------------------------------------------------------- */
+    
+    /**
+     * Handle video file selection and auto-generate thumbnail
+     */
+    const handleVideoFileChange = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) {
+            setThumbnailPreview(null);
+            setGeneratedThumbnail(null);
+            return;
+        }
+
+        setIsGeneratingThumbnail(true);
+        try {
+            const thumbnailFile = await extractThumbnailFromVideo(file);
+            setGeneratedThumbnail(thumbnailFile);
+            
+            // Create preview URL
+            const previewUrl = URL.createObjectURL(thumbnailFile);
+            setThumbnailPreview(previewUrl);
+        } catch (error) {
+            console.error('Failed to generate thumbnail from video:', error);
+            // Don't alert - just fail silently and let user upload manually if needed
+        } finally {
+            setIsGeneratingThumbnail(false);
+        }
+    };
+
+    /**
+     * Handle video URL input and auto-fetch thumbnail
+     */
+    const handleVideoUrlChange = async (e) => {
+        const url = e.target.value.trim();
+        if (!url) {
+            setThumbnailPreview(null);
+            setGeneratedThumbnail(null);
+            return;
+        }
+
+        setIsGeneratingThumbnail(true);
+        try {
+            let thumbnailUrl = null;
+
+            // Try YouTube
+            thumbnailUrl = getYouTubeThumbnail(url);
+            
+            // Try Vimeo if not YouTube
+            if (!thumbnailUrl) {
+                thumbnailUrl = await getVimeoThumbnail(url);
+            }
+
+            if (thumbnailUrl) {
+                // Download the thumbnail as a File object
+                const thumbnailFile = await downloadImageAsFile(
+                    thumbnailUrl,
+                    'video_thumbnail.jpg'
+                );
+                setGeneratedThumbnail(thumbnailFile);
+                setThumbnailPreview(thumbnailUrl);
+            } else {
+                setThumbnailPreview(null);
+                setGeneratedThumbnail(null);
+            }
+        } catch (error) {
+            console.error('Failed to fetch thumbnail from URL:', error);
+            setThumbnailPreview(null);
+            setGeneratedThumbnail(null);
+        } finally {
+            setIsGeneratingThumbnail(false);
+        }
+    };
+
+    /**
+     * Handle manual thumbnail upload (overrides auto-generated)
+     */
+    const handleManualThumbnailChange = (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            // User provided manual thumbnail - use it instead
+            setGeneratedThumbnail(null);
+            const previewUrl = URL.createObjectURL(file);
+            setThumbnailPreview(previewUrl);
+        }
+    };
+
+    /**
+     * Reset thumbnail state when modal closes
+     */
+    const resetThumbnailState = () => {
+        if (thumbnailPreview) {
+            URL.revokeObjectURL(thumbnailPreview);
+        }
+        setThumbnailPreview(null);
+        setGeneratedThumbnail(null);
+        setIsGeneratingThumbnail(false);
+    };
+
+    /* -----------------------------------------------------------------------------------
         FORM SUBMIT (FILE OR URL)
     ----------------------------------------------------------------------------------- */
     const handleSubmit = async (e) => {
@@ -194,7 +409,7 @@ export default function VideoLibrary() {
 
         const videoFile = data.get("video_file");
         const videoURL = data.get("video_url")?.trim();
-        const thumbnailFile = data.get("thumbnail");
+        const manualThumbnailFile = data.get("thumbnail");
 
         const titleProvided = title?.trim().length > 0;
         const urlProvided = videoURL && videoURL.length > 0;
@@ -207,6 +422,7 @@ export default function VideoLibrary() {
         }
 
         try {
+            setIsSubmitting(true); // START LOADING
             // Upload file if present
             const uploadedVideo = fileProvided
                 ? await postAsset(
@@ -218,16 +434,26 @@ export default function VideoLibrary() {
                 )
                 : null;
 
-            const uploadedThumb =
-                thumbnailFile && thumbnailFile.size > 0
-                    ? await postAsset(
-                        thumbnailFile,
-                        `${title} Thumbnail`,
-                        "Video thumbnail",
-                        null,
-                        "video-thumbnails"
-                    )
-                    : null;
+            // Determine which thumbnail to use:
+            // 1. Manual upload (if provided)
+            // 2. Auto-generated (if available)
+            // 3. None
+            let thumbnailToUpload = null;
+            if (manualThumbnailFile && manualThumbnailFile.size > 0) {
+                thumbnailToUpload = manualThumbnailFile;
+            } else if (generatedThumbnail) {
+                thumbnailToUpload = generatedThumbnail;
+            }
+
+            const uploadedThumb = thumbnailToUpload
+                ? await postAsset(
+                    thumbnailToUpload,
+                    `${title} Thumbnail`,
+                    "Video thumbnail",
+                    null,
+                    "video-thumbnails"
+                )
+                : null;
 
             // Build video object
             const newVideo = {
@@ -259,6 +485,7 @@ export default function VideoLibrary() {
             const updatedEntry = await response.json();
             setEntry(updatedEntry.entry);
             setIsOpen(false);
+            resetThumbnailState();
             setShowToast(true);
 
             setTimeout(() => {
@@ -267,6 +494,8 @@ export default function VideoLibrary() {
         } catch (error) {
             console.error("Upload failed:", error);
             alert("Failed to add video. Check console for details.");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -354,8 +583,10 @@ export default function VideoLibrary() {
                             <Dialog
                                 className="fixed inset-0 z-50"
                                 open={isOpen}
-                                onClose={() => (setIsOpen(false))}
-
+                                onClose={() => {
+                                    setIsOpen(false);
+                                    resetThumbnailState();
+                                }}
                             >
                                 <motion.div
                                     className="fixed inset-0 bg-black/50"
@@ -379,7 +610,10 @@ export default function VideoLibrary() {
                                                 <Dialog.Title className="font-bold text-2xl">
                                                     Add Video
                                                 </Dialog.Title>
-                                                <button onClick={() => (setIsOpen(false))}>
+                                                <button onClick={() => {
+                                                    setIsOpen(false);
+                                                    resetThumbnailState();
+                                                }}>
                                                     <X className="h-6 w-6 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300" />
                                                 </button>
                                             </div>
@@ -418,13 +652,13 @@ export default function VideoLibrary() {
                                                                 name="video_file"
                                                                 type="file"
                                                                 accept="video/*"
+                                                                onChange={handleVideoFileChange}
                                                                 className="w-full text-sm text-gray-700 dark:text-gray-200
                           file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0
                           file:text-sm file:font-medium file:bg-gray-400 file:text-white
                           hover:file:bg-gray-500 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700
                           rounded-lg px-2 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500
                           outline-none transition"/>
-                                                            <small className="text-gray-600">File will remain unchanged if left blank.</small>
                                                         </div>
                                                     </div>
                                                     <div className="relative flex items-center justify-center w-12">
@@ -440,9 +674,10 @@ export default function VideoLibrary() {
                                                             Video URL
                                                         </label>
                                                         <input
-                                                            name="link"
+                                                            name="video_url"
                                                             type="url"
                                                             placeholder="https://youtube.com/watch?v=VIDEO"
+                                                            onChange={handleVideoUrlChange}
                                                             className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none transition"
                                                         />
                                                     </div>
@@ -471,14 +706,31 @@ export default function VideoLibrary() {
                                                         />
                                                     </div>
 
+                                                    {/* Thumbnail Section with Preview */}
                                                     <div>
-                                                        <label className="block text-sm font-medium dark:text-gray-200">
-                                                            Thumbnail
+                                                        <label className="block text-sm font-medium dark:text-gray-200 mb-1">
+                                                            Thumbnail {isGeneratingThumbnail && <span className="text-xs text-gray-500">(Generating...)</span>}
                                                         </label>
+                                                        
+                                                        {/* Thumbnail Preview */}
+                                                        {thumbnailPreview && (
+                                                            <div className="mb-3 relative inline-block">
+                                                                <img 
+                                                                    src={thumbnailPreview} 
+                                                                    alt="Thumbnail preview" 
+                                                                    className="h-32 rounded-lg border-2 border-green-500 object-cover"
+                                                                />
+                                                                <div className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
+                                                                    ✓ Auto-generated
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                        
                                                         <input
                                                             name="thumbnail"
                                                             type="file"
                                                             accept="image/*"
+                                                            onChange={handleManualThumbnailChange}
                                                             className="w-full text-sm text-gray-700 dark:text-gray-200
                           file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0
                           file:text-sm file:font-medium file:bg-gray-400 file:text-white
@@ -486,24 +738,45 @@ export default function VideoLibrary() {
                           rounded-lg px-2 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500
                           outline-none transition"
                                                         />
+                                                        <small className="text-gray-600">
+                                                            {generatedThumbnail 
+                                                                ? "Thumbnail auto-generated. Upload a file to override." 
+                                                                : "Upload manually or leave blank to auto-generate from video."}
+                                                        </small>
                                                     </div>
-                                                    <small className="text-gray-600">File will remain unchanged if left blank.</small>
                                                 </div>
 
                                                 {/* Footer Buttons */}
                                                 <div className="flex justify-end gap-3 pt-4">
                                                     <button
                                                         type="button"
-                                                        onClick={() => (setIsOpen(false))}
-                                                        className="px-5 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                                                        onClick={() => {
+                                                            setIsOpen(false);
+                                                            resetThumbnailState();
+                                                        }}
+                                                        className="px-5 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        disabled={isSubmitting}
                                                     >
                                                         Cancel
                                                     </button>
                                                     <button
                                                         type="submit"
-                                                        className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition"
+                                                        disabled={isGeneratingThumbnail || isSubmitting}
+                                                        className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
                                                     >
-                                                        Save Video
+                                                        {isSubmitting ? (
+                                                            <>
+                                                                <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                                </svg>
+                                                                <span>Uploading...</span>
+                                                            </>
+                                                        ) : isGeneratingThumbnail ? (
+                                                            "Generating..."
+                                                        ) : (
+                                                            "Save Video"
+                                                        )}
                                                     </button>
                                                 </div>
                                             </form>
@@ -614,7 +887,7 @@ export default function VideoLibrary() {
                                             </div>
 
                                             {/* ------------------ TEXT CONTENT ------------------ */}
-                                            <CardHeader className="flex-grow">
+                                            <CardHeader className="flex-grow pb-2">
                                                 <div className="flex justify-between items-start mb-2">
                                                     <CardTitle className="text-lg font-semibold leading-tight line-clamp-1">
                                                         {video.title}
@@ -624,11 +897,16 @@ export default function VideoLibrary() {
                                                         onDelete={() => openDeleteModal(video)}
                                                     />
                                                 </div>
+                                                {video.description && (
+                                                    <CardDescription className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mt-1">
+                                                        {video.description}
+                                                    </CardDescription>
+                                                )}
                                             </CardHeader>
 
-                                            <CardFooter>
+                                            <CardFooter className="pt-0">
                                                 {video.date_posted && (
-                                                    <p className="text-xs">
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400">
                                                         Posted on{" "}
                                                         {new Date(video.date_posted).toLocaleDateString()}
                                                     </p>
