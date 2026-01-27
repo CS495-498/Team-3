@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/Supabase/client.js";
+import { useMemo } from "react";
+
 
 export default function UpdatePasswordPage() {
     const router = useRouter();
-    const supabase = createClient();
+    const supabase = useMemo(() => createClient(), []);
 
     const [password, setPassword] = useState("");
     const [confirm, setConfirm] = useState("");
