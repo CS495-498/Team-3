@@ -24,7 +24,8 @@ export default function ForgotPasswordPage() {
             setMessage('Error: ' + error.message)
         } else {
             setMessage('Check your email for the password reset instructions!')
-            router.push(`/login/reset-code?email=${encodeURIComponent(email)}`)
+            sessionStorage.setItem('pwreset_email', email.trim())
+            router.push(`/login/reset-code`)
 
         }
 
