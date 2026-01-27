@@ -13,18 +13,25 @@ export default function ForgotPasswordPage() {
     const router = useRouter()
 
     const handlePasswordReset = async (e) => {
+        console.log('handlePasswordReset fired')
         e.preventDefault()
         setLoading(true)
         setMessage('')
 
         try {
-            await supabase.auth.resetPasswordForEmail(email);
+            const res = await fetch('/api/forgot-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email }),
+            })
+
+            console.log('forgot-password status:', res.status)
+            console.log('forgot-password body:', await res.text())
 
             setMessage('Check your email for the password reset instructions!')
             sessionStorage.setItem('pwreset_email', email.trim())
             router.push(`/login/reset-code`)
         } finally {
-
             setLoading(false)
         }
     }

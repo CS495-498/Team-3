@@ -75,12 +75,11 @@ export default function ResetCodeClient() {
         return
       }
 
-      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail)
-
-      if (error) {
-        setMessage('Code sent (if that email exists). Check your inbox.')
-        return
-      }
+      await fetch('/api/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail }),
+      })
 
       setMessage('Code sent (if that email exists). Check your inbox.')
       setCooldown(RESEND_COOLDOWN_SECONDS)
@@ -97,7 +96,7 @@ export default function ResetCodeClient() {
         </h1>
 
         <p className="mt-2 text-sm text-center text-gray-600 dark:text-gray-300">
-          We emailed you a 6-digit code. Enter it below to continue.
+          We emailed you a 8-digit code. Enter it below to continue.
         </p>
 
         <form className="space-y-4 mt-6" onSubmit={handleVerify}>
@@ -118,7 +117,7 @@ export default function ResetCodeClient() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              6-digit code
+              8-digit code
             </label>
             <input
               inputMode="numeric"
