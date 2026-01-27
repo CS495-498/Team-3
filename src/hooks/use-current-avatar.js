@@ -1,33 +1,39 @@
-'use client'
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from "react";
 
-export function useCurrentAvatar(user) {
+export function useCurrentAvatar(user, activePersona) {
     const [signedAvatarUrl, setSignedAvatarUrl] = useState(null);
     const [loading, setLoading] = useState(false);
+
     useEffect(() => {
         const fetchAvatar = async () => {
             if (!user?.id) return;
 
             try {
                 setLoading(true);
-                const res = await fetch(`/api/profiles/${user.id}`);
-                if (!res.ok) {
-                    console.error("Failed to fetch profile");
+
+                if (activePersona) {
+                    if (activePersona.avatar_url) {
+                        setSignedAvatarUrl(activePersona.avatar_url);
+                    } else {
+                        setSignedAvatarUrl(null);
+                    }
                     return;
                 }
 
-                const data = await res.json();
+                const res = await fetch(`/api/profiles/${user.id}`);
+                if (!res.ok) return;
 
-                if (data.signed_avatar_url) {
-                    setSignedAvatarUrl(data.signed_avatar_url);
-                }
+                const data = await res.json();
+                setSignedAvatarUrl(data?.signed_avatar_url ?? null);
             } catch (err) {
                 console.error("Error fetching avatar:", err);
             } finally {
                 setLoading(false);
             }
-        }
+        };
+
         fetchAvatar();
-    }, [user]);
-    return { signedAvatarUrl, loading }
+    }, [user?.id, activePersona?.id, activePersona?.avatar_url]);
+
+    return { signedAvatarUrl, loading };
 }
