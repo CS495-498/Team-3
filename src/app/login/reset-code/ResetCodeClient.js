@@ -54,7 +54,7 @@ export default function ResetCodeClient() {
       })
 
       if (error) {
-        setMessage(error.message)
+        setMessage("Invalid or expired reset code.")
         return
       }
 
@@ -78,7 +78,7 @@ export default function ResetCodeClient() {
       const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail)
 
       if (error) {
-        setMessage(error.message)
+        setMessage('Code sent (if that email exists). Check your inbox.')
         return
       }
 

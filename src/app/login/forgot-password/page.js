@@ -17,19 +17,16 @@ export default function ForgotPasswordPage() {
         setLoading(true)
         setMessage('')
 
-        const { error } = await supabase.auth.resetPasswordForEmail(email);
+        try {
+            await supabase.auth.resetPasswordForEmail(email);
 
-
-        if (error) {
-            setMessage('Error: ' + error.message)
-        } else {
             setMessage('Check your email for the password reset instructions!')
             sessionStorage.setItem('pwreset_email', email.trim())
             router.push(`/login/reset-code`)
+        } finally {
 
+            setLoading(false)
         }
-
-        setLoading(false)
     }
 
     return (
