@@ -1,11 +1,9 @@
 'use client'
 
-import { createClient } from '@/utils/Supabase/client.js'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 export default function ForgotPasswordPage() {
-    const supabase = createClient()
 
     const [email, setEmail] = useState('')
     const [loading, setLoading] = useState(false)
@@ -13,7 +11,6 @@ export default function ForgotPasswordPage() {
     const router = useRouter()
 
     const handlePasswordReset = async (e) => {
-        console.log('handlePasswordReset fired')
         e.preventDefault()
         setLoading(true)
         setMessage('')
@@ -24,9 +21,6 @@ export default function ForgotPasswordPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email }),
             })
-
-            console.log('forgot-password status:', res.status)
-            console.log('forgot-password body:', await res.text())
 
             setMessage('Check your email for the password reset instructions!')
             sessionStorage.setItem('pwreset_email', email.trim())
