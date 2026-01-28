@@ -141,9 +141,8 @@ export default function Home() {
     };
 
     async function handleEditSave(updatedItem) {
-
+        if(!sameUser(selectedItem.user_id, currentUser.id)) return;
         if (!updatedItem.id) return;
-        if(!sameUser(updatedItem.user_id, currentUser.id)) return;
 
         const res = await fetch(`/api/feature-requests/${updatedItem.id}`, {
             method: "PUT",
