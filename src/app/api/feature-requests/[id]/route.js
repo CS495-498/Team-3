@@ -119,6 +119,9 @@ export async function PUT(req, { params }) {
     console.error(error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+  if(data.length === 0) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403});
+  }
 
   return NextResponse.json(data, { status: 200 });
 }
@@ -140,7 +143,7 @@ export async function DELETE(req, { params }) {
 
   try {
     // Ensure user can only delete their own requests
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("feature_requests")
       .delete()
       .eq("id", id)
@@ -151,6 +154,9 @@ export async function DELETE(req, { params }) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    if(data.length === 0) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403});
+    }
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (err) {
     console.error("Delete request failed:", err);

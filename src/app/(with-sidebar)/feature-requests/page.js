@@ -136,8 +136,14 @@ export default function Home() {
         setIsDeleteOpen(true);
     };
 
+    const sameUser = (feature_request_user_id, user_id) => {
+        return user_id === feature_request_user_id;
+    };
+
     async function handleEditSave(updatedItem) {
+
         if (!updatedItem.id) return;
+        if(!sameUser(updatedItem.user_id, currentUser.id)) return;
 
         const res = await fetch(`/api/feature-requests/${updatedItem.id}`, {
             method: "PUT",
@@ -169,6 +175,8 @@ export default function Home() {
     }
 
     const handleConfirmDelete = async () => {
+        if(!sameUser(selectedItem.user_id, currentUser.id)) return;
+
         try {
             const res = await fetch(`/api/feature-requests/${selectedItem.id}`, {
                 method: "DELETE",
@@ -240,39 +248,6 @@ export default function Home() {
             console.error("Vote failed:", err);
         }
     };
-
-    // useEffect( () => {
-    //     const fetchUserID = async () => {
-    //         setIsLoading(true);
-    //         const supabase = createClient();
-    //         const {data: { user }, error: userError,} = await supabase.auth.getUser()
-    //         if (userError || !user) {
-    //             console.error('Unauthorized User:', userError)
-    //             setIsLoading(false)
-    //         }
-    //         setCurrentUser(user);
-    //         try {
-    //             const { user_id, error } = await supabase.from('profiles').select('id').eq('id', user.id).single()
-    //             if (error) throw error
-    //
-    //             if (user_id){
-    //
-    //             }
-    //             setIsLoading(false)
-    //
-    //         } catch (err) {
-    //             console.error('Error loading user data:', err)
-    //             alert('Error loading user data!')
-    //         } finally {
-    //             setIsLoading(false)
-    //         }
-    //     }
-    //     fetchUserID()
-    // }, []);
-
-    const sameUser = (feature_request_user_id, user_id) => {
-        return user_id === feature_request_user_id;
-    }
 
     if (isLoading) {
         return <LoadingIndicator label="Loading feature requests..." />;

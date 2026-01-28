@@ -76,7 +76,7 @@ export async function POST(req) {
   if (userError || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
+  // File Upload
   const contentLength = req.headers.get("content-length");
 
   if (contentLength && Number(contentLength) > MAX_FILE_SIZE) {
@@ -108,7 +108,6 @@ export async function POST(req) {
     }
 
     // Optional: sanitize images
-
     filePath = `uploads/${crypto.randomUUID()}.${detectedType.ext}`;
 
     const { error: uploadError } = await supabase.storage
