@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="de980aa8-1447-4961-9935-6f134762a930" name="Changes" comment="Edit and delete functions check if the user making the request and the user_id attached to the feature request are the same before executing&#10;The API endpoints check if the data from the retrieval query is null. If null, then the current user and the user who created the selected feature request are different and it throws a 403 error" />
+    <list default="true" id="de980aa8-1447-4961-9935-6f134762a930" name="Changes" comment="Delete and edit functionality for feature requests is now only allowed for the users that originally created them" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -13,13 +13,13 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "git-widget-placeholder": "#321 on feature/hide-FR-edit-delete-if-no…-user",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "ts.external.directory.path": "/Applications/WebStorm.app/Contents/plugins/javascript-plugin/jsLanguageServicesImpl/external"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;git-widget-placeholder&quot;: &quot;#321 on feature/hide-FR-edit-delete-if-no…-user&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;/Applications/WebStorm.app/Contents/plugins/javascript-plugin/jsLanguageServicesImpl/external&quot;
   }
-}]]></component>
+}</component>
   <component name="TaskManager">
     <task id="LOCAL-00001" summary="Extra security checks on the API endpoints as well as on the client">
       <option name="closed" value="true" />
@@ -44,6 +44,7 @@
     <MESSAGE value="AdminConsolePage returns all profiles" />
     <MESSAGE value="Extra security checks on the API endpoints as well as on the client" />
     <MESSAGE value="Edit and delete functions check if the user making the request and the user_id attached to the feature request are the same before executing&#10;The API endpoints check if the data from the retrieval query is null. If null, then the current user and the user who created the selected feature request are different and it throws a 403 error" />
-    <option name="LAST_COMMIT_MESSAGE" value="Edit and delete functions check if the user making the request and the user_id attached to the feature request are the same before executing&#10;The API endpoints check if the data from the retrieval query is null. If null, then the current user and the user who created the selected feature request are different and it throws a 403 error" />
+    <MESSAGE value="Delete and edit functionality for feature requests is now only allowed for the users that originally created them" />
+    <option name="LAST_COMMIT_MESSAGE" value="Delete and edit functionality for feature requests is now only allowed for the users that originally created them" />
   </component>
 </project>

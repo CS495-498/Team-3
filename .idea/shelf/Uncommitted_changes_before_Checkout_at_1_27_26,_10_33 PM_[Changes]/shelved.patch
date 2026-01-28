@@ -1,0 +1,38 @@
+Index: .idea/workspace.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<project version=\"4\">\n  <component name=\"AutoImportSettings\">\n    <option name=\"autoReloadType\" value=\"SELECTIVE\" />\n  </component>\n  <component name=\"ChangeListManager\">\n    <list default=\"true\" id=\"dfdd5eeb-8d6b-430a-abc4-35ed96e453dd\" name=\"Changes\" comment=\"Delete and edit functionality for feature requests is now only allowed for the users that originally created them\" />\n    <option name=\"SHOW_DIALOG\" value=\"false\" />\n    <option name=\"HIGHLIGHT_CONFLICTS\" value=\"true\" />\n    <option name=\"HIGHLIGHT_NON_ACTIVE_CHANGELIST\" value=\"false\" />\n    <option name=\"LAST_RESOLUTION\" value=\"IGNORE\" />\n  </component>\n  <component name=\"FileTemplateManagerImpl\">\n    <option name=\"RECENT_TEMPLATES\">\n      <list>\n        <option value=\"JavaScript File\" />\n      </list>\n    </option>\n  </component>\n  <component name=\"Git.Settings\">\n    <option name=\"RECENT_BRANCH_BY_REPOSITORY\">\n      <map>\n        <entry key=\"$PROJECT_DIR$\" value=\"feature/filter-feature-requests-by-creator\" />\n      </map>\n    </option>\n    <option name=\"RECENT_GIT_ROOT_PATH\" value=\"$PROJECT_DIR$\" />\n  </component>\n  <component name=\"GitHubPullRequestSearchHistory\">{\n  &quot;lastFilter&quot;: {\n    &quot;state&quot;: &quot;OPEN&quot;,\n    &quot;assignee&quot;: &quot;BraydenSaunders&quot;\n  }\n}</component>\n  <component name=\"GithubPullRequestsUISettings\">{\n  &quot;selectedUrlAndAccountId&quot;: {\n    &quot;url&quot;: &quot;https://github.com/CS495-Fall2025/Team-3.git&quot;,\n    &quot;accountId&quot;: &quot;9daa9be4-0070-4e13-b71b-73106dc50c9b&quot;\n  }\n}</component>\n  <component name=\"ProjectColorInfo\">{\n  &quot;associatedIndex&quot;: 3\n}</component>\n  <component name=\"ProjectId\" id=\"38XIZVdIGzxadLYjsI7u1pnZ8MC\" />\n  <component name=\"ProjectViewState\">\n    <option name=\"hideEmptyMiddlePackages\" value=\"true\" />\n    <option name=\"showLibraryContents\" value=\"true\" />\n  </component>\n  <component name=\"PropertiesComponent\"><![CDATA[{\n  \"keyToString\": {\n    \"RunOnceActivity.ShowReadmeOnStart\": \"true\",\n    \"git-widget-placeholder\": \"main\",\n    \"node.js.detected.package.eslint\": \"true\",\n    \"node.js.detected.package.tslint\": \"true\",\n    \"node.js.selected.package.eslint\": \"(autodetect)\",\n    \"node.js.selected.package.tslint\": \"(autodetect)\",\n    \"nodejs_package_manager_path\": \"npm\",\n    \"ts.external.directory.path\": \"/Applications/WebStorm.app/Contents/plugins/javascript-plugin/jsLanguageServicesImpl/external\",\n    \"vue.rearranger.settings.migration\": \"true\"\n  }\n}]]></component>\n  <component name=\"RecentsManager\">\n    <key name=\"MoveFile.RECENT_KEYS\">\n      <recent name=\"$PROJECT_DIR$\" />\n    </key>\n  </component>\n  <component name=\"SharedIndexes\">\n    <attachedChunks>\n      <set>\n        <option value=\"bundled-js-predefined-d6986cc7102b-5c90d61e3bab-JavaScript-WS-242.23726.96\" />\n      </set>\n    </attachedChunks>\n  </component>\n  <component name=\"SpellCheckerSettings\" RuntimeDictionaries=\"0\" Folders=\"0\" CustomDictionaries=\"0\" DefaultDictionary=\"application-level\" UseSingleDictionary=\"true\" transferred=\"true\" />\n  <component name=\"TaskManager\">\n    <task active=\"true\" id=\"Default\" summary=\"Default task\">\n      <changelist id=\"dfdd5eeb-8d6b-430a-abc4-35ed96e453dd\" name=\"Changes\" comment=\"\" />\n      <created>1768939545019</created>\n      <option name=\"number\" value=\"Default\" />\n      <option name=\"presentableId\" value=\"Default\" />\n      <updated>1768939545019</updated>\n      <workItem from=\"1768939546075\" duration=\"1039000\" />\n      <workItem from=\"1769032725711\" duration=\"8284000\" />\n      <workItem from=\"1769308983381\" duration=\"8290000\" />\n    </task>\n    <task id=\"LOCAL-00001\" summary=\"Initial Commit\">\n      <option name=\"closed\" value=\"true\" />\n      <created>1769109841182</created>\n      <option name=\"number\" value=\"00001\" />\n      <option name=\"presentableId\" value=\"LOCAL-00001\" />\n      <option name=\"project\" value=\"LOCAL\" />\n      <updated>1769109841182</updated>\n    </task>\n    <task id=\"LOCAL-00002\" summary=\"Delete and edit functionality for feature requests is now only allowed for the users that originally created them\">\n      <option name=\"closed\" value=\"true\" />\n      <created>1769313993310</created>\n      <option name=\"number\" value=\"00002\" />\n      <option name=\"presentableId\" value=\"LOCAL-00002\" />\n      <option name=\"project\" value=\"LOCAL\" />\n      <updated>1769313993310</updated>\n    </task>\n    <option name=\"localTasksCounter\" value=\"3\" />\n    <servers />\n  </component>\n  <component name=\"TypeScriptGeneratedFilesManager\">\n    <option name=\"version\" value=\"3\" />\n  </component>\n  <component name=\"VcsManagerConfiguration\">\n    <MESSAGE value=\"Initial Commit\" />\n    <MESSAGE value=\"Delete and edit functionality for feature requests is now only allowed for the users that originally created them\" />\n    <option name=\"LAST_COMMIT_MESSAGE\" value=\"Delete and edit functionality for feature requests is now only allowed for the users that originally created them\" />\n  </component>\n</project>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/workspace.xml b/.idea/workspace.xml
+--- a/.idea/workspace.xml	(revision 7045b8dbdf6dc8dc3a74adbb14fb7504dc766f53)
++++ b/.idea/workspace.xml	(date 1769570533634)
+@@ -4,7 +4,7 @@
+     <option name="autoReloadType" value="SELECTIVE" />
+   </component>
+   <component name="ChangeListManager">
+-    <list default="true" id="dfdd5eeb-8d6b-430a-abc4-35ed96e453dd" name="Changes" comment="Delete and edit functionality for feature requests is now only allowed for the users that originally created them" />
++    <list default="true" id="dfdd5eeb-8d6b-430a-abc4-35ed96e453dd" name="Changes" comment="Unversioned files" />
+     <option name="SHOW_DIALOG" value="false" />
+     <option name="HIGHLIGHT_CONFLICTS" value="true" />
+     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+@@ -48,7 +48,7 @@
+   <component name="PropertiesComponent"><![CDATA[{
+   "keyToString": {
+     "RunOnceActivity.ShowReadmeOnStart": "true",
+-    "git-widget-placeholder": "main",
++    "git-widget-placeholder": "feature/admin-console",
+     "node.js.detected.package.eslint": "true",
+     "node.js.detected.package.tslint": "true",
+     "node.js.selected.package.eslint": "(autodetect)",
+@@ -107,6 +107,7 @@
+   <component name="VcsManagerConfiguration">
+     <MESSAGE value="Initial Commit" />
+     <MESSAGE value="Delete and edit functionality for feature requests is now only allowed for the users that originally created them" />
+-    <option name="LAST_COMMIT_MESSAGE" value="Delete and edit functionality for feature requests is now only allowed for the users that originally created them" />
++    <MESSAGE value="Unversioned files" />
++    <option name="LAST_COMMIT_MESSAGE" value="Unversioned files" />
+   </component>
+ </project>
+\ No newline at end of file

@@ -119,6 +119,9 @@ export async function PUT(req, { params }) {
     console.error(error);
     return NextResponse.json({ error: error.message }, { status: 403 });
   }
+  if (!data || data.length === 0) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   return NextResponse.json(data, { status: 200 });
 }
