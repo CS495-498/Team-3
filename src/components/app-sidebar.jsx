@@ -153,11 +153,18 @@ function NavProjects() {
     >
         {/* Header */}
         <SidebarHeader className="p-0 mb-0 border-b dark:border-gray-800">
-            <img
-                className="w-15 h-13 p-3"
-                src={entry?.logo?.url}
-                alt="Logo"
-            />
+            <Link
+                href="/"
+                aria-label="Go to home"
+                className="inline-flex items-center justify-start"
+            >
+                <img
+                    className="w-15 h-13 p-3 cursor-pointer select-none"
+                    src={entry?.logo?.url}
+                    alt="Home"
+                    draggable="false"
+                />
+            </Link>
         </SidebarHeader>
 
         {/* Sidebar content */}
