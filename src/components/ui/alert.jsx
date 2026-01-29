@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, AlertCircle, AlertTriangle, Info, Bell } from 'lucide-react';
 
-const AlertTimer = ({ endTime, colorClass }) => {
+const AlertTimer = ({ endTime, colorClass, onExpire, noteId }) => {
   const [timeLeft, setTimeLeft] = useState('');
+  const [hasExpired, setHasExpired] = useState(false); // Add this state
 
   useEffect(() => {
     const calculateTimeLeft = () => {
@@ -11,6 +12,10 @@ const AlertTimer = ({ endTime, colorClass }) => {
       const diff = end - now;
 
       if (diff <= 0) {
+        if (onExpire && noteId) {
+          setHasExpired(true);
+          onExpire(noteId);
+        }
         return 'Expired';
       }
 
@@ -33,7 +38,7 @@ const AlertTimer = ({ endTime, colorClass }) => {
     }, 60000);
 
     return () => clearInterval(interval);
-  }, [endTime]);
+  }, [endTime, onExpire, noteId, hasExpired]);
 
   if (!endTime) return null;
 
@@ -45,7 +50,7 @@ const AlertTimer = ({ endTime, colorClass }) => {
   );
 };
 
-const AlertCard = ({ note, index }) => {
+const AlertCard = ({ note, index, onExpire }) => {
   const getAlertConfig = (critical) => {
     switch (critical) {
       case 4:
@@ -129,7 +134,12 @@ const AlertCard = ({ note, index }) => {
           )}
         </div>
 
-        <AlertTimer endTime={note?.end_time} colorClass={config.timerBg} />
+        <AlertTimer 
+          endTime={note?.end_time} 
+          colorClass={config.timerBg}
+          onExpire={onExpire}
+          noteId={note?.uid || note?._metadata?.uid}
+        />
       </div>
     </div>
   );

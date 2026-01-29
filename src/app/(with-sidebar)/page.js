@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, Fragment } from "react";
+import React, { useState, useEffect, Fragment, useRef } from "react";
 import Stack, { onEntryChange } from "@/lib/cstack";
 import { CircleAlert } from "lucide-react";
 import { Dialog } from "@headlessui/react";
@@ -8,7 +8,6 @@ import appendNotification from "@/app/api/helper/appendNotification.js";
 import { motion, AnimatePresence } from "framer-motion";
 import SuccessToast from "@/components/ui/success-toast.jsx";
 import { AlertTimer, AlertCard } from "@/components/ui/alert.jsx";
-
 import LoadingIndicator from "@/components/ui/loading-indicator.jsx";
 
 export default function Home() {
@@ -17,6 +16,9 @@ export default function Home() {
     const [modalOpen, setModalOpen] = useState(false);
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState("");
+    
+    const expiredAlertsRef = useRef(new Set());
+    const deleteTimeoutRef = useRef(null);
 
     const getContent = async () => {
         console.log("Fetching homepage content...");
@@ -48,6 +50,59 @@ export default function Home() {
         6
     );
 
+    const processBatchDelete = async () => {
+        if (expiredAlertsRef.current.size === 0) return;
+
+        const expiredIds = Array.from(expiredAlertsRef.current);
+        expiredAlertsRef.current.clear();
+
+        try {
+            const updatedAlerts = alerts.filter(alert => {
+                const alertId = alert.uid || alert._metadata?.uid;
+                return !expiredIds.includes(alertId);
+            });
+
+            if (updatedAlerts.length === alerts.length) {
+                console.log('No alerts to delete');
+                return;
+            }
+
+            const response = await fetch("/api/update-alerts-in-cs/delete", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    entryUid: entry.uid,
+                    alerts: updatedAlerts,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to delete expired alerts");
+            }
+
+            const updatedEntry = await response.json();
+            setEntry(updatedEntry.entry);
+
+            console.log(`Successfully deleted ${expiredIds.length} expired alert(s)`);
+        } catch (error) {
+            console.error("Failed to delete expired alerts:", error);
+            // Re-add failed deletions to try again later
+            expiredIds.forEach(id => expiredAlertsRef.current.add(id));
+        }
+    };
+
+    const handleExpiredAlert = (noteId) => {
+        expiredAlertsRef.current.add(noteId);
+
+        if (deleteTimeoutRef.current) {
+            clearTimeout(deleteTimeoutRef.current);
+        }
+
+
+        deleteTimeoutRef.current = setTimeout(() => {
+            processBatchDelete();
+        }, 2000);
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -232,13 +287,18 @@ export default function Home() {
                     </AnimatePresence>
                 </div>
                 <div className="w-full mb-24 mt-3">
-                        {visibleAlerts.length ? (
-                            visibleAlerts.map((note, idx) => (
-                                <AlertCard key={idx} note={note} index={idx} />
-                            ))
-                        ) : (
-                            <div className="text-gray-500 italic mt-3">No notifications</div>
-                        )}
+                    {visibleAlerts.length ? (
+                        visibleAlerts.map((note, idx) => (
+                            <AlertCard 
+                                key={note.uid || note._metadata?.uid || idx} 
+                                note={note} 
+                                index={idx}
+                                onExpire={handleExpiredAlert}
+                            />
+                        ))
+                    ) : (
+                        <div className="text-gray-500 italic mt-3">No notifications</div>
+                    )}
                     {hasMore && (
                         <div
                             ref={ref}
