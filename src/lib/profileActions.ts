@@ -129,24 +129,19 @@ export async function uploadAvatar({
                                        supabase,
                                        file,
                                        profile,
-                                   }: {
-    supabase: SupabaseClient;
-    file: File;
-    profile: { username?: string; full_name?: string };
-}) {
-    const {
-        data: { user },
-    } = await supabase.auth.getUser();
+                                   }:
+                                    {
+                                        supabase: SupabaseClient;
+                                        file: File;
+                                        profile: { username?: string; full_name?: string }; })
+                                    {
+    const {data: { user },} = await supabase.auth.getUser();
 
     if (!user) throw new Error("Not authenticated");
 
-    const {
-        data: { session },
-    } = await supabase.auth.getSession();
+    const {data: { session },} = await supabase.auth.getSession();
 
-    if (!session?.access_token) {
-        throw new Error("No auth session");
-    }
+    if (!session?.access_token) {throw new Error("No auth session");}
 
     const formData = new FormData();
     formData.append("file", file);

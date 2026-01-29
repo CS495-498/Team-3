@@ -80,7 +80,23 @@ export async function PUT(req, context) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const formData = await req.formData();
+  const {data: profile, error: profileError} = await supabase
+      .from("profiles")
+      .select("active_persona_id")
+      .eq("id", user.id)
+      .single();
+
+  if (profileError) {
+    return NextResponse.json(
+        {error: profileError.message},
+        {status: 500}
+    );
+}
+
+const activePersonaId = profile.active_persona_id;
+
+
+    const formData = await req.formData();
   const file = formData.get("file");
   const username = formData.get("username") || null;
   const full_name = formData.get("full_name") || null;
@@ -100,9 +116,13 @@ export async function PUT(req, context) {
       return NextResponse.json({ error: "Invalid file type" }, { status: 400 });
     }
 
-    filePath = `avatars/${user.id}.${detectedType.ext}`;
+    const avatarOwnerId = activePersonaId ?? user.id;
+    const avatarFolder = activePersonaId ? "personas" : "profiles";
 
-    const { error: uploadError } = await supabaseServiceRole.storage
+    filePath = `${avatarFolder}/${avatarOwnerId}.${detectedType.ext}`;
+
+
+      const { error: uploadError } = await supabaseServiceRole.storage
         .from("avatars")
         .upload(filePath, buffer, {
           contentType: detectedType.mime,
@@ -115,26 +135,53 @@ export async function PUT(req, context) {
     }
   }
 
-  const { data, error } = await supabase
-      .from("profiles")
-      .update({
-        username,
-        full_name,
-        avatar_url: filePath || undefined,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", id)
-      .select()
-      .single();
+    let updatedRecord;
 
-  if (error) {
+    if (activePersonaId) {
+       const { data, error } = await supabase
+            .from("personas")
+            .update({
+                avatar_url: filePath,
+                updated_at: new Date().toISOString(),
+            })
+            .eq("id", activePersonaId)
+            .eq("owner_id", user.id)
+            .select()
+            .single();
+
+        if (error) {
+            return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+
+        updatedRecord = data;
+    } else {
+        const { data, error } = await supabase
+            .from("profiles")
+            .update({
+                username,
+                full_name,
+                avatar_url: filePath || undefined,
+                updated_at: new Date().toISOString(),
+            })
+            .eq("id", user.id)
+            .select()
+            .single();
+
+        if (error) {
+            return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+
+        updatedRecord = data;
+    }
+
+    if (error) {
     console.error("Profile update error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
   let enriched = { ...data };
 
-  if (data.avatar_url) {
+  if (updatedRecord.avatar_url) {
     const { data: urlData, error: urlError } =
         await supabaseServiceRole.storage
             .from("avatars")
