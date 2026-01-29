@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import { createClient } from "@/utils/Supabase/client";
+
+const supabase = createClient();
 
 export function useCurrentAvatar(user, activePersona) {
     const [signedAvatarUrl, setSignedAvatarUrl] = useState(null);
@@ -8,28 +11,42 @@ export function useCurrentAvatar(user, activePersona) {
         const fetchAvatar = async () => {
             if (!user?.id) return;
 
-            try {
-                setLoading(true);
-
-                if (activePersona) {
-                    if (activePersona.avatar_url) {
-                        setSignedAvatarUrl(activePersona.avatar_url);
-                    } else {
-                        setSignedAvatarUrl(null);
-                    }
+            // ---- PERSONA ----
+            if (activePersona) {
+                if (!activePersona.avatar_url) {
+                    setSignedAvatarUrl(null);
                     return;
                 }
 
-                const res = await fetch(`/api/profiles/${user.id}`);
-                if (!res.ok) return;
+                setLoading(true);
 
-                const data = await res.json();
-                setSignedAvatarUrl(data?.signed_avatar_url ?? null);
-            } catch (err) {
-                console.error("Error fetching avatar:", err);
-            } finally {
+                const { data, error } = await supabase.storage
+                    .from("avatars")
+                    .createSignedUrl(activePersona.avatar_url, 60 * 60);
+
+                if (!error) {
+                    setSignedAvatarUrl(data.signedUrl);
+                } else {
+                    console.error("Persona avatar sign error:", error);
+                    setSignedAvatarUrl(null);
+                }
+
                 setLoading(false);
+                return;
             }
+
+            // ---- PROFILE ----
+            setLoading(true);
+
+            const res = await fetch(`/api/profiles/${user.id}`);
+            if (!res.ok) {
+                setLoading(false);
+                return;
+            }
+
+            const data = await res.json();
+            setSignedAvatarUrl(data?.signed_avatar_url ?? null);
+            setLoading(false);
         };
 
         fetchAvatar();
