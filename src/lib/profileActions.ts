@@ -124,6 +124,13 @@ export async function deleteAccount() {
     }
 }
 
+export async function deletePersona(persona: string) {
+    const res = await fetch(`/api/personas/${persona}`, {method: "DELETE"});
+    if (!res.ok) {
+        throw new Error("Failed to delete persona");
+    }
+}
+
 
 export async function uploadAvatar({
                                        supabase,

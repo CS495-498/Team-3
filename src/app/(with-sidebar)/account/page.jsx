@@ -5,6 +5,10 @@ import { createClient } from "@/utils/Supabase/client.js";
 import SuccessToast from "@/components/ui/success-toast.jsx";
 import { useCurrentAvatar } from "@/hooks/use-current-avatar.js";
 import { Button } from "@/components/ui/button.jsx";
+import { Trash2 } from "lucide-react";
+
+
+
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -26,6 +30,7 @@ import {
     createPersona as createPersonaAction,
     deleteAccount as deleteAccountAction,
     uploadAvatar,
+    deletePersona as deletePersonaAction,
 } from "@/lib/profileActions";
 
 export default function Page() {
@@ -135,6 +140,22 @@ export default function Page() {
         }
     };
 
+    const handleDeletePersona = async (activePersona) => {
+        if (!confirm(`Delete your persona, ${activePersona.full_name}, permanently? This cannot be undone.`))
+            return;
+
+        try {
+            await deletePersonaAction(activePersona.id);
+
+            setPersonas(prev => prev.filter(p => p.id !== activePersona.id));
+
+            setActivePersona(null);
+
+            setOpenSheet(null);        } catch (err) {
+            console.error("deletePersona failed:", err);
+            alert(err?.message || "Error deleting persona");
+        }
+    }
     const handleAvatarUpdate = async e => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -155,6 +176,8 @@ export default function Page() {
     const handleChange = (field, value) => {
         setProfile(prev => ({ ...prev, [field]: value }));
     };
+
+
 
 
     return (
@@ -221,10 +244,10 @@ export default function Page() {
             {/* Account Settings Sheet */}
             <Sheet open={openSheet === 'settings'} onOpenChange={(open) => !open && setOpenSheet(null)}>
                 <SheetContent side="left" className="w-full sm:max-w-md">
-                    <SheetHeader className="pl-4">
+                    <SheetHeader>
                         <SheetTitle>Account Settings</SheetTitle>
                     </SheetHeader>
-                    <div className="mt-6 space-y-4 pl-4">
+                    <div className="mt-6 space-y-4 px-4">
                         <div>
                             <label className="text-sm font-medium text-gray-600 dark:text-gray-300">
                                 Full Name
@@ -271,7 +294,7 @@ export default function Page() {
                     <SheetHeader>
                         <SheetTitle>Personas</SheetTitle>
                     </SheetHeader>
-                    <div className="mt-6 space-y-4">
+                    <div className="mt-6 space-y-4 px-4">
                         <div>
                             <label className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2 block">
                                 Active Persona
@@ -294,6 +317,16 @@ export default function Page() {
                                     </option>
                                 ))}
                             </select>
+                            {activePersona && (
+                                <button
+                                    type="button"
+                                    onClick={() => handleDeletePersona(activePersona)}
+                                    className="p-2 rounded-md text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30"
+                                    title="Delete persona"
+                                >
+                                    <Trash2 className="h-4 w-4 text-red-600" />
+                                </button>
+                            )}
                         </div>
                         <div>
                             <label className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2 block">
