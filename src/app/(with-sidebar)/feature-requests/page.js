@@ -20,6 +20,8 @@ import DeleteModal from "@/components/deleteModal.jsx";
 import EditFeatureRequestModal from "@/components/editFeatureRequestModal.jsx";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog } from "@headlessui/react";
+import {createClient} from "@/utils/Supabase/client.js";
+import {onEntryChange} from "@/lib/cstack.js";
 
 
 export default function Home() {
@@ -134,7 +136,12 @@ export default function Home() {
         setIsDeleteOpen(true);
     };
 
+    const sameUser = (feature_request_user_id, user_id) => {
+        return user_id === feature_request_user_id;
+    };
+
     async function handleEditSave(updatedItem) {
+        if(!sameUser(selectedItem.user_id, currentUser.id)) return;
         if (!updatedItem.id) return;
 
         const res = await fetch(`/api/feature-requests/${updatedItem.id}`, {
@@ -167,6 +174,8 @@ export default function Home() {
     }
 
     const handleConfirmDelete = async () => {
+        if(!sameUser(selectedItem.user_id, currentUser.id)) return;
+
         try {
             const res = await fetch(`/api/feature-requests/${selectedItem.id}`, {
                 method: "DELETE",
@@ -492,20 +501,21 @@ export default function Home() {
 
                                 {/* Comments & dropdown */}
                                 <div className="flex justify-between items-center ml-4">
+                                    <div className={!sameUser(req.user_id, currentUser.id) ? 'hidden' : ''}>
+                                        <CardDropdown
+                                            onEdit={() => openEditModal(req)}
+                                            onDelete={() => openDeleteModal(req)}
+                                        />
+                                    </div>
                                     <button
                                         onClick={() => openCommentsDialog(req)}
                                         className="flex items-center gap-1 px-3 py-2 rounded-md text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700"
                                     >
-                                        <MessageSquare className="w-5 h-5" />
+                                        <MessageSquare className="w-5 h-5"/>
                                         <span className="text-sm">{req.commentCount}</span>
                                     </button>
-                                    <CardDropdown
-                                        onEdit={() => openEditModal(req)}
-                                        onDelete={() => openDeleteModal(req)}
-                                    />
                                 </div>
                             </li>
-
                         );
                     })}
 
@@ -516,7 +526,8 @@ export default function Home() {
             {hasMore && (
                 <div ref={ref} className="flex flex-col justify-center items-center py-8 mt-6">
                     <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                        <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                        <div
+                            className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
                         <span className="text-sm">Loading more requests...</span>
                     </div>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">

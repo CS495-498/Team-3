@@ -117,7 +117,7 @@ export async function PUT(req, { params }) {
 
   if (error) {
     console.error(error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 403 });
   }
 
   return NextResponse.json(data, { status: 200 });
@@ -128,7 +128,6 @@ export async function DELETE(req, { params }) {
   const { id } = await params;
   const supabase = await createClient();
 
-  // Authenticate user
   const {
     data: { user },
     error: userError,
@@ -139,21 +138,27 @@ export async function DELETE(req, { params }) {
   }
 
   try {
-    // Ensure user can only delete their own requests
-    const { error } = await supabase
-      .from("feature_requests")
-      .delete()
-      .eq("id", id)
-      .eq("user_id", user.id);
-
+    const { data, error } = await supabase
+        .from("feature_requests")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", user.id)
+        .select()
     if (error) {
       console.error("Delete feature request error:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    if (!data || data.length === 0) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (err) {
     console.error("Delete request failed:", err);
-    return NextResponse.json({ error: err.message || "Failed to delete" }, { status: 500 });
+    return NextResponse.json(
+        { error: err.message || "Failed to delete" },
+        { status: 500 }
+    );
   }
-};
+}
