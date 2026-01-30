@@ -6,6 +6,8 @@ import {
     updateProfile,
     switchPersona,
     createPersona,
+    deleteAccount,
+    deletePersona
 } from "../../src/lib/profileActions.ts";
 
 describe("profileActions", () => {
@@ -25,6 +27,84 @@ describe("profileActions", () => {
         sinon.restore();
     });
 
+
+    describe("deletePersona()", () => {
+        let fetchStub;
+
+        beforeEach(() => {
+            fetchStub = sinon.stub(global, "fetch");
+        });
+
+        afterEach(() => {
+            fetchStub.restore();
+        });
+
+        it("calls DELETE /api/personas/:id", async () => {
+            fetchStub.resolves({
+                ok: true,
+            });
+
+            await deletePersona("persona-1");
+
+            expect(fetchStub.calledOnce).to.be.true;
+
+            const [url, options] = fetchStub.firstCall.args;
+            expect(url).to.equal("/api/personas/persona-1");
+            expect(options.method).to.equal("DELETE");
+        });
+
+        it("throws if the request fails", async () => {
+            fetchStub.resolves({
+                ok: false,
+            });
+
+            try {
+                await deletePersona("persona-1");
+                throw new Error("Expected to throw");
+            } catch (err) {
+                expect(err.message).to.equal("Failed to delete persona");
+            }
+        });
+    });
+
+    describe("deleteAccount()", () => {
+        let fetchStub;
+
+        beforeEach(() => {
+            fetchStub = sinon.stub(global, "fetch");
+        });
+
+        afterEach(() => {
+            fetchStub.restore();
+        });
+
+        it("calls DELETE /api/profiles/me", async () => {
+            fetchStub.resolves({
+                ok: true,
+            });
+
+            await deleteAccount();
+
+            expect(fetchStub.calledOnce).to.be.true;
+
+            const [url, options] = fetchStub.firstCall.args;
+            expect(url).to.equal("/api/profiles/me");
+            expect(options.method).to.equal("DELETE");
+        });
+
+        it("throws if the request fails", async () => {
+            fetchStub.resolves({
+                ok: false,
+            });
+
+            try {
+                await deleteAccount();
+                throw new Error("Expected to throw");
+            } catch (err) {
+                expect(err.message).to.equal("Failed to delete account");
+            }
+        });
+    });
 
 
     describe("getUserAndProfile()", () => {

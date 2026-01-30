@@ -1,4 +1,3 @@
-// /app/api/me/route.js  (Next.js App Router style)
 import { NextResponse } from "next/server";
 
 import { createClient as createClient } from "@/utils/Supabase/server";

@@ -92,10 +92,8 @@ export default function Page() {
         if (!user) return;
         try {
             setLoading(true);
-            // If personaId is empty/null/original, switch back to original account
             const finalPersonaId = personaId === "" || personaId === "original" ? null : personaId;
             await switchPersonaAction(supabase, user.id, finalPersonaId);
-            // Set activePersona to null if switching to original, otherwise find the persona
             setActivePersona(finalPersonaId ? personas.find(p => p.id === finalPersonaId) || null : null);
         } catch (err) {
             console.error("switchPersona failed:", err);
