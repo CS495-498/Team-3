@@ -16,9 +16,8 @@ export async function POST(req, { params }) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Parse body
-  const body = await req.json();
-  const { vote } = body; // "up" or "down"
+    const body = await req.json();
+    const { vote } = body;
 
   if (!vote || !["up", "down"].includes(vote)) {
     return NextResponse.json(
@@ -27,26 +26,24 @@ export async function POST(req, { params }) {
     );
   }
 
-  try {
-    // 1. Upsert vote (user can change their vote)
-    const { error: voteError } = await supabase
-        .from("votes")
-        .upsert(
-            {
-              user_id: user.id,
-              request_id: Number(id),
-              vote,
-            },
-            { onConflict: "user_id,request_id" }
-        );
+    try {
+        const { error: voteError } = await supabase
+            .from("votes")
+            .upsert(
+                {
+                    user_id: user.id,
+                    req_id: Number(id),
+                    vote,
+                },
+                { onConflict: "user_id,req_id" }
+            );
 
-    if (voteError) throw voteError;
+        if (voteError) throw voteError;
 
-    // 2. Recount votes for this request
-    const { data: votes, error: fetchError } = await supabase
-        .from("votes")
-        .select("vote")
-        .eq("request_id", Number(id));
+        const { data: votes, error: fetchError } = await supabase
+            .from("votes")
+            .select("vote")
+            .eq("req_id", Number(id));
 
     if (fetchError) throw fetchError;
 
@@ -61,7 +58,7 @@ export async function POST(req, { params }) {
         .update({ number_of_votes: total })
         .eq("id", Number(id));
 
-    if (updateError) throw updateError;
+        if (updateError) throw updateError;
 
     return NextResponse.json(
         { number_of_votes: total },
@@ -77,8 +74,8 @@ export async function POST(req, { params }) {
 }
 
 export async function PUT(req, { params }) {
-  const { id } = await params;
-  const supabase = await createClient();
+    const { id } = params;
+    const supabase = await createClient();
 
   // Authenticate user
   const {
@@ -90,9 +87,8 @@ export async function PUT(req, { params }) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Parse request body
-  const body = await req.json();
-  const { title, content, status } = body;
+    const body = await req.json();
+    const { title, content, status } = body;
 
   if (!title || title.trim() === "") {
     return NextResponse.json(
@@ -102,56 +98,63 @@ export async function PUT(req, { params }) {
   }
 
   // Update the feature request
-  const { data, error } = await supabase
-    .from("feature_requests")
-    .update({
-      title,
-      content,
-      status,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", id)
-    .eq("user_id", user.id) // ensures users can only edit their own requests
-    .select("*")
-    .single();
+    const { data, error } = await supabase
+        .from("feature_requests")
+        .update({
+            title,
+            content,
+            status,
+            updated_at: new Date().toISOString(),
+        })
+        .eq("id", id)
+        .eq("user_id", user.id)
+        .select(`
+      *,
+      profiles!fk_feature_requests_author (
+        id,
+        username,
+        avatar_url
+      )
+    `)
+        .single();
 
   if (error) {
     console.error(error);
     return NextResponse.json({ error: error.message }, { status: 403 });
   }
 
-  return NextResponse.json(data, { status: 200 });
+    return NextResponse.json(data, { status: 200 });
 }
 
-
 export async function DELETE(req, { params }) {
-  const { id } = await params;
-  const supabase = await createClient();
+    const { id } = params;
+    const supabase = await createClient();
 
   const {
     data: { user },
     error: userError,
   } = await supabase.auth.getUser();
 
-  if (userError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  try {
-    const { data, error } = await supabase
-        .from("feature_requests")
-        .delete()
-        .eq("id", id)
-        .eq("user_id", user.id)
-        .select()
-    if (error) {
-      console.error("Delete feature request error:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (userError || !user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!data || data.length === 0) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    try {
+        const { data, error } = await supabase
+            .from("feature_requests")
+            .delete()
+            .eq("id", id)
+            .eq("user_id", user.id)
+            .select();
+
+        if (error) {
+            console.error("Delete feature request error:", error);
+            return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+
+        if (!data || data.length === 0) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (err) {
