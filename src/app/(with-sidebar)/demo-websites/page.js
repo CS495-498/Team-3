@@ -164,6 +164,7 @@ export default function Demos() {
                     null,
                     "demo-thumbnails"
                 );
+            } 
             // Option 2: Auto-capture screenshot if URL provided and no manual upload
             else if (demoUrl) {
                 const screenshotResponse = await fetch('/api/capture-screenshot', {
@@ -174,10 +175,10 @@ export default function Demos() {
 
                 if (screenshotResponse.ok) {
                     const { screenshot } = await screenshotResponse.json();
-
+                    
                     const blob = await fetch(`data:image/jpeg;base64,${screenshot}`).then(r => r.blob());
                     const screenshotFile = new File([blob], `${json_data.title}-screenshot.jpg`, { type: 'image/jpeg' });
-
+                    
                     uploadedThumb = await postAsset(
                         screenshotFile,
                         `${json_data.title} Thumbnail`,
@@ -237,36 +238,35 @@ export default function Demos() {
     };
     const handleEditSave = async (e) => {
         e.preventDefault();
-
+    
         try {
             if (selectedItem == null || selectedIndex == null) return;
-
+    
             setIsSubmitting(true);
-
+    
             const form = e.target;
             const data = new FormData(form);
-
+    
             const newTitle = data.get("title");
             const newDescription = data.get("description");
             const newLinkTitle = data.get("link");
             const newImageFile = data.get("image");
-
+    
 
             let imageUid = selectedItem.image?.uid || selectedItem.image || null;
-
+    
             if (newImageFile && newImageFile.size > 0) {
                 const uploaded = await postAsset(
                     newImageFile,
                     `${newTitle} Thumbnail`,
                     "Demo thumbnail",
                     null,                     
-                    null,
                     "demo-thumbnails"
                 );
-
+    
                 imageUid = uploaded?.asset?.uid || null;
             }
-
+    
             const updatedItem = {
                 ...selectedItem,
                 title: newTitle,
@@ -277,16 +277,59 @@ export default function Demos() {
                 },
                 image: imageUid,
             };
-
+    
             console.log("Updated Item:", updatedItem);
-
+    
             const updatedArray = [...entry.demos];
             updatedArray[selectedIndex] = updatedItem;
-
+    
             const normalized = normalizeDemoWebArray(updatedArray);
-
+    
             const response = await fetch("/api/update-demo-web-in-cs", {
                 method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    entryUid: entry.uid,
+                    demos: normalized,
+                }),
+            });
+    
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(text);
+            }
+    
+            const updatedEntry = await response.json();
+            setEntry(updatedEntry.entry);
+            setIsEditOpen(false);
+    
+            setToastMessage("Demo updated successfully!");
+            setShowToast(true);
+            setTimeout(() => setShowToast(false), 2000);
+    
+        } catch (error) {
+            console.error("Edit failed:", error);
+            alert("Failed to update demo.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+
+    const handleConfirmDelete = async () => {
+        try {
+            if (selectedIndex == null) return;
+
+            // 1. Remove the item by index
+            const updatedArray = [...entry.demos];
+            updatedArray.splice(selectedIndex, 1);
+
+            // 2. Normalize for Contentstack
+            const normalized = normalizeDemoWebArray(updatedArray);
+
+            // 3. Send update to CS
+            const response = await fetch("/api/update-demo-web-in-cs", {
+                method: "DELETE",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     entryUid: entry.uid,
@@ -299,59 +342,21 @@ export default function Demos() {
                 throw new Error(text);
             }
 
-            const updatedEntry = await response.json();
-            setEntry(updatedEntry.entry);
-            setIsEditOpen(false);
-
-            setToastMessage("Demo updated successfully!");
-            setShowToast(true);
-            setTimeout(() => setShowToast(false), 2000);
-
-        } catch (error) {
-            console.error("Edit failed:", error);
-            alert("Failed to update demo.");
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-
-    const handleConfirmDelete = async () => {
-        try {
-            if (!selectedItem) return;
-
-            const selectedId = getDemoId(selectedItem);
-            if (!selectedId) throw new Error("Selected demo has no identifier.");
-
-            // Remove by id, not index
-            const updatedArray = (entry.demos || []).filter(d => getDemoId(d) !== selectedId);
-
-            const normalized = normalizeDemoWebArray(updatedArray);
-
-            const response = await fetch("/api/update-demo-web-in-cs", {
-                method: "DELETE",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    entryUid: entry.uid,
-                    demos: normalized,
-                }),
-            });
-
-            if (!response.ok) throw new Error(await response.text());
-
+            // 4. Update UI with returned entry
             const result = await response.json();
             setEntry(result.entry);
 
+            // 5. Close modal + toast
             setIsDeleteOpen(false);
             setToastMessage("Demo deleted successfully!");
             setShowToast(true);
             setTimeout(() => setShowToast(false), 2000);
+
         } catch (error) {
             console.error("Delete failed:", error);
             alert("Failed to delete demo.");
         }
     };
-
 
 
     if (isLoading) {
