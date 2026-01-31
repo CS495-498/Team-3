@@ -236,7 +236,7 @@ export default function Page() {
                         {activePersona ? activePersona.username : "@"+(profile.username || "Username")}
                     </h2>
                     <p className="text-sm opacity-80 text-gray-700 dark:text-gray-300">
-                        {activePersona ? (activePersona.role || "User") : "Original Account"}
+                        {/*{activePersona ? (activePersona.role || "User") : "Original Account"}*/}
                     </p>
                 </div>
             </div>
