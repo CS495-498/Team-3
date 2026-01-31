@@ -1,6 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-
-export async function getUserAndProfile(supabase: SupabaseClient) {
+export async function getUserAndProfile(supabase) {
     const {
         data: { user },
         error: userError,
@@ -33,6 +31,7 @@ export async function getUserAndProfile(supabase: SupabaseClient) {
         profileData?.active_persona_id && personas
             ? personas.find(p => p.id === profileData.active_persona_id) ?? null
             : null;
+
     return {
         user,
         profile: {
@@ -45,13 +44,7 @@ export async function getUserAndProfile(supabase: SupabaseClient) {
     };
 }
 
-
-
-export async function updateProfile(
-    supabase: SupabaseClient,
-    userId: string,
-    profile: { full_name: string; username: string }
-) {
+export async function updateProfile(supabase, userId, profile) {
     const updates = {
         id: userId,
         full_name: profile.full_name?.trim() || null,
@@ -63,13 +56,7 @@ export async function updateProfile(
     if (error) throw error;
 }
 
-
-
-export async function switchPersona(
-    supabase: SupabaseClient,
-    userId: string,
-    personaId: string | null
-) {
+export async function switchPersona(supabase, userId, personaId) {
     const { error } = await supabase
         .from("profiles")
         .update({ active_persona_id: personaId })
@@ -78,13 +65,7 @@ export async function switchPersona(
     if (error) throw error;
 }
 
-
-
-export async function createPersona(
-    supabase: SupabaseClient,
-    userId: string,
-    displayName: string
-) {
+export async function createPersona(supabase, userId, displayName) {
     const trimmed = displayName.trim();
     if (!trimmed) {
         throw new Error("Persona name cannot be empty");
@@ -100,6 +81,7 @@ export async function createPersona(
         })
         .select()
         .single();
+
     if (error) throw error;
 
     const { error: profileUpdateError } = await supabase
@@ -114,9 +96,6 @@ export async function createPersona(
     return data;
 }
 
-
-
-
 export async function deleteAccount() {
     const res = await fetch("/api/profiles/me", { method: "DELETE" });
     if (!res.ok) {
@@ -124,31 +103,27 @@ export async function deleteAccount() {
     }
 }
 
-export async function deletePersona(persona: string) {
-    const res = await fetch(`/api/personas/${persona}`, {method: "DELETE"});
+export async function deletePersona(persona) {
+    const res = await fetch(`/api/personas/${persona}`, { method: "DELETE" });
     if (!res.ok) {
         throw new Error("Failed to delete persona");
     }
 }
 
-
-export async function uploadAvatar({
-                                       supabase,
-                                       file,
-                                       profile,
-                                   }:
-                                    {
-                                        supabase: SupabaseClient;
-                                        file: File;
-                                        profile: { username?: string; full_name?: string }; })
-                                    {
-    const {data: { user },} = await supabase.auth.getUser();
+export async function uploadAvatar({ supabase, file, profile }) {
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) throw new Error("Not authenticated");
 
-    const {data: { session },} = await supabase.auth.getSession();
+    const {
+        data: { session },
+    } = await supabase.auth.getSession();
 
-    if (!session?.access_token) {throw new Error("No auth session");}
+    if (!session?.access_token) {
+        throw new Error("No auth session");
+    }
 
     const formData = new FormData();
     formData.append("file", file);

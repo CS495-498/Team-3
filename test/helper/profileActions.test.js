@@ -8,7 +8,7 @@ import {
     createPersona,
     deleteAccount,
     deletePersona
-} from "../../src/lib/profileActions.ts";
+} from "@/lib/profileActions.js";
 
 describe("profileActions", () => {
     let supabase;

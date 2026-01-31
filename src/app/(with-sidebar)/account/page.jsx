@@ -31,7 +31,7 @@ import {
     deleteAccount as deleteAccountAction,
     uploadAvatar,
     deletePersona as deletePersonaAction,
-} from "@/lib/profileActions";
+} from "@/lib/profileActions.js";
 
 export default function Page() {
     const supabase = createClient();
