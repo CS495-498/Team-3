@@ -208,7 +208,6 @@ export default function Page() {
                 </DropdownMenu>
             </div>
 
-            {/* Banner - Tightened */}
             <div className="w-full h-32 bg-gradient-to-r from-purple-600 to-purple-700 dark:from-purple-700 dark:to-purple-800 relative">
                 <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center">
                     <div className="relative group w-24 h-24 mb-2">
@@ -233,6 +232,9 @@ export default function Page() {
                     <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                         {activePersona ? activePersona.full_name : (profile.full_name || "Full Name")}
                     </h1>
+                    <h2 className="text-med opacity-80 text-gray-700 dark:text-gray-300">
+                        {activePersona ? activePersona.username : "@"+(profile.username || "Username")}
+                    </h2>
                     <p className="text-sm opacity-80 text-gray-700 dark:text-gray-300">
                         {activePersona ? (activePersona.role || "User") : "Original Account"}
                     </p>
@@ -370,7 +372,7 @@ export default function Page() {
 
             {/* Delete Account Sheet */}
             <Sheet open={openSheet === 'delete'} onOpenChange={(open) => !open && setOpenSheet(null)}>
-                <SheetContent side="left" className="w-full sm:max-w-md">
+                <SheetContent side="left" className="w-full sm:max-w-md px-4">
                     <SheetHeader>
                         <SheetTitle className="text-red-600 dark:text-red-400">Danger Zone</SheetTitle>
                     </SheetHeader>
