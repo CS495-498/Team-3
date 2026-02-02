@@ -314,7 +314,7 @@ return (
 
             {/* Account Settings Sheet */}
             <Sheet open={openSheet === 'settings'} onOpenChange={(open) => !open && setOpenSheet(null)}>
-                <SheetContent side="left" className="w-full sm:max-w-md">
+                <SheetContent side="right" className="w-full sm:max-w-md">
                     <SheetHeader>
                         <SheetTitle>Account Settings</SheetTitle>
                     </SheetHeader>
@@ -361,7 +361,7 @@ return (
             </Sheet>
 
             <Sheet open={openSheet === 'personas'} onOpenChange={(open) => !open && setOpenSheet(null)}>
-                <SheetContent side="left" className="w-full sm:max-w-md">
+                <SheetContent side="right" className="w-full sm:max-w-md">
                     <SheetHeader>
                         <SheetTitle>Personas</SheetTitle>
                     </SheetHeader>
@@ -443,7 +443,7 @@ return (
 
             {/* Delete Account Sheet */}
             <Sheet open={openSheet === 'delete'} onOpenChange={(open) => !open && setOpenSheet(null)}>
-                <SheetContent side="left" className="w-full sm:max-w-md px-4">
+                <SheetContent side="right" className="w-full sm:max-w-md px-4">
                     <SheetHeader>
                         <SheetTitle className="text-red-600 dark:text-red-400">Danger Zone</SheetTitle>
                     </SheetHeader>
