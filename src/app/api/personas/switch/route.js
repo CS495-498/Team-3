@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 
-export async function DELETE(req, context) {
-    const { id } = await context.params;
+export async function PATCH(req) {
+    const { personaId } = await req.json();
 
     const cookieStore = await cookies();
 
@@ -29,41 +29,47 @@ export async function DELETE(req, context) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // ---- FETCH PERSONA ----
+    // ---- CLEAR ACTIVE PERSONA ----
+    if (!personaId) {
+        const { error } = await supabase
+            .from("profiles")
+            .update({ active_persona_id: null })
+            .eq("id", user.id);
+
+        if (error) {
+            return NextResponse.json(
+                { error: error.message },
+                { status: 500 }
+            );
+        }
+
+        return NextResponse.json({ success: true });
+    }
+
+    // ---- VERIFY OWNERSHIP ----
     const { data: persona, error: personaError } = await supabase
         .from("personas")
-        .select("id, owner_id")
-        .eq("id", id)
+        .select("id")
+        .eq("id", personaId)
+        .eq("owner_id", user.id)
         .single();
 
     if (personaError || !persona) {
         return NextResponse.json(
-            { error: "Persona not found" },
-            { status: 404 }
+            { error: "Persona not found or forbidden" },
+            { status: 403 }
         );
     }
 
-    if (persona.owner_id !== user.id) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    // ---- CLEAR ACTIVE PERSONA ----
-    await supabase
+    // ---- SET ACTIVE PERSONA ----
+    const { error: updateError } = await supabase
         .from("profiles")
-        .update({ active_persona_id: null })
-        .eq("id", user.id)
-        .eq("active_persona_id", id);
+        .update({ active_persona_id: personaId })
+        .eq("id", user.id);
 
-    // ---- DELETE PERSONA ----
-    const { error: deleteError } = await supabase
-        .from("personas")
-        .delete()
-        .eq("id", id)
-        .eq("owner_id", user.id);
-
-    if (deleteError) {
+    if (updateError) {
         return NextResponse.json(
-            { error: deleteError.message },
+            { error: updateError.message },
             { status: 500 }
         );
     }

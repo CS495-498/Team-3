@@ -5,9 +5,7 @@ import { createClient } from "@/utils/Supabase/client.js";
 import SuccessToast from "@/components/ui/success-toast.jsx";
 import { useCurrentAvatar } from "@/hooks/use-current-avatar.js";
 import { Button } from "@/components/ui/button.jsx";
-import { Trash2 } from "lucide-react";
-
-
+import { Trash2, Menu } from "lucide-react";
 
 import {
     DropdownMenu,
@@ -21,17 +19,6 @@ import {
     SheetHeader,
     SheetTitle,
 } from "@/components/ui/sheet.jsx";
-import { Menu } from "lucide-react";
-
-import {
-    getUserAndProfile,
-    updateProfile as updateProfileAction,
-    switchPersona as switchPersonaAction,
-    createPersona as createPersonaAction,
-    deleteAccount as deleteAccountAction,
-    uploadAvatar,
-    deletePersona as deletePersonaAction,
-} from "@/lib/profileActions.js";
 
 export default function Page() {
     const supabase = createClient();
@@ -48,22 +35,32 @@ export default function Page() {
     const [activePersona, setActivePersona] = useState(null);
     const [openSheet, setOpenSheet] = useState(null);
 
-    const emptyProfile = { full_name: "", username: "", avatar_url: "" };
+    const emptyProfile = {full_name: "", username: "", avatar_url: ""};
     const [profile, setProfile] = useState(emptyProfile);
 
-    const { signedAvatarUrl } = useCurrentAvatar(user, activePersona);
+    const {signedAvatarUrl} = useCurrentAvatar(user, activePersona);
 
+    // ---------------- LOAD USER DATA ----------------
     useEffect(() => {
         const loadData = async () => {
             try {
                 setLoading(true);
-                const data = await getUserAndProfile(supabase);
-                setUser(data.user);
-                setProfile(data.profile);
-                setPersonas(data.personas);
-                setActivePersona(data.activePersona);
+
+                const res = await fetch("/api/profiles/me");
+                if (!res.ok) throw new Error("Failed to load user");
+
+                const data = await res.json();
+
+                setUser({id: data.id});
+                setProfile({
+                    full_name: data.full_name ?? "",
+                    username: data.username ?? "",
+                    avatar_url: data.avatar_url ?? "",
+                });
+                setPersonas(data.personas ?? []);
+                setActivePersona(data.activePersona ?? null);
             } catch (err) {
-                console.error("Account loadData failed:", err);
+                console.error("Account load failed:", err);
                 alert(err?.message || "Error loading user data");
             } finally {
                 setLoading(false);
@@ -73,11 +70,30 @@ export default function Page() {
         loadData();
     }, []);
 
+    // ---------------- UPDATE PROFILE ----------------
     const updateProfile = async () => {
-        if (!user) return;
         try {
             setLoading(true);
-            await updateProfileAction(supabase, user.id, profile);
+
+            const res = await fetch("/api/profiles/me", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(profile),
+            });
+
+            if (!res.ok) {
+                let message = "Update failed";
+
+                try {
+                    const data = await res.json();
+                    message = data?.error || message;
+                } catch {
+                }
+
+                throw new Error(message);
+            }
+
+
             setShowToast(true);
             setTimeout(() => setShowToast(false), 3000);
         } catch (err) {
@@ -88,13 +104,28 @@ export default function Page() {
         }
     };
 
+    // ---------------- SWITCH PERSONA ----------------
     const switchPersona = async personaId => {
-        if (!user) return;
         try {
             setLoading(true);
-            const finalPersonaId = personaId === "" || personaId === "original" ? null : personaId;
-            await switchPersonaAction(supabase, user.id, finalPersonaId);
-            setActivePersona(finalPersonaId ? personas.find(p => p.id === finalPersonaId) || null : null);
+            const finalPersonaId =
+                personaId === "" || personaId === "original"
+                    ? null
+                    : personaId;
+
+            const res = await fetch("/api/personas/switch", {
+                method: "PATCH",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({personaId: finalPersonaId}),
+            });
+
+            if (!res.ok) throw new Error("Failed to switch persona");
+
+            setActivePersona(
+                finalPersonaId
+                    ? personas.find(p => p.id === finalPersonaId) ?? null
+                    : null
+            );
         } catch (err) {
             console.error("switchPersona failed:", err);
             alert(err?.message || "Error switching persona");
@@ -103,16 +134,26 @@ export default function Page() {
         }
     };
 
+    // ---------------- CREATE PERSONA ----------------
     const createPersona = async () => {
-        if (!newPersonaName.trim() || !user) return;
+        if (!newPersonaName.trim()) return;
 
         try {
             setAddingPersona(true);
-            const persona = await createPersonaAction(
-                supabase,
-                user.id,
-                newPersonaName
-            );
+
+            const res = await fetch("/api/personas", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({displayName: newPersonaName}),
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || "Failed to create persona");
+            }
+
+            const persona = await res.json();
+
             setPersonas(prev => [...prev, persona]);
             setActivePersona(persona);
             setNewPersonaName("");
@@ -124,12 +165,15 @@ export default function Page() {
         }
     };
 
+    // ---------------- DELETE ACCOUNT ----------------
     const handleDeleteAccount = async () => {
         if (!confirm("Delete your account permanently? This cannot be undone."))
             return;
 
         try {
-            await deleteAccountAction();
+            const res = await fetch("/api/profiles/me", {method: "DELETE"});
+            if (!res.ok) throw new Error("Delete failed");
+
             await supabase.auth.signOut();
             window.location.href = "/login";
         } catch (err) {
@@ -138,33 +182,62 @@ export default function Page() {
         }
     };
 
-    const handleDeletePersona = async (activePersona) => {
-        if (!confirm(`Delete your persona, ${activePersona.full_name}, permanently? This cannot be undone.`))
+    // ---------------- DELETE PERSONA ----------------
+    const handleDeletePersona = async persona => {
+        if (
+            !confirm(
+                `Delete your persona, ${persona.full_name}, permanently?`
+            )
+        )
             return;
 
         try {
-            await deletePersonaAction(activePersona.id);
+            const res = await fetch(`/api/personas/${persona.id}`, {
+                method: "DELETE",
+            });
 
-            setPersonas(prev => prev.filter(p => p.id !== activePersona.id));
+            if (!res.ok) throw new Error("Failed to delete persona");
 
+            setPersonas(prev => prev.filter(p => p.id !== persona.id));
             setActivePersona(null);
-
-            setOpenSheet(null);        } catch (err) {
+            setOpenSheet(null);
+        } catch (err) {
             console.error("deletePersona failed:", err);
             alert(err?.message || "Error deleting persona");
         }
-    }
+    };
+
+    // ---------------- AVATAR UPLOAD (UNCHANGED) ----------------
     const handleAvatarUpdate = async e => {
         const file = e.target.files?.[0];
         if (!file) return;
 
         try {
-            const updatedProfile = await uploadAvatar({
-                supabase,
-                file,
-                profile,
+            const {
+                data: {user},
+            } = await supabase.auth.getUser();
+
+            const {
+                data: {session},
+            } = await supabase.auth.getSession();
+
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("username", profile.username || "");
+            formData.append("full_name", profile.full_name || "");
+
+            const res = await fetch(`/api/profiles/${user.id}`, {
+                method: "PUT",
+                headers: {
+                    Authorization: `Bearer ${session.access_token}`,
+                },
+                body: formData,
             });
-            setProfile(updatedProfile);
+
+            if (!res.ok) throw new Error("Upload failed");
+
+            const data = await res.json();
+            setProfile(data);
         } catch (err) {
             console.error("uploadAvatar failed:", err);
             alert(err?.message || "Avatar upload failed");
@@ -172,20 +245,18 @@ export default function Page() {
     };
 
     const handleChange = (field, value) => {
-        setProfile(prev => ({ ...prev, [field]: value }));
+        setProfile(prev => ({...prev, [field]: value}));
     };
 
 
-
-
-    return (
+return (
         <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
             <SuccessToast
                 message={toastMessage}
                 isOpen={showToast}
                 onClose={() => setShowToast(false)}
             />
-            
+
             {/* Menu Button */}
             <div className="absolute top-4 right-4 z-10">
                 <DropdownMenu>
