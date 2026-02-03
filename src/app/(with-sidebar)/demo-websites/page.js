@@ -66,10 +66,10 @@ export default function Demos() {
     }, []);
 
     const getDemoId = (demo) =>
+        demo?._metadata?.uid ||
         demo?.uid ||
         demo?.system?.uid ||
-        demo?.link?.href ||
-        demo?.title;
+        null;
 
     const demos = entry?.demos?.filter((demo) => {
         const query = searchQuery.toLowerCase();
@@ -89,17 +89,36 @@ export default function Demos() {
         });
     }, [demos, isBookmarked]);
 
+    const demoIndexById = useMemo(() => {
+        const map = new Map();
+        const arr = entry?.demos || [];
+
+        arr.forEach((demo, i) => {
+            const id = getDemoId(demo);
+            if (id) map.set(id, i);
+        });
+
+        return map;
+    }, [entry?.demos]);
+
+
     const { items: visibleDemos, hasMore, ref } = useInfiniteScroll(sortedDemos, 8);
 
-    const openEditModal = (demo, index) => {
+    const openEditModal = (demo) => {
+        const id = getDemoId(demo);
+        const originalIndex = id && demoIndexById.has(id) ? demoIndexById.get(id) : null;
+
         setSelectedItem(demo);
-        setSelectedIndex(index);
+        setSelectedIndex(originalIndex);
         setIsEditOpen(true);
     };
 
-    const openDeleteModal = (demo, index) => {
+    const openDeleteModal = (demo) => {
+        const id = getDemoId(demo);
+        const originalIndex = id && demoIndexById.has(id) ? demoIndexById.get(id) : null;
+
         setSelectedItem(demo);
-        setSelectedIndex(index);
+        setSelectedIndex(originalIndex);
         setIsDeleteOpen(true);
     };
 
@@ -164,7 +183,7 @@ export default function Demos() {
                     null,
                     "demo-thumbnails"
                 );
-            } 
+            }
             // Option 2: Auto-capture screenshot if URL provided and no manual upload
             else if (demoUrl) {
                 const screenshotResponse = await fetch('/api/capture-screenshot', {
@@ -175,10 +194,10 @@ export default function Demos() {
 
                 if (screenshotResponse.ok) {
                     const { screenshot } = await screenshotResponse.json();
-                    
+
                     const blob = await fetch(`data:image/jpeg;base64,${screenshot}`).then(r => r.blob());
                     const screenshotFile = new File([blob], `${json_data.title}-screenshot.jpg`, { type: 'image/jpeg' });
-                    
+
                     uploadedThumb = await postAsset(
                         screenshotFile,
                         `${json_data.title} Thumbnail`,
@@ -238,35 +257,35 @@ export default function Demos() {
     };
     const handleEditSave = async (e) => {
         e.preventDefault();
-    
+
         try {
             if (selectedItem == null || selectedIndex == null) return;
-    
+
             setIsSubmitting(true);
-    
+
             const form = e.target;
             const data = new FormData(form);
-    
+
             const newTitle = data.get("title");
             const newDescription = data.get("description");
             const newLinkTitle = data.get("link");
             const newImageFile = data.get("image");
-    
+
 
             let imageUid = selectedItem.image?.uid || selectedItem.image || null;
-    
+
             if (newImageFile && newImageFile.size > 0) {
                 const uploaded = await postAsset(
                     newImageFile,
                     `${newTitle} Thumbnail`,
                     "Demo thumbnail",
-                    null,                     
+                    null,
                     "demo-thumbnails"
                 );
-    
+
                 imageUid = uploaded?.asset?.uid || null;
             }
-    
+
             const updatedItem = {
                 ...selectedItem,
                 title: newTitle,
@@ -277,14 +296,14 @@ export default function Demos() {
                 },
                 image: imageUid,
             };
-    
+
             console.log("Updated Item:", updatedItem);
-    
+
             const updatedArray = [...entry.demos];
             updatedArray[selectedIndex] = updatedItem;
-    
+
             const normalized = normalizeDemoWebArray(updatedArray);
-    
+
             const response = await fetch("/api/update-demo-web-in-cs", {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
@@ -293,20 +312,20 @@ export default function Demos() {
                     demos: normalized,
                 }),
             });
-    
+
             if (!response.ok) {
                 const text = await response.text();
                 throw new Error(text);
             }
-    
+
             const updatedEntry = await response.json();
             setEntry(updatedEntry.entry);
             setIsEditOpen(false);
-    
+
             setToastMessage("Demo updated successfully!");
             setShowToast(true);
             setTimeout(() => setShowToast(false), 2000);
-    
+
         } catch (error) {
             console.error("Edit failed:", error);
             alert("Failed to update demo.");
@@ -318,7 +337,10 @@ export default function Demos() {
 
     const handleConfirmDelete = async () => {
         try {
-            if (selectedIndex == null) return;
+            if (selectedIndex == null || selectedIndex < 0) {
+                alert("Could not locate this demo in the source list.");
+                return;
+            }
 
             // 1. Remove the item by index
             const updatedArray = [...entry.demos];
@@ -537,7 +559,7 @@ export default function Demos() {
                         <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6 me-10">
                             {visibleDemos.map((demo, idx) => {
                                 const demoId = getDemoId(demo);
-                                const key = demoId ? `${demoId}-${idx}` : `demo-${idx}`;
+                                const key = demoId || `demo-${idx}`;
                                 return (
                                     <div key={key} className="relative group">
                                         <Card className="h-85 flex flex-col rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 bg-white dark:bg-gray-800">
@@ -560,8 +582,8 @@ export default function Demos() {
                                                         {demo?.title}
                                                     </CardTitle>
                                                     <CardDropdown
-                                                        onEdit={() => openEditModal(demo, idx)}
-                                                        onDelete={() => openDeleteModal(demo, idx)}
+                                                        onEdit={() => openEditModal(demo)}
+                                                        onDelete={() => openDeleteModal(demo)}
                                                     />
                                                 </div>
                                                 <CardDescription
