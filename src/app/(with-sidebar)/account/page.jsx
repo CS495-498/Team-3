@@ -1,188 +1,297 @@
-'use client'
-import React, { useEffect, useState } from 'react'
-import { createClient } from '@/utils/Supabase/client.js'
-import SuccessToast from "@/components/ui/success-toast.jsx";
-import {useCurrentAvatar} from "@/hooks/use-current-avatar.js";
+"use client";
 
+import React, { useEffect, useState } from "react";
+import { createClient } from "@/utils/Supabase/client.js";
+import SuccessToast from "@/components/ui/success-toast.jsx";
+import { useCurrentAvatar } from "@/hooks/use-current-avatar.js";
+import { Button } from "@/components/ui/button.jsx";
+import { Trash2, Menu } from "lucide-react";
+
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu.jsx";
+import {
+    Sheet,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+} from "@/components/ui/sheet.jsx";
 
 export default function Page() {
-    const supabase = createClient()
+    const supabase = createClient();
 
-    const [loading, setLoading] = useState(true)
-    const [user, setUser] = useState(null)
+    const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState(null);
     const [showToast, setShowToast] = useState(false);
-    const [toastMessage, setToastMessage] = useState("Account Updated Successfully");
-    const { signedAvatarUrl } = useCurrentAvatar(user);
-    const emptyProfile = {
-        full_name: '',
-        username: '',
-        avatar_url: '',
-    }
-    const [profile, setProfile] = useState(emptyProfile)
+    const [toastMessage] = useState("Account Updated Successfully");
 
-    // Fetch profile on mount
+    const [newPersonaName, setNewPersonaName] = useState("");
+    const [newPersonaRole, setNewPersonaRole] = useState("User");
+    const [addingPersona, setAddingPersona] = useState(false);
+    const [personas, setPersonas] = useState([]);
+    const [activePersona, setActivePersona] = useState(null);
+    const [openSheet, setOpenSheet] = useState(null);
+
+    const emptyProfile = {full_name: "", username: "", avatar_url: ""};
+    const [profile, setProfile] = useState(emptyProfile);
+
+    const {signedAvatarUrl} = useCurrentAvatar(user, activePersona);
+
+    // ---------------- LOAD USER DATA ----------------
     useEffect(() => {
-        const fetchProfile = async () => {
-
-            setLoading(true)
-            const {data: { user }, error: userError,} = await supabase.auth.getUser()
-
-            if (userError || !user) {
-                console.error('No logged-in user:', userError)
-                setLoading(false)
-                return
-            }
-            setUser(user)
-
+        const loadData = async () => {
             try {
-                const { data, error } = await supabase
-                    .from('profiles')
-                    .select('full_name, username, avatar_url')
-                    .eq('id', user.id)
-                    .single()
+                setLoading(true);
 
-                if (error) throw error
+                const res = await fetch("/api/profiles/me");
+                if (!res.ok) throw new Error("Failed to load user");
 
-                if (data) {
-                    setProfile({
-                        full_name: data.full_name ?? '',
-                        username: data.username ?? '',
-                        avatar_url: data.avatar_url ?? '',
-                    })
-                } else {
-                    setProfile(emptyProfile)
-                }
-                setLoading(false)
+                const data = await res.json();
 
+                setUser({id: data.id});
+                setProfile({
+                    full_name: data.full_name ?? "",
+                    username: data.username ?? "",
+                    avatar_url: data.avatar_url ?? "",
+                });
+                setPersonas(data.personas ?? []);
+                setActivePersona(data.activePersona ?? null);
             } catch (err) {
-                console.error('Error loading user data:', err)
-                alert('Error loading user data!')
+                console.error("Account load failed:", err);
+                alert(err?.message || "Error loading user data");
             } finally {
-                setLoading(false)
+                setLoading(false);
             }
-        }
+        };
 
-        fetchProfile()
-    }, [])
+        loadData();
+    }, []);
 
-    // Update profile
+    // ---------------- UPDATE PROFILE ----------------
     const updateProfile = async () => {
-        if (loading || !user) {
-            console.warn("User not ready yet.")
-        }
-        else {
-            try {
-                setLoading(true)
+        try {
+            setLoading(true);
 
-                const updates = {
-                    id: user.id,
-                    full_name: profile.full_name?.trim() || null,
-                    username: profile.username?.trim() || null,
-                    updated_at: new Date().toISOString(),
+            const res = await fetch("/api/profiles/me", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(profile),
+            });
+
+            if (!res.ok) {
+                let message = "Update failed";
+
+                try {
+                    const data = await res.json();
+                    message = data?.error || message;
+                } catch {
                 }
 
-                const { error } = await supabase.from('profiles').upsert(updates)
-                if (error) throw error
-
-            } catch (err) {
-                console.error('Error updating profile:', err)
-                alert('Error updating profile.')
-            } finally {
-                setShowToast(true)
-                setLoading(false)
-                setTimeout(() => {
-                    setShowToast(false);
-                }, 3000);
+                throw new Error(message);
             }
-        }
-    }
 
-    const handleDeleteAccount = async () => {
-        if (!confirm("Delete your account permanently? This cannot be undone.")) return;
+
+            setShowToast(true);
+            setTimeout(() => setShowToast(false), 3000);
+        } catch (err) {
+            console.error("updateProfile failed:", err);
+            alert(err?.message || "Error updating profile");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // ---------------- SWITCH PERSONA ----------------
+    const switchPersona = async personaId => {
+        try {
+            setLoading(true);
+            const finalPersonaId =
+                personaId === "" || personaId === "original"
+                    ? null
+                    : personaId;
+
+            const res = await fetch("/api/personas/switch", {
+                method: "PATCH",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({personaId: finalPersonaId}),
+            });
+
+            if (!res.ok) throw new Error("Failed to switch persona");
+
+            setActivePersona(
+                finalPersonaId
+                    ? personas.find(p => p.id === finalPersonaId) ?? null
+                    : null
+            );
+        } catch (err) {
+            console.error("switchPersona failed:", err);
+            alert(err?.message || "Error switching persona");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // ---------------- CREATE PERSONA ----------------
+    const createPersona = async () => {
+        if (!newPersonaName.trim()) return;
 
         try {
-            await fetch("/api/profiles/me", { method: "DELETE" });
-            localStorage.setItem("toastMessage", "Account deleted");
+            setAddingPersona(true);
+
+            const res = await fetch("/api/personas", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({displayName: newPersonaName}),
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || "Failed to create persona");
+            }
+
+            const persona = await res.json();
+
+            setPersonas(prev => [...prev, persona]);
+            setActivePersona(persona);
+            setNewPersonaName("");
+        } catch (err) {
+            console.error("createPersona failed:", err);
+            alert(err?.message || "Failed to create persona");
+        } finally {
+            setAddingPersona(false);
+        }
+    };
+
+    // ---------------- DELETE ACCOUNT ----------------
+    const handleDeleteAccount = async () => {
+        if (!confirm("Delete your account permanently? This cannot be undone."))
+            return;
+
+        try {
+            const res = await fetch("/api/profiles/me", {method: "DELETE"});
+            if (!res.ok) throw new Error("Delete failed");
+
             await supabase.auth.signOut();
             window.location.href = "/login";
-        } catch {
-            alert("Error deleting account.");
+        } catch (err) {
+            console.error("deleteAccount failed:", err);
+            alert(err?.message || "Error deleting account");
         }
     };
 
+    // ---------------- DELETE PERSONA ----------------
+    const handleDeletePersona = async persona => {
+        if (
+            !confirm(
+                `Delete your persona, ${persona.full_name}, permanently?`
+            )
+        )
+            return;
 
+        try {
+            const res = await fetch(`/api/personas/${persona.id}`, {
+                method: "DELETE",
+            });
 
-    const handleAvatarUpdate = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return alert("No file selected");
+            if (!res.ok) throw new Error("Failed to delete persona");
 
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return alert("Not authenticated");
-
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.access_token) {
-            return alert("No auth session found");
+            setPersonas(prev => prev.filter(p => p.id !== persona.id));
+            setActivePersona(null);
+            setOpenSheet(null);
+        } catch (err) {
+            console.error("deletePersona failed:", err);
+            alert(err?.message || "Error deleting persona");
         }
-
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("username", profile.username || "");
-        formData.append("full_name", profile.full_name || "");
-
-        const res = await fetch(`/api/profiles/${user.id}`, {
-            method: "PUT",
-            headers: {
-                Authorization: `Bearer ${session.access_token}`,
-            },
-            body: formData,
-        });
-
-        const updatedProfile = await res.json();
-
-        if (!res.ok) {
-            return alert(updatedProfile?.error || "Upload failed");
-        }
-
-        setProfile(updatedProfile);
     };
 
+    // ---------------- AVATAR UPLOAD (UNCHANGED) ----------------
+    const handleAvatarUpdate = async e => {
+        const file = e.target.files?.[0];
+        if (!file) return;
 
+        try {
+            const {
+                data: {user},
+            } = await supabase.auth.getUser();
 
-    // Controlled input handler
+            const {
+                data: {session},
+            } = await supabase.auth.getSession();
+
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("username", profile.username || "");
+            formData.append("full_name", profile.full_name || "");
+
+            const res = await fetch(`/api/profiles/${user.id}`, {
+                method: "PUT",
+                headers: {
+                    Authorization: `Bearer ${session.access_token}`,
+                },
+                body: formData,
+            });
+
+            if (!res.ok) throw new Error("Upload failed");
+
+            const data = await res.json();
+            setProfile(data);
+        } catch (err) {
+            console.error("uploadAvatar failed:", err);
+            alert(err?.message || "Avatar upload failed");
+        }
+    };
+
     const handleChange = (field, value) => {
-        setProfile((prev) => ({ ...prev, [field]: value }))
-    }
+        setProfile(prev => ({...prev, [field]: value}));
+    };
 
-    return (
-        <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col items-center">
+
+return (
+        <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
             <SuccessToast
                 message={toastMessage}
                 isOpen={showToast}
                 onClose={() => setShowToast(false)}
             />
-            {/* Banner */}
-            <div className="w-full h-44 bg-gradient-to-r from-purple-600 to-purple-700 dark:from-purple-700 dark:to-purple-800 relative">
-                <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex flex-col items-center">
 
-                    <div className="relative group w-36 h-36 mb-4">
-                        {/* Avatar image / circle */}
-                        <div
-                            className="w-36 h-36 rounded-full border-4 border-white dark:border-gray-900 shadow-xl overflow-hidden">
-                            {
-                                <img
-                                    src={signedAvatarUrl ? signedAvatarUrl : "/DefaultProfile.png"}
-                                    className="w-full h-full object-cover"
-                                />
-                            }
+            {/* Menu Button */}
+            <div className="absolute top-4 right-4 z-10">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="icon">
+                            <Menu className="h-5 w-5" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem onClick={() => setOpenSheet('settings')}>
+                            Account Settings
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setOpenSheet('personas')}>
+                            Personas
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setOpenSheet('delete')} className="text-red-600 dark:text-red-400">
+                            Delete Account
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
+
+            <div className="w-full h-32 bg-gradient-to-r from-purple-600 to-purple-700 dark:from-purple-700 dark:to-purple-800 relative">
+                <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center">
+                    <div className="relative group w-24 h-24 mb-2">
+                        <div className="w-24 h-24 rounded-full border-4 border-white dark:border-gray-900 shadow-xl overflow-hidden">
+                            <img
+                                src={signedAvatarUrl ? signedAvatarUrl : "/DefaultProfile.png"}
+                                className="w-full h-full object-cover"
+                                alt="Profile"
+                            />
                         </div>
-
-                        {/* Hover overlay */}
-                        <div
-                            className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-sm font-medium transition-opacity cursor-pointer">
+                        <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-medium transition-opacity cursor-pointer">
                             Change Avatar
                         </div>
-
-                        {/* Invisible file input on top */}
                         <input
                             type="file"
                             accept="image/*"
@@ -191,27 +300,25 @@ export default function Page() {
                             className="absolute inset-0 opacity-0 cursor-pointer"
                         />
                     </div>
-
-
-                    <h1 className="text-gray-900 text-3xl font-bold dark:text-white drop-shadow">
-                        {profile.full_name || "Full Name"}
+                    <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                        {activePersona ? activePersona.full_name : (profile.full_name || "Full Name")}
                     </h1>
-
-                    <p className="text-gray-900 dark:text-white/90 drop-shadow text-lg">
-                        @{profile.username || "username"}
+                    <h2 className="text-med opacity-80 text-gray-700 dark:text-gray-300">
+                        {activePersona ? activePersona.username : "@"+(profile.username || "Username")}
+                    </h2>
+                    <p className="text-sm opacity-80 text-gray-700 dark:text-gray-300">
+                        {/*{activePersona ? (activePersona.role || "User") : "Original Account"}*/}
                     </p>
-
                 </div>
             </div>
 
-            <div className="mt-24 w-full max-w-xl px-6">
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 space-y-6">
-
-                    <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
-                        Edit Profile
-                    </h2>
-
-                    <div className="space-y-4">
+            {/* Account Settings Sheet */}
+            <Sheet open={openSheet === 'settings'} onOpenChange={(open) => !open && setOpenSheet(null)}>
+                <SheetContent side="right" className="w-full sm:max-w-md">
+                    <SheetHeader>
+                        <SheetTitle>Account Settings</SheetTitle>
+                    </SheetHeader>
+                    <div className="mt-6 space-y-4 px-4">
                         <div>
                             <label className="text-sm font-medium text-gray-600 dark:text-gray-300">
                                 Full Name
@@ -221,11 +328,10 @@ export default function Page() {
                                 value={profile.full_name ?? ""}
                                 onChange={(e) => handleChange("full_name", e.target.value)}
                                 className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-700
-                       bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
-                       px-3 py-2 focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-600 outline-none"
+                                    bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                                    px-3 py-2 focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-600 outline-none"
                             />
                         </div>
-
                         <div>
                             <label className="text-sm font-medium text-gray-600 dark:text-gray-300">
                                 Username
@@ -235,42 +341,127 @@ export default function Page() {
                                 value={profile.username ?? ""}
                                 onChange={(e) => handleChange("username", e.target.value)}
                                 className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-700
-                       bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
-                       px-3 py-2 focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-600 outline-none"
+                                    bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                                    px-3 py-2 focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-600 outline-none"
                             />
                         </div>
+                        <button
+                            onClick={updateProfile}
+                            disabled={loading}
+                            className="w-full py-2.5 rounded-lg text-white font-medium text-center
+                                bg-gradient-to-r from-purple-600 to-purple-700
+                                hover:from-purple-700 hover:to-purple-800
+                                dark:from-purple-700 dark:to-purple-800 dark:hover:from-purple-800 dark:hover:to-purple-900
+                                transition-all shadow-md disabled:opacity-50"
+                        >
+                            {loading ? "Saving..." : "Update Profile"}
+                        </button>
                     </div>
+                </SheetContent>
+            </Sheet>
 
-                    <button
-                        onClick={updateProfile}
-                        disabled={loading}
-                        className="w-full py-2.5 rounded-lg text-white font-medium text-center
-                   bg-gradient-to-r from-purple-600 to-purple-700
-                   hover:from-purple-700 hover:to-purple-800
-                   dark:from-purple-700 dark:to-purple-800 dark:hover:from-purple-800 dark:hover:to-purple-900
-                   transition-all shadow-md disabled:opacity-50"
-                    >
-                        {loading ? "Saving..." : "Update Profile"}
-                    </button>
-                </div>
-                <div className="mt-6 w-full max-w-xl px-6">
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-red-200 dark:border-red-900">
-                        <h3 className="text-lg font-semibold text-red-600 dark:text-red-400">
-                            Danger Zone
-                        </h3>
+            <Sheet open={openSheet === 'personas'} onOpenChange={(open) => !open && setOpenSheet(null)}>
+                <SheetContent side="right" className="w-full sm:max-w-md">
+                    <SheetHeader>
+                        <SheetTitle>Personas</SheetTitle>
+                    </SheetHeader>
+                    <div className="mt-6 space-y-4 px-4">
+                        <div>
+                            <label className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2 block">
+                                Active Persona
+                            </label>
+                            <select
+                                value={activePersona?.id ?? "original"}
+                                onChange={(e) => switchPersona(e.target.value)}
+                                className="w-full rounded-lg px-3 py-2 bg-white dark:bg-gray-700
+        border border-gray-300 dark:border-gray-600
+        text-sm text-gray-900 dark:text-gray-100"
+                            >
 
+                                <option value="original">
+                                    Original Account
+                                </option>
+
+                                {personas.map(p => (
+                                    <option key={p.id} value={p.id}>
+                                        {p.full_name}
+                                    </option>
+                                ))}
+                            </select>
+                            {activePersona && (
+                                <button
+                                    type="button"
+                                    onClick={() => handleDeletePersona(activePersona)}
+                                    className="p-2 rounded-md text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30"
+                                    title="Delete persona"
+                                >
+                                    <Trash2 className="h-4 w-4 text-red-600" />
+                                </button>
+                            )}
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2 block">
+                                Create New Persona
+                            </label>
+                            <div className="space-y-3">
+                                <input
+                                    type="text"
+                                    placeholder="New persona name"
+                                    value={newPersonaName}
+                                    onChange={(e) => setNewPersonaName(e.target.value)}
+                                    className="w-full rounded-lg px-3 py-2
+                                        border border-gray-300 dark:border-gray-600
+                                        bg-white dark:bg-gray-700
+                                        text-sm text-gray-900 dark:text-gray-100"
+                                />
+                                <select
+                                    value={newPersonaRole}
+                                    onChange={(e) => setNewPersonaRole(e.target.value)}
+                                    className="w-full rounded-lg px-3 py-2 bg-white dark:bg-gray-700
+                                        border border-gray-300 dark:border-gray-600
+                                        text-sm text-gray-900 dark:text-gray-100"
+                                >
+                                    <option value="User">User</option>
+                                    <option value="Admin">Admin</option>
+                                    <option value="Viewer">Viewer</option>
+                                </select>
+                                <button
+                                    onClick={createPersona}
+                                    disabled={addingPersona || !newPersonaName.trim()}
+                                    className="w-full py-2 rounded-lg text-sm font-medium
+                                        bg-purple-600 text-white
+                                        hover:bg-purple-700
+                                        disabled:opacity-50"
+                                >
+                                    {addingPersona ? "Creating..." : "Create Persona"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </SheetContent>
+            </Sheet>
+
+            {/* Delete Account Sheet */}
+            <Sheet open={openSheet === 'delete'} onOpenChange={(open) => !open && setOpenSheet(null)}>
+                <SheetContent side="right" className="w-full sm:max-w-md px-4">
+                    <SheetHeader>
+                        <SheetTitle className="text-red-600 dark:text-red-400">Danger Zone</SheetTitle>
+                    </SheetHeader>
+                    <div className="mt-6">
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                            Deleting your account will permanently remove all your data. This action cannot be undone.
+                        </p>
                         <button
                             onClick={handleDeleteAccount}
-                            className="mt-4 w-full py-2.5 rounded-lg font-medium
-            bg-red-600 text-white hover:bg-red-700
-            transition-all shadow-md"
+                            className="w-full py-2.5 rounded-lg font-medium
+                                bg-red-600 text-white hover:bg-red-700
+                                transition-all shadow-md"
                         >
                             Delete My Account
                         </button>
                     </div>
-                </div>
-
-            </div>
+                </SheetContent>
+            </Sheet>
         </div>
     )
 }
