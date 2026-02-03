@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
+import { createClient } from "@/utils/Supabase/server"; // adjust path if needed
 
 export async function POST(req) {
     const { displayName } = await req.json();
@@ -12,20 +11,9 @@ export async function POST(req) {
         );
     }
 
-    const cookieStore = await cookies();
+    const supabase = await createClient();
 
-    const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-        {
-            cookies: {
-                get(name) {
-                    return cookieStore.get(name)?.value;
-                },
-            },
-        }
-    );
-
+    // ---- AUTH ----
     const {
         data: { user },
         error: userError,
@@ -35,6 +23,7 @@ export async function POST(req) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // ---- CREATE PERSONA ----
     const { data, error } = await supabase
         .from("personas")
         .insert({
@@ -47,9 +36,13 @@ export async function POST(req) {
         .single();
 
     if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json(
+            { error: error.message },
+            { status: 500 }
+        );
     }
 
+    // ---- SET ACTIVE PERSONA ----
     await supabase
         .from("profiles")
         .update({ active_persona_id: data.id })
