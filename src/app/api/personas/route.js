@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/Supabase/server"; // adjust path if needed
+import { createClient } from "@/utils/Supabase/server";
 
 export async function POST(req) {
     const { displayName } = await req.json();
