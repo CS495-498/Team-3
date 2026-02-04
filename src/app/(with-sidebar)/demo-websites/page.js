@@ -394,17 +394,17 @@ export default function Demos() {
     }
 
     return (
-        <div className="pl-10 pt-6 min-h-screen flex flex-col">
+        <div className="pl-4 sm:pl-6 lg:pl-10 pt-6 min-h-screen flex flex-col">
             <SuccessToast
                 message={toastMessage}
                 isOpen={showToast}
                 onClose={() => setShowToast(false)}
             />
             <div className="flex justify-between items-center mb-6 pt-6">
-                <h1 className="text-4xl font-bold ml-4">
+                <h1 className="text-4xl font-bold ml-2 sm:ml-4">
                     {entry?.title}
                 </h1>
-                <div className="flex items-center gap-2 mr-4">
+                <div className="flex items-center gap-2 mr-2 sm:mr-4">
                     <button
                         type="button"
                         onClick={() => setIsOpen(true)}
@@ -432,7 +432,7 @@ export default function Demos() {
                             viewBox="0 0 24 24"
                             strokeWidth="1.5"
                             stroke="currentColor"
-                            className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
+                            className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400"
                         >
                             <path
                                 strokeLinecap="round"
@@ -459,7 +459,7 @@ export default function Demos() {
 
                                 <div className="fixed inset-0 flex items-center justify-center p-6">
                                     <motion.div
-                                        className="w-full max-w-xl mx-auto"
+                                        className="w-full max-w-lg sm:max-w-xl lg:max-w-2xl mx-auto"
                                         initial={{ opacity: 0, scale: 0.96, y: -8 }}
                                         animate={{ opacity: 1, scale: 1, y: 0 }}
                                         exit={{ opacity: 0, scale: 0.96, y: -8 }}
@@ -578,7 +578,7 @@ export default function Demos() {
                                 const key = demoId || `demo-${idx}`;
                                 return (
                                     <div key={key} className="relative group">
-                                        <Card className="h-85 flex flex-col rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 bg-white dark:bg-gray-800">
+                                        <Card className="min-h-[340px] flex flex-col rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 bg-white dark:bg-gray-800">
                                             {demo?.image?.url && (
                                                 <div className="relative w-full aspect-video">
                                                     <Link href={demo?.link?.href || "#"} target="_blank" rel="noopener noreferrer">
@@ -603,8 +603,7 @@ export default function Demos() {
                                                     />
                                                 </div>
                                                 <CardDescription
-                                                    className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed overflow-y-auto pr-2"
-                                                    style={{ maxHeight: "55px" }}
+                                                    className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed overflow-y-auto pr-2 line-clamp-3"
                                                 >
                                                     {demo?.description}
                                                 </CardDescription>
@@ -615,7 +614,7 @@ export default function Demos() {
                                             active={demoId ? isBookmarked(demoId) : false}
                                             disabled={!demoId || isPending(demoId)}
                                             onToggle={() => handleBookmarkToggle(demo)}
-                                            className="absolute top-3 right-3 shadow-md"
+                                            className="absolute top-2 sm:top-3 right-2 sm:right-3 shadow-md"
                                             titleWhenActive="Remove demo from bookmarks"
                                             titleWhenInactive="Save demo to bookmarks"
                                         />
