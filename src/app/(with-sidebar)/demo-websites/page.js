@@ -40,6 +40,8 @@ export default function Demos() {
     const [selectedItem, setSelectedItem] = useState(null);
     const [selectedIndex, setSelectedIndex] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const MAX_CHARS = 30;
+    const [title, setTitle] = useState("");
 
 
     const {
@@ -146,6 +148,7 @@ export default function Demos() {
     };
 
     const handleSubmit = async (e) => {
+        setTitle("")
         e.preventDefault();
 
         const form = e.target;
@@ -169,6 +172,11 @@ export default function Demos() {
             if (!json_data.title?.trim()) {
                 alert("Please provide a title.");
                 setIsSubmitting(false); // STOP LOADING
+                return;
+            }
+            if (!json_data.url?.trim()) {
+                alert("Please provide a URL.");
+                setIsSubmitting(false);
                 return;
             }
 
@@ -469,9 +477,16 @@ export default function Demos() {
                                                         name="title"
                                                         type="text"
                                                         placeholder="Enter demo title"
+                                                        value={title}
+                                                        maxLength={MAX_CHARS}
+                                                        onChange={(e) => setTitle(e.target.value)}
                                                         className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition"
                                                     />
+                                                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 text-right">
+                                                        {title.length} / {MAX_CHARS}
+                                                    </div>
                                                 </div>
+
 
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
@@ -493,6 +508,7 @@ export default function Demos() {
                                                         name="url"
                                                         type="text"
                                                         placeholder="Enter Demo URL"
+
                                                         className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition"
                                                     />
                                                 </div>
@@ -588,7 +604,7 @@ export default function Demos() {
                                                 </div>
                                                 <CardDescription
                                                     className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed overflow-y-auto pr-2"
-                                                    style={{ maxHeight: "85px" }}
+                                                    style={{ maxHeight: "55px" }}
                                                 >
                                                     {demo?.description}
                                                 </CardDescription>
