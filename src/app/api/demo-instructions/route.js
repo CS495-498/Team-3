@@ -5,6 +5,7 @@ const API_KEY = process.env.CONTENTSTACK_API_KEY;
 const MANAGEMENT_TOKEN = process.env.CONTENTSTACK_MANAGEMENT_TOKEN;
 const LIBRARY_ENTRY_ID = "blt56af12999b14b723";
 const ENVIRONMENT = process.env.CONTENTSTACK_ENVIRONMENT;
+const ALLOWED_ROLES = ["admin", "contentstack"];
 
 export async function POST(req) {
   const supabase = await createClient();
@@ -19,17 +20,20 @@ export async function POST(req) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     // or redirect("/login") if desired
   }
-   const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("id, full_name")
-      .eq("id", user.id)
-      .maybeSingle();
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, full_name, role")
+    .eq("id", user.id)
+    .maybeSingle();
 
-    if (profileError || !profile) {
-      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
-    }
+  if (profileError || !profile) {
+    return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+  }
+  if (!ALLOWED_ROLES.includes(profile.role)) {
+  return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+}
 
-    const author = profile.full_name || "Unknown";
+  const author = profile.full_name || "Unknown";
   try {
     const { title, html } = await req.json();
 
