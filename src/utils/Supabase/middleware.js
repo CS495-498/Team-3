@@ -4,7 +4,7 @@ import ROLE_PERMISSIONS from "@/config/rolePermissions";
 import PERMISSIONS from "@/config/permissions";
 
 export async function updateSession(request) {
-     let supabaseResponse = NextResponse.next({
+    let supabaseResponse = NextResponse.next({
         request: {
             headers: request.headers,
         },
@@ -33,34 +33,42 @@ export async function updateSession(request) {
     )
 
     // refreshing the auth token
-    const user = await supabase.auth.getUser()
-    if (!request.nextUrl.pathname.startsWith('/login') && user.error) {
-        return NextResponse.redirect(new URL('/login', request.url))
+
+    const { data, error: authError } = await supabase.auth.getUser();
+    const user = data?.user;
+
+    if (!user || authError) {
+    if (!request.nextUrl.pathname.startsWith("/login")) {
+      return NextResponse.redirect(new URL("/login", request.url));
     }
-      // 👇 Stop here if not logged in
-  if (!user) return supabaseResponse;
-
-  // -------------------------
-  // 2. AUTHORIZATION (new)
-  // -------------------------
-  const pathname = request.nextUrl.pathname;
-
-  // Only guard protected sections
-  if (pathname.startsWith("/admin")) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    const permissions = ROLE_PERMISSIONS[profile?.role] || [];
-
-    if (!permissions.includes(PERMISSIONS.MANAGE_USERS)) {
-      return NextResponse.redirect(
-        new URL("/unauthorized", request.url)
-      );
-    }
+    return NextResponse.next();
   }
+    // 👇 Stop here if not logged in
+    if (!user) return supabaseResponse;
+
+    // -------------------------
+    // 2. AUTHORIZATION (new)
+    // -------------------------
+    const pathname = request.nextUrl.pathname;
+
+    // Only guard protected sections
+    if (pathname.startsWith("/admin")) {
+        const { data: profile, error: profileError } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", user.id)   // <- now user.id is defined
+            .single();
+
+        if (profileError || !profile) {
+            console.log("Profile error:", profileError);
+            return NextResponse.redirect(new URL("/unauthorized", request.url));
+        }
+
+        const permissions = ROLE_PERMISSIONS[profile.role] || [];
+        if (!permissions.includes(PERMISSIONS.MANAGE_USERS)) {
+            return NextResponse.redirect(new URL("/unauthorized", request.url));
+        }
+    }
 
 
     return supabaseResponse
