@@ -1,5 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
+import ROLE_PERMISSIONS from "@/config/rolePermissions";
+import PERMISSIONS from "@/config/permissions";
 
 export async function updateSession(request) {
      let supabaseResponse = NextResponse.next({
@@ -35,6 +37,31 @@ export async function updateSession(request) {
     if (!request.nextUrl.pathname.startsWith('/login') && user.error) {
         return NextResponse.redirect(new URL('/login', request.url))
     }
+      // 👇 Stop here if not logged in
+  if (!user) return supabaseResponse;
+
+  // -------------------------
+  // 2. AUTHORIZATION (new)
+  // -------------------------
+  const pathname = request.nextUrl.pathname;
+
+  // Only guard protected sections
+  if (pathname.startsWith("/admin")) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    const permissions = ROLE_PERMISSIONS[profile?.role] || [];
+
+    if (!permissions.includes(PERMISSIONS.MANAGE_USERS)) {
+      return NextResponse.redirect(
+        new URL("/unauthorized", request.url)
+      );
+    }
+  }
+
 
     return supabaseResponse
 }
