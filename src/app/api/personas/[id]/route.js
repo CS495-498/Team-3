@@ -7,7 +7,6 @@ export async function DELETE(req, { params }) {
 
     // ---- AUTH: MUST HAVE USE_PERSONAS PERMISSION ----
     const { error, supabase } = await requireAuthWithPermission(
-        req,
         PERMISSIONS.USE_PERSONAS
     );
 

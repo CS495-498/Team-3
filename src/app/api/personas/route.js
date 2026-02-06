@@ -6,7 +6,6 @@ export async function POST(req) {
     const { displayName } = await req.json();
 
     const { error2, supabase } = await requireAuthWithPermission(
-        req,
         PERMISSIONS.USE_PERSONAS
     );
     if (error2) return error;

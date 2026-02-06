@@ -7,7 +7,6 @@ import PERMISSIONS from "@/config/permissions";
 export async function GET() {
   // ---- AUTH: MUST HAVE MANAGE USERS PERMISSION ----
     const { error, supabase } = await requireAuthWithPermission(
-        req,
         PERMISSIONS.MANAGE_USERS
     );
 

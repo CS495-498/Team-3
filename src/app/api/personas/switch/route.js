@@ -6,7 +6,6 @@ export async function PATCH(req) {
     const { personaId } = await req.json();
 
     const { error, supabase } = await requireAuthWithPermission(
-        req,
         PERMISSIONS.USE_PERSONAS
     );
     if (error) return error;

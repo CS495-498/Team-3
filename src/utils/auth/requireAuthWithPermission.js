@@ -3,7 +3,7 @@ import { createClient } from "@/utils/Supabase/server";
 import requirePermission from "@/utils/auth/requirePermission";
 
 
-export default async function requireAuthWithPermission(req, permission) {
+export default async function requireAuthWithPermission(permission) {
   const supabase = await createClient();
 
   const {
