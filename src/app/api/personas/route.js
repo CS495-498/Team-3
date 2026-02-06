@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/Supabase/server";
+import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
+import PERMISSIONS from "@/config/permissions";
 
 export async function POST(req) {
     const { displayName } = await req.json();

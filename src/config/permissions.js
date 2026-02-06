@@ -3,6 +3,9 @@ const PERMISSIONS = {
   MANAGE_USERS: "manage_users",
   UPDATE_OWN_PROFILE: "update_own_profile",
 
+
+  UPLOAD_NOTIFICATIONS: "upload_notifications",
+
   // Content publishing
   PUBLISH_FEATURE_REQUESTS: "publish_feature_requests",
   COMMENT_VOTE_FEATURE_REQUESTS: "comment_vote_feature_requests",
