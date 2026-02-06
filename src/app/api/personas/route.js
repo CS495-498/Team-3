@@ -4,6 +4,12 @@ import { createClient } from "@/utils/Supabase/server";
 export async function POST(req) {
     const { displayName } = await req.json();
 
+    const { error2, supabase } = await requireAuthWithPermission(
+        req,
+        PERMISSIONS.USE_PERSONAS
+    );
+    if (error2) return error;
+
     if (!displayName?.trim()) {
         return NextResponse.json(
             { error: "Persona name required" },
@@ -11,17 +17,8 @@ export async function POST(req) {
         );
     }
 
-    const supabase = await createClient();
 
-    // ---- AUTH ----
-    const {
-        data: { user },
-        error: userError,
-    } = await supabase.auth.getUser();
 
-    if (userError || !user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
     // ---- CREATE PERSONA ----
     const { data, error } = await supabase
