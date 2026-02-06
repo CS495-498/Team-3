@@ -1,9 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/utils/Supabase/client.js'
-import SuccessToast from "@/components/ui/success-toast.jsx";
+import SuccessToast from "@/components/ui/success-toast.jsx"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -11,54 +10,73 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
-  const [showRegister, setShowRegister] = useState(false);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
+  const [showRegister, setShowRegister] = useState(false)
+  const [showToast, setShowToast] = useState(false)
+  const [toastMessage, setToastMessage] = useState("")
+
+  useEffect(() => {
+    const msg = localStorage.getItem("toastMessage")
+    if (!msg) return
+
+    setToastMessage(msg)
+    setShowToast(true)
+    localStorage.removeItem("toastMessage")
+
+    const timer = setTimeout(() => setShowToast(false), 3000)
+    return () => clearTimeout(timer)
+  }, [])
 
   const handleLogin = async (e) => {
     e.preventDefault()
     setLoading(true)
     setMessage('')
 
-    const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    try {
+      const res = await fetch('/api/public/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      })
 
-    if (error) {
-      setMessage(error.message)
-    } else {
-      localStorage.setItem("loginMessage", "Logged in");
-      router.push('/') // redirect to homepage
+      const data = await res.json()
+
+      if (!res.ok) {
+        setMessage(data.error || 'Login failed')
+      } else {
+        localStorage.setItem("loginMessage", "Logged in")
+        // Force a full page reload to pick up the new session
+        window.location.href = '/'
+      }
+    } catch (error) {
+      console.error('Client-side error:', error)
+      setMessage('An error occurred')
     }
 
     setLoading(false)
   }
-
-    useEffect(() => {
-        const msg = localStorage.getItem("toastMessage");
-        if (!msg) return;
-
-        setToastMessage(msg);
-        setShowToast(true);
-
-        localStorage.removeItem("toastMessage");
-
-        const timer = setTimeout(() => setShowToast(false), 3000);
-        return () => clearTimeout(timer);
-    }, []);
 
   const handleSignUp = async (e) => {
     e.preventDefault()
     setLoading(true)
     setMessage('')
 
-    const supabase = createClient()
-    const { error } = await supabase.auth.signUp({ email, password })
+    try {
+      const res = await fetch('/api/public/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      })
 
-    if (error) {
-      setMessage(error.message)
-    } else {
-      setMessage('Signup successful! Check your email to confirm your account.')
-      setShowRegister(false) // optionally go back to login form
+      const data = await res.json()
+
+      if (!res.ok) {
+        setMessage(data.error || 'Signup failed')
+      } else {
+        setMessage('Signup successful! Check your email to confirm your account.')
+        setShowRegister(false)
+      }
+    } catch (error) {
+      setMessage('An error occurred')
     }
 
     setLoading(false)
@@ -66,10 +84,8 @@ export default function LoginPage() {
 
   return (
     <div className="flex h-screen w-screen bg-white dark:bg-gray-900">
-
       <div className="relative w-1/2 flex items-center justify-center px-10 bg-white dark:bg-gray-900">
         <div className="w-full max-w-sm">
-
           {showRegister ? (
             <>
               <h1 className="text-3xl font-bold text-center mb-4 text-gray-900 dark:text-gray-100">
@@ -175,7 +191,9 @@ export default function LoginPage() {
               </p>
 
               <p className="mt-4 text-center text-gray-700 dark:text-gray-300">
-                <a href="/login/forgot-password" className="text-[#88563b] font-semibold underline">Forgot Password?</a>
+                <a href="/login/forgot-password" className="text-[#88563b] font-semibold underline">
+                  Forgot Password?
+                </a>
               </p>
             </>
           )}
@@ -195,8 +213,6 @@ export default function LoginPage() {
           className="w-full h-full object-cover"
         />
       </div>
-
     </div>
   )
-
 }
