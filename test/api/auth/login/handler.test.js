@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 import sinon from 'sinon'
-import { loginHandler } from '../../../../src/app/api/public/login/handler.js'
+import { loginHandler } from '../../../../src/app/api/auth/login/handler.js'
 
 describe('public/login handler', () => {
     it('returns 200 with session + user on success', async () => {

@@ -7,7 +7,8 @@ export async function updateSession(request) {
 
     // Skip auth check for public API routes, login page, and Next.js internals
     if (
-        pathname.startsWith('/api/public/') ||
+        pathname.startsWith('/api/auth/login') ||
+        pathname.startsWith('/api/auth/signup') ||
         pathname.startsWith('/api/auth/session') ||
         pathname.startsWith('/login') ||
         pathname.startsWith('/_next/')

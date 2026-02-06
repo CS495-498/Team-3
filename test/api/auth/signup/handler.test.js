@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 import sinon from 'sinon'
-import { signupHandler } from '../../../../src/app/api/public/signup/handler.js'
+import { signupHandler } from '../../../../src/app/api/auth/signup/handler.js'
 
 describe('public/signup handler', () => {
 

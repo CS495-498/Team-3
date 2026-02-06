@@ -32,7 +32,7 @@ export default function LoginPage() {
     setMessage('')
 
     try {
-      const res = await fetch('/api/public/login', {
+      const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -45,7 +45,8 @@ export default function LoginPage() {
       } else {
         localStorage.setItem("loginMessage", "Logged in")
         // Force a full page reload to pick up the new session
-        window.location.href = '/'
+        router.push('/')
+        router.refresh()
       }
     } catch (error) {
       console.error('Client-side error:', error)
@@ -61,7 +62,7 @@ export default function LoginPage() {
     setMessage('')
 
     try {
-      const res = await fetch('/api/public/signup', {
+      const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
