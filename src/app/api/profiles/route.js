@@ -1,24 +1,24 @@
 import { NextResponse } from "next/server";
 import { redirect } from "next/navigation";
-import { createClient } from "@/utils/Supabase/server";
+import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
+import PERMISSIONS from "@/config/permissions";
 
 // GET all users/profiles
 export async function GET() {
-  const supabase = await createClient();
+  // ---- AUTH: MUST HAVE MANAGE USERS PERMISSION ----
+    const { error, supabase } = await requireAuthWithPermission(
+        req,
+        PERMISSIONS.MANAGE_USERS
+    );
 
-  const {
-    data: { user },
-    error: userError
-  } = await supabase.auth.getUser();
+    if (error) return error;
 
-  if (userError || !user) redirect("/login");
-
-  const { data, error } = await supabase
+  const { data, fetchError } = await supabase
     .from("profiles")
     .select("*");
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (fetchError) {
+    return NextResponse.json({ error: fetchError.message }, { status: 500 });
   }
 
   return NextResponse.json(data, { status: 200 });
