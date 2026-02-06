@@ -44,7 +44,6 @@ export default function LoginPage() {
         setMessage(data.error || 'Login failed')
       } else {
         localStorage.setItem("loginMessage", "Logged in")
-        // Force a full page reload to pick up the new session
         router.push('/')
         router.refresh()
       }
