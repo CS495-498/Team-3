@@ -1,6 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/adminAlert";
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState([]);
@@ -32,48 +49,84 @@ export default function AdminUsersPage() {
     fetchUsers();
   }, []);
 
-  if (loading) return <p>Loading users…</p>;
-  if (error) return <p style={{ color: "red" }}>{error}</p>;
-
   return (
-    <div style={{ padding: "2rem" }}>
-      <h1>Admin – Users</h1>
+    <div className="p-6">
+      <Card className="shadow-sm">
+        <CardHeader>
+          <CardTitle>Admin · Users</CardTitle>
+        </CardHeader>
 
-      <table
-        style={{
-          width: "100%",
-          borderCollapse: "collapse",
-          marginTop: "1rem",
-        }}
-      >
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Username</th>
-            <th>Full Name</th>
-            <th>Website</th>
-            <th>Active Persona</th>
-            <th>Updated At</th>
-          </tr>
-        </thead>
+        <CardContent>
+          {loading && (
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+            </div>
+          )}
 
-        <tbody>
-          {users.map((user) => (
-            <tr key={user.id}>
-              <td>{user.id}</td>
-              <td>{user.username || "—"}</td>
-              <td>{user.full_name || "—"}</td>
-              <td>{user.website || "—"}</td>
-              <td>{user.active_persona_id || "—"}</td>
-              <td>
-                {user.updated_at
-                  ? new Date(user.updated_at).toLocaleString()
-                  : "—"}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+          {error && (
+            <Alert variant="destructive">
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {!loading && !error && (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ID</TableHead>
+                  <TableHead>Username</TableHead>
+                  <TableHead>Full Name</TableHead>
+                  <TableHead>Website</TableHead>
+                  <TableHead>Persona</TableHead>
+                  <TableHead className="text-right">Updated</TableHead>
+                </TableRow>
+              </TableHeader>
+
+              <TableBody>
+                {users.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell className="font-mono text-xs">
+                      {user.id}
+                    </TableCell>
+                    <TableCell>{user.username || "—"}</TableCell>
+                    <TableCell>{user.full_name || "—"}</TableCell>
+                    <TableCell>
+                      {user.website ? (
+                        <a
+                          href={user.website}
+                          target="_blank"
+                          className="text-primary underline"
+                        >
+                          {user.website}
+                        </a>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {user.active_persona_id ? (
+                        <Badge variant="secondary">
+                          {user.active_persona_id}
+                        </Badge>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right text-muted-foreground">
+                      {user.updated_at
+                        ? new Date(user.updated_at).toLocaleString()
+                        : "—"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
