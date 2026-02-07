@@ -1,10 +1,13 @@
 import { updateSession } from '@/utils/Supabase/middleware.js'
+import { sanitizeUserAgent, sanitizeReferer } from '@/utils/sanitize.js'
 
 export async function middleware(request) {
     const startTime = Date.now()
 
     const endpoint = request.nextUrl.pathname
     const method = request.method
+    const sanitizedUserAgent = sanitizeUserAgent(request.headers.get('user-agent'))
+    const sanitizedReferer = sanitizeReferer(request.headers.get('referer'))
 
     try {
         const response = await updateSession(request)
@@ -23,7 +26,10 @@ export async function middleware(request) {
 
         fetch(`${request.nextUrl.origin}/api/logs`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'x-internal-log-secret': process.env.LOG_INGEST_SECRET || ''
+            },
             body: JSON.stringify({
                 level,
                 endpoint,
@@ -33,8 +39,8 @@ export async function middleware(request) {
                 metadata: {
                     method,
                     processing_time_ms: processingTime,
-                    user_agent: request.headers.get('user-agent'),
-                    referer: request.headers.get('referer')
+                    user_agent: sanitizedUserAgent,
+                    referer: sanitizedReferer
                 }
             })
         }).catch(() => {
@@ -46,7 +52,10 @@ export async function middleware(request) {
 
         fetch(`${request.nextUrl.origin}/api/logs`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'x-internal-log-secret': process.env.LOG_INGEST_SECRET || ''
+            },
             body: JSON.stringify({
                 level: 'error',
                 endpoint,
@@ -57,7 +66,7 @@ export async function middleware(request) {
                     method,
                     processing_time_ms: processingTime,
                     error_stack: error.stack,
-                    user_agent: request.headers.get('user-agent')
+                    user_agent: sanitizedUserAgent
                 }
             })
         }).catch(() => {

@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server'
 import logger from '@/utils/logger.js'
 
 export async function POST(req) {
+    const internalSecret = req.headers.get('x-internal-log-secret')
+    if (!process.env.LOG_INGEST_SECRET || internalSecret !== process.env.LOG_INGEST_SECRET) {
+        return new NextResponse(null, { status: 401 })
+    }
+
     try {
         const logData = await req.json()
 
@@ -23,6 +28,6 @@ export async function POST(req) {
 
         return new NextResponse(null, { status: 204 })
     } catch (error) {
-        return new NextResponse(null, { status: 204 })
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 }
