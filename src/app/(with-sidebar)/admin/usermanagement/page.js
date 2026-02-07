@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/adminAlert";
+import { AlertTitle, AlertDescription } from "@/components/ui/adminAlert";
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState([]);
@@ -53,7 +53,7 @@ export default function AdminUsersPage() {
     <div className="p-6">
       <Card className="shadow-sm">
         <CardHeader>
-          <CardTitle>Admin · Users</CardTitle>
+          <CardTitle>Admin · User Management</CardTitle>
         </CardHeader>
 
         <CardContent>
@@ -66,10 +66,10 @@ export default function AdminUsersPage() {
           )}
 
           {error && (
-            <Alert variant="destructive">
+            <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
               <AlertTitle>Error</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
-            </Alert>
+            </div>
           )}
 
           {!loading && !error && (
@@ -77,9 +77,10 @@ export default function AdminUsersPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>ID</TableHead>
+                  <TableHead>Email</TableHead>
                   <TableHead>Username</TableHead>
                   <TableHead>Full Name</TableHead>
-                  <TableHead>Website</TableHead>
+                  <TableHead>Role</TableHead>
                   <TableHead>Persona</TableHead>
                   <TableHead className="text-right">Updated</TableHead>
                 </TableRow>
@@ -91,30 +92,38 @@ export default function AdminUsersPage() {
                     <TableCell className="font-mono text-xs">
                       {user.id}
                     </TableCell>
+
+                    <TableCell className="font-mono text-sm">
+                      {user.email || "—"}
+                    </TableCell>
+
                     <TableCell>{user.username || "—"}</TableCell>
                     <TableCell>{user.full_name || "—"}</TableCell>
+
                     <TableCell>
-                      {user.website ? (
-                        <a
-                          href={user.website}
-                          target="_blank"
-                          className="text-primary underline"
+                      {user.role ? (
+                        <Badge
+                          variant={
+                            user.role === "admin" ? "destructive" : "secondary"
+                          }
                         >
-                          {user.website}
-                        </a>
+                          {user.role}
+                        </Badge>
                       ) : (
                         "—"
                       )}
                     </TableCell>
+
                     <TableCell>
                       {user.active_persona_id ? (
-                        <Badge variant="secondary">
+                        <Badge variant="outline">
                           {user.active_persona_id}
                         </Badge>
                       ) : (
                         "—"
                       )}
                     </TableCell>
+
                     <TableCell className="text-right text-muted-foreground">
                       {user.updated_at
                         ? new Date(user.updated_at).toLocaleString()
