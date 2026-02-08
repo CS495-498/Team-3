@@ -30,4 +30,12 @@ const ROLE_PERMISSIONS = {
   admin: ADMIN_PERMISSIONS,
 };
 
+
+
 export default ROLE_PERMISSIONS;
+
+export const ROLES = Object.keys(ROLE_PERMISSIONS);
+
+export const isValidRole = (role) =>
+  ROLES.includes(role);
+
