@@ -201,7 +201,7 @@ export function NavProjects() {
                                                                 asChild
                                                                 className={`flex items-center gap-2 transition-all duration-200
                             ${isActive
-                                                                        ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800 dark:bg-purple-700 dark:text-white dark:hover:bg-purple-800 font-semibold"
+                                                                        ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800"
                                                                         : "text-gray-800 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-[#1b1b1f]"
                                                                     }`}
                                                             >
