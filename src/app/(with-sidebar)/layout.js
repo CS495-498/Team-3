@@ -3,12 +3,14 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { RoleProvider } from "@/context/RoleContext";
+import { UserProvider } from "@/context/UserContext";
+import { User } from "lucide-react";
 
 
 
 export default function WithSidebarLayout({ children }) {
   return (
-    <RoleProvider>
+    <UserProvider>
     <SidebarProvider>
       <div className="flex min-h-screen w-screen">
         
@@ -23,6 +25,6 @@ export default function WithSidebarLayout({ children }) {
         </main>
       </div>
     </SidebarProvider>
-    </RoleProvider>
+    </UserProvider>
   );
 }
