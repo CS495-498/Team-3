@@ -2,10 +2,13 @@
 
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { RoleProvider } from "@/context/RoleContext";
+
 
 
 export default function WithSidebarLayout({ children }) {
   return (
+    <RoleProvider>
     <SidebarProvider>
       <div className="flex min-h-screen w-screen">
         
@@ -20,5 +23,6 @@ export default function WithSidebarLayout({ children }) {
         </main>
       </div>
     </SidebarProvider>
+    </RoleProvider>
   );
 }

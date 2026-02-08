@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/utils/Supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 
+
 export async function GET() {
     try {
         const supabase = await createClient();
@@ -17,7 +18,7 @@ export async function GET() {
 
         const { data: profile, error: profileError } = await supabase
             .from("profiles")
-            .select("full_name, username, avatar_url, active_persona_id")
+            .select("full_name, username, avatar_url, active_persona_id, role")
             .eq("id", user.id)
             .single();
 
@@ -47,6 +48,7 @@ export async function GET() {
 
         return NextResponse.json({
             id: user.id,
+            role: profile.role ?? "",
             full_name: profile.full_name ?? "",
             username: profile.username ?? "",
             avatar_url: profile.avatar_url ?? "",
