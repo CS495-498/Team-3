@@ -1,15 +1,19 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import DOMPurify from "isomorphic-dompurify";
 import { ChevronsUp, ChevronsDown, MessageSquare } from "lucide-react";
 import SuccessToast from "@/components/ui/success-toast.jsx";
 import LoadingIndicator from "@/components/ui/loading-indicator.jsx";
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
+import {
+    Select,
+    SelectTrigger,
+    SelectContent,
+    SelectItem,
+    SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch"
 
-import AddFeatureRequest from "@/components/featureRequestModal";
-import CommentsDialog from "@/components/commentsDialog";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 
 import { getFeatureRequests } from "@/lib/featureRequests/requests/getFeatureRequests";
@@ -17,11 +21,13 @@ import { getUserVotes } from "@/lib/featureRequests/requests/getUserVotes";
 import { castVote } from "@/lib/featureRequests/votes/castVote";
 import { addComment } from "@/lib/featureRequests/comments/addComments";
 import { getComments } from "@/lib/featureRequests/comments/getComments";
+
 import CardDropdown from "@/components/cardDropdown.jsx";
 import DeleteModal from "@/components/deleteModal.jsx";
-import EditFeatureRequestModal from "@/components/editFeatureRequestModal.jsx";
+
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog } from "@headlessui/react";
+import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor";
 
 import { useUser } from "@/context/UserContext";
 import { hasPermission } from "@/utils/hasPermission";
@@ -36,8 +42,12 @@ export default function Home() {
     const [requests, setRequests] = useState([]);
     const [votes, setVotes] = useState({});
     const [isLoading, setIsLoading] = useState(true);
+
     const [deleteToast, setDeleteToast] = useState(false);
+
     const [statusFilter, setStatusFilter] = useState("all");
+    const [sortOption, setSortOption] = useState("votes_desc");
+
     const [showCompleted, setShowCompleted] = useState(() => {
         if (typeof window !== "undefined") {
             const saved = sessionStorage.getItem("featureRequests_showCompleted");
@@ -46,17 +56,16 @@ export default function Home() {
         return false;
     });
     const [selectedRequest, setSelectedRequest] = useState(null);
-    const [comments, setComments] = useState([]);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [showToast, setShowToast] = useState(false);
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
-    const [sortOption, setSortOption] = useState("votes_desc");
 
     const [videoModalOpen, setVideoModalOpen] = useState(false);
     const [activeVideoSrc, setActiveVideoSrc] = useState(null);
 
+    // Full request viewer
     const { user, loading: userLoading } = useUser();
 
     const canManageAll =
@@ -80,10 +89,24 @@ export default function Home() {
     const [isRequestOpen, setIsRequestOpen] = useState(false);
     const [activeRequest, setActiveRequest] = useState(null);
 
+    // Comments in full request viewer
+    const [commentText, setCommentText] = useState("");
+    const [commentPostError, setCommentPostError] = useState("");
+
+    const [comments, setComments] = useState([]);
+    const [commentsLoading, setCommentsLoading] = useState(false);
+
+    // Add/Edit RTE modal (Demo Instructions style)
+    const [rteModalOpen, setRteModalOpen] = useState(false);
+    const [rteMode, setRteMode] = useState("add"); // "add" | "edit"
+    const [rteTitle, setRteTitle] = useState("");
+    const [rteError, setRteError] = useState("");
+    const [dialogEditorContent, setDialogEditorContent] = useState("");
+    const editorRef = useRef(null);
+
     useEffect(() => {
         Promise.all([getFeatureRequests(), getUserVotes()])
             .then(([reqs, userVotes]) => {
-                console.log("reqs", reqs);
                 setRequests(reqs);
 
                 setVotes(userVotes);
@@ -104,19 +127,20 @@ export default function Home() {
             .then((r) => r.json())
             .then((data) => {
                 if (!mounted) return;
-                if (!data || data?.error) {
-                    setCurrentUser(null);
-                } else {
-                    setCurrentUser(data); // { id, username }
-                }
+                if (!data || data?.error) setCurrentUser(null);
+                else setCurrentUser(data); // { id, username }
             })
             .catch((err) => {
                 console.error("Failed to load current user:", err);
                 setCurrentUser(null);
             });
 
-        return () => { mounted = false; };
+        return () => {
+            mounted = false;
+        };
     }, []);
+
+    const sameUser = (feature_request_user_id, user_id) => user_id === feature_request_user_id;
 
     // Persist showCompleted preference to sessionStorage
     useEffect(() => {
@@ -138,7 +162,6 @@ export default function Home() {
             list = list.filter((req) => req.status === statusFilter);
         }
 
-        // SORT
         switch (sortOption) {
             case "votes_desc":
                 list.sort((a, b) => b.number_of_votes - a.number_of_votes);
@@ -163,6 +186,8 @@ export default function Home() {
             case "title_desc":
                 list.sort((a, b) => b.title.localeCompare(a.title));
                 break;
+            default:
+                break;
         }
 
         return list;
@@ -170,8 +195,21 @@ export default function Home() {
 
 
 
-    const { items: visibleRequests, hasMore, ref } = useInfiniteScroll(filteredSortedRequests, 6);
+    const { items: visibleRequests, hasMore, ref } = useInfiniteScroll(
+        filteredSortedRequests,
+        6
+    );
 
+    const isImage = (url) => {
+        if (!url) return false;
+        const path = url.split("?")[0];
+        return /\.(jpg|jpeg|png|gif|webp)$/i.test(path);
+    };
+
+    const isPDF = (url) => {
+        if (!url) return false;
+        const path = url.split("?")[0];
+        return /\.pdf$/i.test(path);
 
     const openCommentsDialog = async (req) => {
         const data = await getComments(req.id);
@@ -180,13 +218,31 @@ export default function Home() {
         setIsDialogOpen(true);
     };
 
-    const openEditModal = (demo) => {
-        setSelectedItem(demo);
-        setIsEditOpen(true);
+    const isVideo = (url) => {
+        if (!url) return false;
+        const path = url.split("?")[0];
+        return /\.(mp4|webm|ogg)$/i.test(path);
     };
 
-    const openDeleteModal = (demo) => {
-        setSelectedItem(demo);
+    // Allow embedded media/files in HTML
+    const sanitizeHTML = (html) =>
+        DOMPurify.sanitize(html || "", {
+            ADD_TAGS: ["iframe", "video", "source"],
+            ADD_ATTR: [
+                "allow",
+                "allowfullscreen",
+                "frameborder",
+                "scrolling",
+                "src",
+                "srcset",
+                "type",
+                "controls",
+                "poster",
+            ],
+        });
+
+    const openDeleteModal = (req) => {
+        setSelectedItem(req);
         setIsDeleteOpen(true);
     };
 
@@ -244,7 +300,6 @@ export default function Home() {
 
             setRequests((prev) => prev.filter((r) => r.id !== selectedItem.id));
 
-            // close full-view modal if deleting the active request
             if (activeRequest?.id === selectedItem.id) {
                 setIsRequestOpen(false);
                 setActiveRequest(null);
@@ -257,20 +312,6 @@ export default function Home() {
         } catch (error) {
             console.error("Error deleting feature request:", error);
         }
-    };
-
-    const handleAddComment = async (content) => {
-        const newComment = await addComment(selectedRequest.id, content);
-
-        setComments((prev) => [...prev, newComment]);
-
-        setRequests((prev) =>
-            prev.map((r) =>
-                r.id === selectedRequest.id
-                    ? { ...r, commentCount: r.commentCount + 1 }
-                    : r
-            )
-        );
     };
 
     const handleVote = async (id, type) => {
@@ -286,14 +327,9 @@ export default function Home() {
                 if (r.id !== id) return r;
 
                 let change;
-
-                if (previousVote === type) {
-                    change = type === "up" ? -1 : +1;
-                } else if (previousVote) {
-                    change = type === "up" ? +2 : -2;
-                } else {
-                    change = type === "up" ? +1 : -1;
-                }
+                if (previousVote === type) change = type === "up" ? -1 : +1;
+                else if (previousVote) change = type === "up" ? +2 : -2;
+                else change = type === "up" ? +1 : -1;
 
                 return { ...r, number_of_votes: r.number_of_votes + change };
             })
@@ -309,11 +345,176 @@ export default function Home() {
         }
     };
 
-    // ✅ NEW: open full request viewer
-    const openRequest = (req) => {
+    // Open full request viewer + load comments so user can comment below the HTML
+    const openRequest = async (req) => {
         setActiveRequest(req);
         setIsRequestOpen(true);
+
+        setCommentsLoading(true);
+        try {
+            const data = await getComments(req.id);
+            setComments(data || []);
+        } catch (e) {
+            console.error("Failed to load comments:", e);
+            setComments([]);
+        } finally {
+            setCommentsLoading(false);
+        }
     };
+
+    // Add/Edit RTE triggers
+    const openAddRte = () => {
+        setRteError("");
+        setRteMode("add");
+        setSelectedItem(null);
+        setRteTitle("");
+        setDialogEditorContent("");
+        setRteModalOpen(true);
+    };
+
+    const openEditRte = (req) => {
+        setRteError("");
+        setRteMode("edit");
+        setSelectedItem(req);
+        setRteTitle(req?.title || "");
+        setDialogEditorContent(req?.content || "");
+        setRteModalOpen(true);
+    };
+
+    // Save feature request from RTE (no attachments: embed links/media in HTML)
+    const handleRteSave = async () => {
+        setRteError("");
+
+        const html = editorRef.current?.getHTML?.() ?? "";
+        const title = (rteTitle || "").trim();
+
+        if (!title) {
+            setRteError("Title is required.");
+            return;
+        }
+
+        try {
+            if (rteMode === "add") {
+                // ✅ no file uploads now — content is embedded via HTML
+                const res = await fetch("/api/feature-requests", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ title, content: html }),
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error || "Failed to add feature request");
+                }
+
+                const usernameFromServer = data.username || data.user?.username;
+                const username = usernameFromServer || currentUser?.username || "Unknown";
+
+                const requestWithExtras = {
+                    ...data,
+                    username,
+                    user: undefined,
+                    commentCount: 0,
+                    number_of_votes: data.number_of_votes ?? 0,
+                };
+
+                setRequests((prev) => [requestWithExtras, ...prev]);
+                setRteModalOpen(false);
+
+                setShowToast(true);
+                setTimeout(() => setShowToast(false), 2000);
+                return;
+            }
+
+            // edit
+            if (rteMode === "edit") {
+                if (!selectedItem || !currentUser) return;
+                if (!sameUser(selectedItem.user_id, currentUser.id)) return;
+
+                const payload = {
+                    ...selectedItem,
+                    title,
+                    content: html,
+                };
+
+                const res = await fetch(`/api/feature-requests/${selectedItem.id}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                });
+
+                if (!res.ok) {
+                    let errorMessage = "Unknown error";
+                    try {
+                        const err = await res.json();
+                        errorMessage = err.error || JSON.stringify(err);
+                    } catch {}
+                    throw new Error(errorMessage);
+                }
+
+                const updated = await res.json();
+
+                setRequests((prev) =>
+                    prev.map((req) =>
+                        req.id === updated.id
+                            ? { ...updated, username: req.username, commentCount: req.commentCount }
+                            : req
+                    )
+                );
+
+                setActiveRequest((prev) =>
+                    prev?.id === updated.id ? { ...prev, ...updated } : prev
+                );
+
+                setRteModalOpen(false);
+            }
+        } catch (e) {
+            console.error(e);
+            setRteError(e?.message || "Failed to save. Check console for details.");
+        }
+    };
+
+    // Add comment directly under full request HTML
+    const handleAddCommentInline = async () => {
+        if (!activeRequest?.id) return;
+
+        setCommentPostError("");
+        const text = (commentText || "").trim();
+
+        if (!text) {
+            setCommentPostError("Comment cannot be empty.");
+            return;
+        }
+
+        try {
+            // send as plain text (your addComment() should accept this)
+            const newComment = await addComment(activeRequest.id, text);
+
+            setComments((prev) => [...prev, newComment]);
+
+            setRequests((prev) =>
+                prev.map((r) =>
+                    r.id === activeRequest.id
+                        ? { ...r, commentCount: (r.commentCount || 0) + 1 }
+                        : r
+                )
+            );
+
+            setActiveRequest((prev) =>
+                prev ? { ...prev, commentCount: (prev.commentCount || 0) + 1 } : prev
+            );
+
+            setCommentText("");
+        } catch (e) {
+            console.error("Failed to post comment:", e);
+            setCommentPostError("Failed to post comment. Please try again.");
+        }
+    };
+
+
+
+
     if (isLoading || userLoading) {
         return <LoadingIndicator label="Loading feature requests..." />;
     }
@@ -338,6 +539,7 @@ export default function Home() {
                 <div className="flex items-center justify-between mb-4 bg-secondary/40 p-4 rounded-lg">
                     <div className="flex items-center gap-8">
                         <h1 className="text-4xl font-bold ml-4">Feature Requests</h1>
+
                         {/* Filter By */}
                         <div className="flex items-center gap-2">
                             <span className="text-sm text-muted-foreground">Filter by:</span>
@@ -354,7 +556,6 @@ export default function Home() {
                             </Select>
                         </div>
 
-                        {/* Sort By */}
                         <div className="flex items-center gap-2">
                             <span className="text-sm text-muted-foreground">Sort by:</span>
                             <Select value={sortOption} onValueChange={setSortOption}>
@@ -387,44 +588,52 @@ export default function Home() {
                     </div>
                 </div>
 
-
                 {canPublish && (
+                    <button
+                        onClick={openAddRte}
+                        type="button"
+                        className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
+                    >
+                        Add Feature Request
+                    </button>
                     <AddFeatureRequest
                         onAdded={async ({ title, content, file }) => {
+                            // DO NOT set local error here — let modal handle it
                             const formData = new FormData();
                             formData.append("title", title);
                             formData.append("content", content);
                             if (file) formData.append("file", file);
 
-                            const res = await fetch("/api/feature-requests", {
-                                method: "POST",
-                                body: formData,
-                            });
+                                const res = await fetch("/api/feature-requests", {
+                                    method: "POST",
+                                    body: formData,
+                                });
 
-                            const data = await res.json();
+                                const data = await res.json();
 
-                            if (!res.ok) {
-                                throw new Error(data.error || "Failed to add feature request");
-                            }
+                                if (!res.ok) {
+                                    throw new Error(data.error || "Failed to add feature request");
+                                }
 
-                            const usernameFromServer =
-                                data.username || data.user?.username;
-                            const username =
-                                usernameFromServer || currentUser?.username || "Unknown";
+                                const usernameFromServer =
+                                    data.username || data.user?.username;
+                                const username =
+                                    usernameFromServer || currentUser?.username || "Unknown";
 
-                            const requestWithExtras = {
-                                ...data,
-                                username,
-                                user: undefined,
-                                commentCount: 0,
-                                number_of_votes: data.number_of_votes ?? 0,
-                            };
+                                const requestWithExtras = {
+                                    ...data,
+                                    username,
+                                    user: undefined,
+                                    commentCount: 0,
+                                    number_of_votes: data.number_of_votes ?? 0,
+                                };
 
-                            setRequests(prev => [requestWithExtras, ...prev]);
-                            setShowToast(true);
-                            setTimeout(() => setShowToast(false), 2000);
-                        }}
-                    />
+                                setRequests(prev => [requestWithExtras, ...prev]);
+                                setShowToast(true);
+                                setTimeout(() => setShowToast(false), 2000);
+                            }}
+                        />
+                    )}
                 )}
 
 
@@ -438,26 +647,11 @@ export default function Home() {
                     {visibleRequests.map((req) => {
                         const voteState = votes[req.id];
 
-                        const isImage = (url) => {
-                            if (!url) return false;
-                            const path = url.split("?")[0];
-                            return /\.(jpg|jpeg|png|gif|webp)$/i.test(path);
-                        };
-
-                        const isPDF = (url) => {
-                            if (!url) return false;
-                            const path = url.split("?")[0];
-                            return /\.pdf$/i.test(path);
-                        };
-
-                        const isVideo = (url) => {
-                            if (!url) return false;
-                            const path = url.split("?")[0];
-                            return /\.(mp4|webm|ogg)$/i.test(path);
-                        };
-
-                        // ✅ NEW: sanitize once per item render
-                        const safeHTML = DOMPurify.sanitize(req.content || "");
+                        // 1-line ellipsis preview: strip tags to text and truncate
+                        const previewText = (req.content || "")
+                            .replace(/<[^>]*>/g, " ")
+                            .replace(/\s+/g, " ")
+                            .trim();
 
                         const isCompleted = req.status === "completed";
 
@@ -471,21 +665,23 @@ export default function Home() {
                                 {/* Votes */}
                                 <div className="flex flex-col items-center space-y-2 mr-4">
                                     <button
-                                        className={`p-1 rounded-md transition ${voteState === "up"
-                                            ? "text-green-600"
-                                            : "text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
+                                        className={`p-1 rounded-md transition ${
+                                            voteState === "up"
+                                                ? "text-green-600"
+                                                : "text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
                                         }`}
                                         onClick={() => handleVote(req.id, "up")}
                                     >
                                         <ChevronsUp className="w-5 h-5" />
                                     </button>
                                     <span className="text-sm font-medium text-gray-800 dark:text-gray-50">
-                                        {req.number_of_votes}
-                                    </span>
+                    {req.number_of_votes}
+                  </span>
                                     <button
-                                        className={`p-1 rounded-md transition ${voteState === "down"
-                                            ? "text-red-600"
-                                            : "text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
+                                        className={`p-1 rounded-md transition ${
+                                            voteState === "down"
+                                                ? "text-red-600"
+                                                : "text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
                                         }`}
                                         onClick={() => handleVote(req.id, "down")}
                                     >
@@ -515,7 +711,6 @@ export default function Home() {
                                                     title="Click to view PDF"
                                                 />
                                             )}
-
                                             {isVideo(req.signed_file_url) && (
                                                 <div className="relative w-16 h-16">
                                                     <video
@@ -547,6 +742,9 @@ export default function Home() {
                                             )}
                                         </>
                                     ) : (
+                                        <div
+                                            className="w-16 h-16 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
+                                            title="No attachment"
                                         // Placeholder icon for requests without files
                                         <button
                                             onClick={() => openCommentsDialog(req)}
@@ -554,7 +752,7 @@ export default function Home() {
                                             title="Add/view comments"
                                         >
                                             <MessageSquare className="w-10 h-10 text-gray-600 dark:text-gray-300" />
-                                        </button>
+                                        </div>
                                     )}
                                 </div>
 
@@ -562,11 +760,10 @@ export default function Home() {
                                 {/* Content */}
                                 <div className="flex-1 flex flex-col gap-2">
                                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-50 flex items-center gap-2">
-                                        {/* ✅ Click title to open full request */}
                                         <button
                                             type="button"
                                             onClick={() => openRequest(req)}
-                                            className="text-left hover:underline"
+                                            className="text-left hover:underline truncate max-w-[60ch]"
                                             title="Open feature request"
                                         >
                                             {req.title}
@@ -574,43 +771,32 @@ export default function Home() {
 
                                         {req.status && (
                                             <span
-                                                className={`px-2 py-0.5 text-xs font-medium rounded-full ${req.status === "open"
-                                                    ? "bg-blue-100 text-blue-700"
-                                                    : req.status === "in_progress"
-                                                        ? "bg-yellow-100 text-yellow-700"
-                                                        : req.status === "completed"
-                                                            ? "bg-green-100 text-green-700"
-                                                            : "bg-gray-200 text-gray-700"
+                                                className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                                                    req.status === "open"
+                                                        ? "bg-blue-100 text-blue-700"
+                                                        : req.status === "in_progress"
+                                                            ? "bg-yellow-100 text-yellow-700"
+                                                            : req.status === "completed"
+                                                                ? "bg-green-100 text-green-700"
+                                                                : "bg-gray-200 text-gray-700"
                                                 }`}
                                             >
-                                                {req.status.replace("_", " ")}
-                                            </span>
+                        {req.status.replace("_", " ")}
+                      </span>
                                         )}
                                         <span className="text-sm text-gray-500">— {req.username}</span>
                                     </h3>
 
-                                    {/* ✅ RTE HTML PREVIEW (clamped by height + gradient) */}
+                                    {/* ✅ 1-line ellipsis preview (no gradient overlay, no blue "view" link) */}
                                     <button
                                         type="button"
                                         onClick={() => openRequest(req)}
                                         className="text-left"
                                         title="Open feature request"
                                     >
-                                        <div className="relative">
-                                            <article className="prose prose-sm dark:prose-invert max-w-none">
-                                                <div
-                                                    className="max-h-24 overflow-hidden"
-                                                    dangerouslySetInnerHTML={{ __html: safeHTML }}
-                                                />
-                                            </article>
-
-                                            {/* subtle fade */}
-                                            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-b from-transparent to-white dark:to-gray-900" />
-                                        </div>
-
-                                        <span className="mt-1 inline-block text-xs text-blue-600 dark:text-blue-400 hover:underline">
-                                            View full request →
-                                        </span>
+                                        <p className="text-sm text-gray-700 dark:text-gray-200 truncate">
+                                            {previewText || "No description"}
+                                        </p>
                                     </button>
 
                                     <p className="text-xs text-gray-400 mt-1">
@@ -618,24 +804,21 @@ export default function Home() {
                                     </p>
                                 </div>
 
-                                {/* Comments & dropdown */}
-                                <div className="flex justify-between items-center ml-4">
-                                    <div>
+                                {/* Dropdown + comment count */}
+                                <div className="flex justify-between items-center ml-4 gap-2">
+                                    <div className={!sameUser(req.user_id, currentUser?.id) ? "hidden" : ""}>
                                         {canEditRequest(req) && (
                                             <CardDropdown
-                                                onEdit={() => openEditModal(req)}
+                                                onEdit={() => openEditRte(req)}
                                                 onDelete={() => openDeleteModal(req)}
                                             />
                                         )}
-
                                     </div>
-                                    <button
-                                        onClick={() => openCommentsDialog(req)}
-                                        className="flex items-center gap-1 px-3 py-2 rounded-md text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700"
-                                    >
+
+                                    <div className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-200">
                                         <MessageSquare className="w-5 h-5" />
                                         <span className="text-sm">{req.commentCount}</span>
-                                    </button>
+                                    </div>
                                 </div>
                             </li>
                         );
@@ -655,27 +838,102 @@ export default function Home() {
                 </div>
             )}
 
-            <CommentsDialog
-                isOpen={isDialogOpen}
-                onClose={() => setIsDialogOpen(false)}
-                request={selectedRequest}
-                comments={comments}
-                onAddComment={handleAddComment}
-            />
-            <EditFeatureRequestModal
-                isOpen={isEditOpen}
-                closeModal={() => setIsEditOpen(false)}
-                onSave={handleEditSave}
-                item={selectedItem}
-            />
-
             <DeleteModal
                 isOpen={isDeleteOpen}
                 closeModal={() => setIsDeleteOpen(false)}
                 onDeleteConfirm={handleConfirmDelete}
             />
 
-            {/* ✅ Full Feature Request Modal */}
+            {/* Add/Edit RTE Modal (Demo Instructions style) */}
+            <AnimatePresence>
+                {rteModalOpen && (
+                    <Dialog
+                        className="fixed inset-0 z-50"
+                        open={rteModalOpen}
+                        onClose={() => setRteModalOpen(false)}
+                    >
+                        <motion.div
+                            className="fixed inset-0 bg-black/50"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.3 }}
+                            aria-hidden="true"
+                        />
+
+                        <div className="fixed inset-0 flex items-center justify-center p-6">
+                            <motion.div
+                                className="w-full max-w-5xl mx-auto"
+                                initial={{ opacity: 0, scale: 0.96, y: -8 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.96, y: -8 }}
+                                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                            >
+                                <Dialog.Panel className="w-full h-[95vh] max-h-[95vh] flex flex-col bg-white dark:bg-gray-700 rounded-xl shadow-2xl overflow-hidden">
+                                    <div className="sticky top-0 bg-white dark:bg-gray-700 px-4 py-3 border-b border-gray-200 dark:border-gray-600 z-10 flex items-center justify-between">
+                                        <Dialog.Title className="font-bold text-2xl">
+                                            {rteMode === "add" ? "Add Feature Request" : "Edit Feature Request"}
+                                        </Dialog.Title>
+
+                                        <div className="flex items-center gap-3">
+                                            {rteError && (
+                                                <p className="text-red-500 text-sm max-w-[50ch] truncate">
+                                                    {rteError}
+                                                </p>
+                                            )}
+
+                                            <button
+                                                type="button"
+                                                onClick={() => setRteModalOpen(false)}
+                                                className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                                            >
+                                                Cancel
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={handleRteSave}
+                                                className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
+                                            >
+                                                Save
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex-1 overflow-y-auto p-8 space-y-5">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                                Title
+                                            </label>
+                                            <input
+                                                value={rteTitle}
+                                                onChange={(e) => setRteTitle(e.target.value)}
+                                                type="text"
+                                                placeholder="Enter title"
+                                                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                                Content
+                                            </label>
+                                            <div className="w-full min-h-[300px] rounded-md p-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700">
+                                                <SimpleEditor html={dialogEditorContent} editorRef={editorRef} />
+                                            </div>
+                                            <p className="text-xs text-gray-500 dark:text-gray-300 mt-2">
+                                                Tip: embed files/media by pasting links or using your editors embed options.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </Dialog.Panel>
+                            </motion.div>
+                        </div>
+                    </Dialog>
+                )}
+            </AnimatePresence>
+
+            {/* Full Feature Request Modal + comments directly below HTML */}
             <AnimatePresence>
                 {isRequestOpen && activeRequest && (
                     <Dialog
@@ -701,24 +959,25 @@ export default function Home() {
                             >
                                 <Dialog.Panel className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl overflow-hidden">
                                     <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-start justify-between gap-4">
-                                        <div>
-                                            <Dialog.Title className="text-xl font-bold text-gray-900 dark:text-gray-50">
+                                        <div className="min-w-0">
+                                            <Dialog.Title className="text-xl font-bold text-gray-900 dark:text-gray-50 truncate">
                                                 {activeRequest.title}
                                             </Dialog.Title>
                                             <div className="mt-1 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                                                 {activeRequest.status && (
                                                     <span
-                                                        className={`px-2 py-0.5 text-xs font-medium rounded-full ${activeRequest.status === "open"
-                                                            ? "bg-blue-100 text-blue-700"
-                                                            : activeRequest.status === "in_progress"
-                                                                ? "bg-yellow-100 text-yellow-700"
-                                                                : activeRequest.status === "completed"
-                                                                    ? "bg-green-100 text-green-700"
-                                                                    : "bg-gray-200 text-gray-700"
+                                                        className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                                                            activeRequest.status === "open"
+                                                                ? "bg-blue-100 text-blue-700"
+                                                                : activeRequest.status === "in_progress"
+                                                                    ? "bg-yellow-100 text-yellow-700"
+                                                                    : activeRequest.status === "completed"
+                                                                        ? "bg-green-100 text-green-700"
+                                                                        : "bg-gray-200 text-gray-700"
                                                         }`}
                                                     >
-                                                        {activeRequest.status.replace("_", " ")}
-                                                    </span>
+                            {activeRequest.status.replace("_", " ")}
+                          </span>
                                                 )}
                                                 <span>— {activeRequest.username}</span>
                                             </div>
@@ -733,29 +992,96 @@ export default function Home() {
                                         </button>
                                     </div>
 
-                                    <div className="p-5 max-h-[70vh] overflow-y-auto">
+                                    <div className="p-5 max-h-[75vh] overflow-y-auto space-y-6">
                                         <article className="prose dark:prose-invert max-w-none">
                                             <div
                                                 dangerouslySetInnerHTML={{
-                                                    __html: DOMPurify.sanitize(activeRequest.content || ""),
+                                                    __html: sanitizeHTML(activeRequest.content || ""),
                                                 }}
                                             />
                                         </article>
+
+                                        {/* Comments BELOW the HTML */}
+                                        <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                                    Comments ({activeRequest.commentCount || 0})
+                                                </h4>
+                                                <span className="text-xs text-gray-400">
+                          Created: {new Date(activeRequest.created_at).toLocaleString()}
+                        </span>
+                                            </div>
+
+                                            {/* existing comments */}
+                                            {commentsLoading ? (
+                                                <p className="text-sm text-gray-500 dark:text-gray-400">Loading comments...</p>
+                                            ) : comments.length === 0 ? (
+                                                <p className="text-sm text-gray-500 dark:text-gray-400">No comments yet.</p>
+                                            ) : (
+                                                <div className="space-y-3">
+                                                    {comments.map((c) => (
+                                                        <div
+                                                            key={c.id}
+                                                            className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-800"
+                                                        >
+                                                            <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                                                                {c.username || c.user_id || "User"} •{" "}
+                                                                {c.created_at ? new Date(c.created_at).toLocaleString() : ""}
+                                                            </div>
+                                                            <p className="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-wrap">
+                                                                {c.content || ""}
+                                                            </p>
+
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* add comment */}
+                                            <div className="mt-4">
+                                                <div className="flex items-center justify-between">
+                                                    <label className="block text-sm font-medium text-gray-900 dark:text-gray-100">
+                                                        Add a comment
+                                                    </label>
+                                                    {commentPostError && (
+                                                        <span className="text-sm text-red-500">{commentPostError}</span>
+                                                    )}
+                                                </div>
+
+                                                <div className="mt-2">
+                                                      <textarea
+                                                          value={commentText}
+                                                          onChange={(e) => setCommentText(e.target.value)}
+                                                          rows={4}
+                                                          placeholder="Write a comment…"
+                                                          className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-purple-300"/>
+                                                </div>
+
+                                                <div className="mt-3 flex justify-end">
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleAddCommentInline}
+                                                        className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
+                                                    >
+                                                        Post Comment
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <div className="px-5 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                                        <span className="text-xs text-gray-400">
-                                            Created: {new Date(activeRequest.created_at).toLocaleString()}
-                                        </span>
-
-                                        <button
-                                            type="button"
-                                            onClick={() => openCommentsDialog(activeRequest)}
-                                            className="flex items-center gap-2 px-3 py-2 rounded-md text-gray-600 hover:bg-gray-200 dark:text-gray-200 dark:hover:bg-gray-800"
-                                        >
+                                        <div className="flex items-center gap-2 text-gray-600 dark:text-gray-200">
                                             <MessageSquare className="w-5 h-5" />
-                                            <span className="text-sm">{activeRequest.commentCount}</span>
-                                        </button>
+                                            <span className="text-sm">{activeRequest.commentCount || 0}</span>
+                                        </div>
+
+                                        <div className={!sameUser(activeRequest.user_id, currentUser?.id) ? "hidden" : ""}>
+                                            <CardDropdown
+                                                onEdit={() => openEditRte(activeRequest)}
+                                                onDelete={() => openDeleteModal(activeRequest)}
+                                            />
+                                        </div>
                                     </div>
                                 </Dialog.Panel>
                             </motion.div>

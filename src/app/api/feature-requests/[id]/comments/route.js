@@ -7,10 +7,10 @@ export async function GET(req, { params }) {
   const { id } = await params;
   const supabase = await createClient();
 
-  
+
     // Get logged-in user
      const { error2, profile } = await requireAuthWithPermission(
-  
+
     PERMISSIONS.VIEW_CONTENT
   );
 
@@ -33,7 +33,15 @@ export async function GET(req, { params }) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(data, { status: 200 });
+    const normalized = (data || []).map((c) => ({
+        id: c.id,
+        content: c.content,
+        created_at: c.created_at,
+        user_id: c.user_id,
+        username: c.user?.username || null,
+    }));
+
+    return NextResponse.json(normalized, { status: 200 });
 }
 
 export async function POST(req, { params }) {
@@ -43,7 +51,7 @@ export async function POST(req, { params }) {
   // Authenticate user
     // Get logged-in user
      const { error2, profile } = await requireAuthWithPermission(
-  
+
     PERMISSIONS.COMMENT_VOTE_FEATURE_REQUESTS
   );
 
@@ -73,9 +81,17 @@ export async function POST(req, { params }) {
       .select("*")
       .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json(data, { status: 201 });
+    return NextResponse.json(
+        {
+            id: data.id,
+            content: data.content,
+            created_at: data.created_at,
+            user_id: data.user_id,
+            username: data.user?.username || null,
+        },
+        { status: 201 }
+    );
+
 }
