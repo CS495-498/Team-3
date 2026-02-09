@@ -2,7 +2,21 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 
 export async function updateSession(request) {
-     let supabaseResponse = NextResponse.next({
+
+    const { pathname } = request.nextUrl
+
+    // Skip auth check for public API routes, login page, and Next.js internals
+    if (
+        pathname.startsWith('/api/auth/login') ||
+        pathname.startsWith('/api/auth/signup') ||
+        pathname.startsWith('/api/auth/session') ||
+        pathname.startsWith('/login') ||
+        pathname.startsWith('/_next/')
+    ) {
+        return NextResponse.next()
+    }
+
+    let supabaseResponse = NextResponse.next({
         request: {
             headers: request.headers,
         },
