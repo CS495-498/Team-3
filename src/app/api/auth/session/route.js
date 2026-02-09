@@ -4,15 +4,15 @@ import { NextResponse } from 'next/server'
 export async function GET() {
     try {
         const supabase = await createClient()
-        const { data: { session }, error } = await supabase.auth.getUser()
+        const { data: { user }, error } = await supabase.auth.getUser()
 
-        if (error || !session) {
-            return NextResponse.json({ session: null }, { status: 200 })
+        if (error || !user) {
+            return NextResponse.json({ user: null }, { status: 200 })
         }
 
-        return NextResponse.json({ session })
+        return NextResponse.json({ user }, { status: 200 })
     } catch (error) {
         console.error('Session fetch error:', error)
-        return NextResponse.json({ session: null }, { status: 200 })
+        return NextResponse.json({ user: null }, { status: 200 })
     }
 }
