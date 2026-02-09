@@ -2,15 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import DOMPurify from "isomorphic-dompurify";
-import {
-    ChevronsUp,
-    ChevronsDown,
-    MessageSquare,
-    Paperclip,
-    FileText,
-    File,
-    Film,
-} from "lucide-react";
+import { ChevronsUp, ChevronsDown, MessageSquare } from "lucide-react";
 import SuccessToast from "@/components/ui/success-toast.jsx";
 import LoadingIndicator from "@/components/ui/loading-indicator.jsx";
 import {
@@ -20,14 +12,12 @@ import {
     SelectItem,
     SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 
 import { getFeatureRequests } from "@/lib/featureRequests/requests/getFeatureRequests";
 import { getUserVotes } from "@/lib/featureRequests/requests/getUserVotes";
 import { castVote } from "@/lib/featureRequests/votes/castVote";
-
 import { addComment } from "@/lib/featureRequests/comments/addComments";
 import { getComments } from "@/lib/featureRequests/comments/getComments";
 
@@ -53,24 +43,16 @@ export default function Home() {
     const [isLoading, setIsLoading] = useState(true);
 
     const [deleteToast, setDeleteToast] = useState(false);
+    const [showToast, setShowToast] = useState(false);
 
     const [statusFilter, setStatusFilter] = useState("all");
     const [sortOption, setSortOption] = useState("votes_desc");
 
-    const [showCompleted, setShowCompleted] = useState(() => {
-        if (typeof window !== "undefined") {
-            const saved = sessionStorage.getItem("featureRequests_showCompleted");
-            return saved === "true";
-        }
-        return false;
-    });
-
-
-    const [showToast, setShowToast] = useState(false);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
 
     const [videoModalOpen, setVideoModalOpen] = useState(false);
+    const [activeVideoSrc, setActiveVideoSrc] = useState(null);
 
     // Full request viewer
     const { user, loading: userLoading } = useUser();
@@ -96,23 +78,20 @@ export default function Home() {
     const [isRequestOpen, setIsRequestOpen] = useState(false);
     const [activeRequest, setActiveRequest] = useState(null);
 
-    // Comments (plain text)
-    const [comments, setComments] = useState([]);
-    const [commentsLoading, setCommentsLoading] = useState(false);
+    // Comments in full request viewer
     const [commentText, setCommentText] = useState("");
     const [commentPostError, setCommentPostError] = useState("");
 
-    // Add/Edit RTE modal
+    const [comments, setComments] = useState([]);
+    const [commentsLoading, setCommentsLoading] = useState(false);
+
+    // Add/Edit RTE modal (Demo Instructions style)
     const [rteModalOpen, setRteModalOpen] = useState(false);
     const [rteMode, setRteMode] = useState("add"); // "add" | "edit"
     const [rteTitle, setRteTitle] = useState("");
     const [rteError, setRteError] = useState("");
     const [dialogEditorContent, setDialogEditorContent] = useState("");
     const editorRef = useRef(null);
-
-    // File attachment when adding/editing
-    const [rteFile, setRteFile] = useState(null);
-    const [rteFilePreviewUrl, setRteFilePreviewUrl] = useState(null);
 
     useEffect(() => {
         Promise.all([getFeatureRequests(), getUserVotes()])
@@ -122,16 +101,6 @@ export default function Home() {
             })
             .finally(() => setIsLoading(false));
     }, []);
-
-    // Persist showCompleted preference to sessionStorage
-    useEffect(() => {
-        if (typeof window !== "undefined") {
-            sessionStorage.setItem(
-                "featureRequests_showCompleted",
-                showCompleted.toString()
-            );
-        }
-    }, [showCompleted]);
 
     useEffect(() => {
         let mounted = true;
@@ -152,26 +121,11 @@ export default function Home() {
         };
     }, []);
 
-    // cleanup blob URL to avoid memory leaks
-    useEffect(() => {
-        if (!rteModalOpen && rteFilePreviewUrl) {
-            URL.revokeObjectURL(rteFilePreviewUrl);
-            setRteFilePreviewUrl(null);
-        }
-    }, [rteModalOpen, rteFilePreviewUrl]);
-
-    const sameUser = (feature_request_user_id, user_id) =>
-        user_id === feature_request_user_id;
+    const sameUser = (feature_request_user_id, user_id) => user_id === feature_request_user_id;
 
     const filteredSortedRequests = useMemo(() => {
         let list = [...requests];
 
-        // FILTER: Hide completed by default unless showCompleted is true
-        if (!showCompleted) {
-            list = list.filter((req) => req.status !== "completed");
-        }
-
-        // FILTER: Apply status filter if not "all"
         if (statusFilter !== "all") {
             list = list.filter((req) => req.status === statusFilter);
         }
@@ -180,23 +134,18 @@ export default function Home() {
             case "votes_desc":
                 list.sort((a, b) => b.number_of_votes - a.number_of_votes);
                 break;
-
             case "votes_asc":
                 list.sort((a, b) => a.number_of_votes - b.number_of_votes);
                 break;
-
             case "newest":
                 list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
                 break;
-
             case "oldest":
                 list.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
                 break;
-
             case "title_asc":
                 list.sort((a, b) => a.title.localeCompare(b.title));
                 break;
-
             case "title_desc":
                 list.sort((a, b) => b.title.localeCompare(a.title));
                 break;
@@ -205,7 +154,7 @@ export default function Home() {
         }
 
         return list;
-    }, [requests, statusFilter, sortOption, showCompleted]);
+    }, [requests, statusFilter, sortOption]);
 
     const { items: visibleRequests, hasMore, ref } = useInfiniteScroll(
         filteredSortedRequests,
@@ -224,92 +173,28 @@ export default function Home() {
         return /\.pdf$/i.test(path);
     };
 
-    const openCommentsDialog = async (req) => {
-        const data = await getComments(req.id);
-        setComments(data);
-        setSelectedRequest(req);
-        setIsDialogOpen(true);
-    };
-
     const isVideo = (url) => {
         if (!url) return false;
         const path = url.split("?")[0];
         return /\.(mp4|webm|ogg)$/i.test(path);
     };
 
-    // strict sanitization (no embeds)
-    const sanitizeHTML = (html) => DOMPurify.sanitize(html || "");
-
-
-    function AttachmentPreview({ url, size = 80, fileName = "" }) {
-        if (!url) return null;
-
-        const frameClass =
-            "rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-center overflow-hidden";
-
-        // Local blob URLs won't have extensions; use the chosen file’s mime/name for nicer preview if available
-        const mime = rteFile?.type || "";
-        const name = fileName || rteFile?.name || "";
-
-        const showImage =
-            isImage(url) ||
-            mime.startsWith("image/") ||
-            /\.(jpg|jpeg|png|gif|webp)$/i.test(name);
-        const showVideo =
-            isVideo(url) ||
-            mime.startsWith("video/") ||
-            /\.(mp4|webm|ogg)$/i.test(name);
-        const showPDF = isPDF(url) || mime === "application/pdf" || /\.pdf$/i.test(name);
-
-        if (showImage) {
-            return (
-                <div className={frameClass} style={{width: size, height: size}}>
-                    <img
-                        src={url}
-                        alt="Attachment preview"
-                        style={{width: "100%", height: "100%", objectFit: "cover"}}
-                    />
-                </div>
-            );
-        }
-
-        if (showVideo) {
-            return (
-                <div className="relative" style={{width: size, height: size}}>
-                    <video
-                        src={url}
-                        className={frameClass}
-                        style={{width: size, height: size, objectFit: "cover"}}
-                        muted
-                        loop
-                        playsInline
-                        onMouseEnter={(e) => e.currentTarget.play()}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.pause();
-                            e.currentTarget.currentTime = 0;
-                        }}
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 text-white">
-                        <Film className="w-6 h-6"/>
-                    </div>
-                </div>
-            );
-        }
-
-        if (showPDF) {
-            return (
-                <div className={frameClass} style={{width: size, height: size}}>
-                    <FileText className="w-8 h-8 text-gray-600 dark:text-gray-200"/>
-                </div>
-            );
-        }
-
-        return (
-            <div className={frameClass} style={{width: size, height: size}}>
-                <File className="w-8 h-8 text-gray-600 dark:text-gray-200"/>
-            </div>
-        );
-    }
+    // Allow embedded media/files in HTML
+    const sanitizeHTML = (html) =>
+        DOMPurify.sanitize(html || "", {
+            ADD_TAGS: ["iframe", "video", "source"],
+            ADD_ATTR: [
+                "allow",
+                "allowfullscreen",
+                "frameborder",
+                "scrolling",
+                "src",
+                "srcset",
+                "type",
+                "controls",
+                "poster",
+            ],
+        });
 
     const openDeleteModal = (req) => {
         setSelectedItem(req);
@@ -363,7 +248,7 @@ export default function Home() {
             });
 
             if (!res.ok) {
-                const err = await res.json().catch(() => ({}));
+                const err = await res.json();
                 console.error("Failed to delete feature request:", err.error || err);
                 return;
             }
@@ -401,11 +286,12 @@ export default function Home() {
                 else if (previousVote) change = type === "up" ? +2 : -2;
                 else change = type === "up" ? +1 : -1;
 
-                return {...r, number_of_votes: r.number_of_votes + change};
+                return { ...r, number_of_votes: r.number_of_votes + change };
             })
         );
 
-        const apiVote = previousVote === type ? "remove" : type === "up" ? "up" : "down";
+        const apiVote =
+            previousVote === type ? "remove" : type === "up" ? "up" : "down";
 
         try {
             await castVote(id, apiVote);
@@ -414,13 +300,10 @@ export default function Home() {
         }
     };
 
-    // open full request + load comments
+    // Open full request viewer + load comments so user can comment below the HTML
     const openRequest = async (req) => {
         setActiveRequest(req);
         setIsRequestOpen(true);
-
-        setCommentText("");
-        setCommentPostError("");
 
         setCommentsLoading(true);
         try {
@@ -434,15 +317,13 @@ export default function Home() {
         }
     };
 
+    // Add/Edit RTE triggers
     const openAddRte = () => {
         setRteError("");
         setRteMode("add");
         setSelectedItem(null);
         setRteTitle("");
         setDialogEditorContent("");
-        setRteFile(null);
-        if (rteFilePreviewUrl) URL.revokeObjectURL(rteFilePreviewUrl);
-        setRteFilePreviewUrl(null);
         setRteModalOpen(true);
     };
 
@@ -452,13 +333,10 @@ export default function Home() {
         setSelectedItem(req);
         setRteTitle(req?.title || "");
         setDialogEditorContent(req?.content || "");
-        setRteFile(null);
-        if (rteFilePreviewUrl) URL.revokeObjectURL(rteFilePreviewUrl);
-        setRteFilePreviewUrl(null);
         setRteModalOpen(true);
     };
 
-    // Save feature request WITH optional file attachment
+    // Save feature request from RTE (no attachments: embed links/media in HTML)
     const handleRteSave = async () => {
         setRteError("");
 
@@ -471,18 +349,15 @@ export default function Home() {
         }
 
         try {
-            const formData = new FormData();
-            formData.append("title", title);
-            formData.append("content", html);
-            if (rteFile) formData.append("file", rteFile);
-
             if (rteMode === "add") {
+                // ✅ no file uploads now — content is embedded via HTML
                 const res = await fetch("/api/feature-requests", {
                     method: "POST",
-                    body: formData,
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ title, content: html }),
                 });
 
-                const data = await res.json().catch(() => ({}));
+                const data = await res.json();
 
                 if (!res.ok) {
                     throw new Error(data.error || "Failed to add feature request");
@@ -512,39 +387,39 @@ export default function Home() {
                 if (!selectedItem || !currentUser) return;
                 if (!sameUser(selectedItem.user_id, currentUser.id)) return;
 
+                const payload = {
+                    ...selectedItem,
+                    title,
+                    content: html,
+                };
+
                 const res = await fetch(`/api/feature-requests/${selectedItem.id}`, {
                     method: "PUT",
-                    body: formData,
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
                 });
 
-                const data = await res.json().catch(() => ({}));
-
                 if (!res.ok) {
-                    throw new Error(data.error || "Failed to update feature request");
+                    let errorMessage = "Unknown error";
+                    try {
+                        const err = await res.json();
+                        errorMessage = err.error || JSON.stringify(err);
+                    } catch {}
+                    throw new Error(errorMessage);
                 }
+
+                const updated = await res.json();
 
                 setRequests((prev) =>
                     prev.map((req) =>
-                        req.id === data.id
-                            ? {
-                                ...req,
-                                ...data,
-                                username: data.username ?? req.username,
-                                commentCount: data.commentCount ?? req.commentCount,
-                            }
+                        req.id === updated.id
+                            ? { ...updated, username: req.username, commentCount: req.commentCount }
                             : req
                     )
                 );
 
                 setActiveRequest((prev) =>
-                    prev?.id === data.id
-                        ? {
-                            ...prev,
-                            ...data,
-                            username: data.username ?? prev.username,
-                            commentCount: data.commentCount ?? prev.commentCount,
-                        }
-                        : prev
+                    prev?.id === updated.id ? { ...prev, ...updated } : prev
                 );
 
                 setRteModalOpen(false);
@@ -555,6 +430,7 @@ export default function Home() {
         }
     };
 
+    // Add comment directly under full request HTML
     const handleAddCommentInline = async () => {
         if (!activeRequest?.id) return;
 
@@ -567,6 +443,7 @@ export default function Home() {
         }
 
         try {
+            // send as plain text (your addComment() should accept this)
             const newComment = await addComment(activeRequest.id, text);
 
             setComments((prev) => [...prev, newComment]);
@@ -578,8 +455,9 @@ export default function Home() {
                         : r
                 )
             );
+
             setActiveRequest((prev) =>
-                prev ? {...prev, commentCount: (prev.commentCount || 0) + 1} : prev
+                prev ? { ...prev, commentCount: (prev.commentCount || 0) + 1 } : prev
             );
 
             setCommentText("");
@@ -615,12 +493,11 @@ export default function Home() {
                     <div className="flex items-center gap-8">
                         <h1 className="text-4xl font-bold ml-4">Feature Requests</h1>
 
-                        {/* Filter By */}
                         <div className="flex items-center gap-2">
                             <span className="text-sm text-muted-foreground">Filter by:</span>
                             <Select value={statusFilter} onValueChange={setStatusFilter}>
                                 <SelectTrigger className="w-40">
-                                    <SelectValue placeholder="Status"/>
+                                    <SelectValue placeholder="Status" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">All</SelectItem>
@@ -635,7 +512,7 @@ export default function Home() {
                             <span className="text-sm text-muted-foreground">Sort by:</span>
                             <Select value={sortOption} onValueChange={setSortOption}>
                                 <SelectTrigger className="w-40">
-                                    <SelectValue placeholder="Sort"/>
+                                    <SelectValue placeholder="Sort" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="votes_desc">Most Votes</SelectItem>
@@ -646,21 +523,6 @@ export default function Home() {
                                     <SelectItem value="title_desc">Title Z → A</SelectItem>
                                 </SelectContent>
                             </Select>
-                        </div>
-
-                        {/* Show Completed Toggle */}
-                        <div className="flex items-center gap-2 ml-4 pl-4 border-l border-gray-300 dark:border-gray-700">
-                            <label
-                                htmlFor="show-completed"
-                                className="text-sm text-muted-foreground cursor-pointer"
-                            >
-                                Show completed
-                            </label>
-                            <Switch
-                                id="show-completed"
-                                checked={showCompleted}
-                                onCheckedChange={setShowCompleted}
-                            />
                         </div>
                     </div>
                 </div>
@@ -715,6 +577,13 @@ export default function Home() {
 
 
 
+                <button
+                    onClick={openAddRte}
+                    type="button"
+                    className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
+                >
+                    Add Feature Request
+                </button>
             </div>
 
             {visibleRequests.length === 0 ? (
@@ -724,20 +593,18 @@ export default function Home() {
                     {visibleRequests.map((req) => {
                         const voteState = votes[req.id];
 
+                        // 1-line ellipsis preview: strip tags to text and truncate
                         const previewText = (req.content || "")
                             .replace(/<[^>]*>/g, " ")
                             .replace(/\s+/g, " ")
                             .trim();
 
-                        const isCompleted = req.status === "completed";
-
                         return (
                             <li
                                 key={req.id}
-                                className={`flex items-center py-4 px-4 hover:bg-gray-100 dark:hover:bg-gray-800 ${
-                                    isCompleted ? "opacity-60 dark:opacity-50" : ""
-                                }`}
+                                className="flex items-center py-4 px-4 hover:bg-gray-100 dark:hover:bg-gray-800"
                             >
+                                {/* Votes */}
                                 <div className="flex flex-col items-center space-y-2 mr-4">
                                     <button
                                         className={`p-1 rounded-md transition ${
@@ -747,13 +614,11 @@ export default function Home() {
                                         }`}
                                         onClick={() => handleVote(req.id, "up")}
                                     >
-                                        <ChevronsUp className="w-5 h-5"/>
+                                        <ChevronsUp className="w-5 h-5" />
                                     </button>
-
                                     <span className="text-sm font-medium text-gray-800 dark:text-gray-50">
                     {req.number_of_votes}
                   </span>
-
                                     <button
                                         className={`p-1 rounded-md transition ${
                                             voteState === "down"
@@ -762,27 +627,68 @@ export default function Home() {
                                         }`}
                                         onClick={() => handleVote(req.id, "down")}
                                     >
-                                        <ChevronsDown className="w-5 h-5"/>
+                                        <ChevronsDown className="w-5 h-5" />
                                     </button>
                                 </div>
 
+                                {/* File / Image / Video / Placeholder */}
                                 <div className="flex-shrink-0 flex items-center justify-center mr-4">
-                                    <button
-                                        type="button"
-                                        onClick={() => openRequest(req)}
-                                        aria-label={req.signed_file_url ? "Open request (has attachment)" : "Open request"}
-                                        className="rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
-                                        title={req.signed_file_url ? "Open feature request (attachment inside)" : "Open feature request"}
-                                    >
-                                        {req.signed_file_url ? (
-                                            <AttachmentPreview url={req.signed_file_url} size={64} />
-                                        ) : (
-                                            <div className="w-16 h-16 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                                                <MessageSquare className="w-10 h-10 text-gray-600 dark:text-gray-300" />
-                                            </div>
-                                        )}
-                                    </button>
-
+                                    {req.signed_file_url ? (
+                                        <>
+                                            {isImage(req.signed_file_url) && (
+                                                <img
+                                                    src={req.signed_file_url}
+                                                    alt="Attached"
+                                                    className="w-16 h-16 object-cover rounded-lg cursor-pointer border border-gray-200 dark:border-gray-700"
+                                                    onClick={() => window.open(req.signed_file_url, "_blank")}
+                                                    title="Click to enlarge image"
+                                                />
+                                            )}
+                                            {isPDF(req.signed_file_url) && (
+                                                <img
+                                                    src="/pdf-icon.png"
+                                                    alt="PDF"
+                                                    className="w-16 h-16 object-cover rounded-lg cursor-pointer border border-gray-200 dark:border-gray-700"
+                                                    onClick={() => window.open(req.signed_file_url, "_blank")}
+                                                    title="Click to view PDF"
+                                                />
+                                            )}
+                                            {isVideo(req.signed_file_url) && (
+                                                <div className="relative w-16 h-16">
+                                                    <video
+                                                        src={req.signed_file_url}
+                                                        className="w-16 h-16 rounded-lg object-cover border border-gray-200 dark:border-gray-700"
+                                                        muted
+                                                        loop
+                                                        playsInline
+                                                        onMouseEnter={(e) => e.currentTarget.play()}
+                                                        onMouseLeave={(e) => {
+                                                            e.currentTarget.pause();
+                                                            e.currentTarget.currentTime = 0;
+                                                        }}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/40 text-white text-xl hover:bg-black/50 transition"
+                                                        title="Play video"
+                                                        onClick={() => {
+                                                            setActiveVideoSrc(req.signed_file_url);
+                                                            setVideoModalOpen(true);
+                                                        }}
+                                                    >
+                                                        ▶
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <div
+                                            className="w-16 h-16 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
+                                            title="No attachment"
+                                        >
+                                            <MessageSquare className="w-10 h-10 text-gray-600 dark:text-gray-300" />
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Content */}
@@ -812,17 +718,17 @@ export default function Home() {
                         {req.status.replace("_", " ")}
                       </span>
                                         )}
-
                                         <span className="text-sm text-gray-500">— {req.username}</span>
                                     </h3>
 
+                                    {/* ✅ 1-line ellipsis preview (no gradient overlay, no blue "view" link) */}
                                     <button
                                         type="button"
                                         onClick={() => openRequest(req)}
                                         className="text-left"
                                         title="Open feature request"
                                     >
-                                        <p className="text-sm text-gray-700 dark:text-gray-200 line-clamp-3 wrap-anywhere">
+                                        <p className="text-sm text-gray-700 dark:text-gray-200 truncate">
                                             {previewText || "No description"}
                                         </p>
                                     </button>
@@ -844,12 +750,8 @@ export default function Home() {
                                     </div>
 
                                     <div className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-200">
-                                        <button
-                                            className="flex items-center hover:bg-gray-100 dark:hover:bg-gray-800"
-                                            onClick={() => openRequest(req)}>
-                                            <MessageSquare className="w-5 h-5"/>
-                                            <span className="px-1 text-sm">{req.commentCount}</span>
-                                        </button>
+                                        <MessageSquare className="w-5 h-5" />
+                                        <span className="text-sm">{req.commentCount}</span>
                                     </div>
                                 </div>
                             </li>
@@ -861,8 +763,7 @@ export default function Home() {
             {hasMore && (
                 <div ref={ref} className="flex flex-col justify-center items-center py-8 mt-6">
                     <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                        <div
-                            className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                        <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
                         <span className="text-sm">Loading more requests...</span>
                     </div>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
@@ -877,7 +778,7 @@ export default function Home() {
                 onDeleteConfirm={handleConfirmDelete}
             />
 
-            {/* Add/Edit Modal */}
+            {/* Add/Edit RTE Modal (Demo Instructions style) */}
             <AnimatePresence>
                 {rteModalOpen && (
                     <Dialog
@@ -887,25 +788,23 @@ export default function Home() {
                     >
                         <motion.div
                             className="fixed inset-0 bg-black/50"
-                            initial={{opacity: 0}}
-                            animate={{opacity: 1}}
-                            exit={{opacity: 0}}
-                            transition={{duration: 0.3}}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.3 }}
                             aria-hidden="true"
                         />
 
                         <div className="fixed inset-0 flex items-center justify-center p-6">
                             <motion.div
                                 className="w-full max-w-5xl mx-auto"
-                                initial={{opacity: 0, scale: 0.96, y: -8}}
-                                animate={{opacity: 1, scale: 1, y: 0}}
-                                exit={{opacity: 0, scale: 0.96, y: -8}}
-                                transition={{duration: 0.25, ease: [0.22, 1, 0.36, 1]}}
+                                initial={{ opacity: 0, scale: 0.96, y: -8 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.96, y: -8 }}
+                                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
                             >
-                                <Dialog.Panel
-                                    className="w-full h-[95vh] max-h-[95vh] flex flex-col bg-white dark:bg-gray-700 rounded-xl shadow-2xl overflow-hidden">
-                                    <div
-                                        className="sticky top-0 bg-white dark:bg-gray-700 px-4 py-3 border-b border-gray-200 dark:border-gray-600 z-10 flex items-center justify-between">
+                                <Dialog.Panel className="w-full h-[95vh] max-h-[95vh] flex flex-col bg-white dark:bg-gray-700 rounded-xl shadow-2xl overflow-hidden">
+                                    <div className="sticky top-0 bg-white dark:bg-gray-700 px-4 py-3 border-b border-gray-200 dark:border-gray-600 z-10 flex items-center justify-between">
                                         <Dialog.Title className="font-bold text-2xl">
                                             {rteMode === "add" ? "Add Feature Request" : "Edit Feature Request"}
                                         </Dialog.Title>
@@ -928,7 +827,7 @@ export default function Home() {
                                             <button
                                                 type="button"
                                                 onClick={handleRteSave}
-                                                className="text-white bg-linear-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
+                                                className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
                                             >
                                                 Save
                                             </button>
@@ -937,8 +836,7 @@ export default function Home() {
 
                                     <div className="flex-1 overflow-y-auto p-8 space-y-5">
                                         <div>
-                                            <label
-                                                className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                                                 Title
                                             </label>
                                             <input
@@ -951,84 +849,15 @@ export default function Home() {
                                         </div>
 
                                         <div>
-                                            <label
-                                                className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                                                 Content
                                             </label>
-                                            <div
-                                                className="w-full min-h-75 rounded-md p-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700">
-                                                <SimpleEditor html={dialogEditorContent} editorRef={editorRef}/>
+                                            <div className="w-full min-h-[300px] rounded-md p-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700">
+                                                <SimpleEditor html={dialogEditorContent} editorRef={editorRef} />
                                             </div>
-                                        </div>
-
-                                        {/* Attachment chooser (new selection replaces old visually + open button uses displayed URL) */}
-                                        <div
-                                            className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white/60 dark:bg-gray-800/40 p-4">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <Paperclip className="w-4 h-4 text-gray-600 dark:text-gray-200"/>
-                                                <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                                                    Attachment
-                                                </h4>
-                                            </div>
-
-                                            {(() => {
-                                                const displayUrl = rteFilePreviewUrl || selectedItem?.signed_file_url;
-                                                const displayName =
-                                                    rteFile?.name ||
-                                                    (selectedItem?.file_url ? selectedItem.file_url.split("/").pop() : "");
-
-                                                return displayUrl ? (
-                                                    <div className="flex items-center gap-3 mb-3">
-                                                        <AttachmentPreview url={displayUrl} size={64}
-                                                                           fileName={displayName}/>
-
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => window.open(displayUrl, "_blank")}
-                                                            className="text-sm px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-                                                        >
-                                                            Open attachment
-                                                        </button>
-
-                                                        {displayName ? (
-                                                            <span
-                                                                className="text-xs text-gray-500 dark:text-gray-300 truncate max-w-[40ch]">
-                                {displayName}
-                              </span>
-                                                        ) : null}
-                                                    </div>
-                                                ) : (
-                                                    <p className="text-sm text-gray-500 dark:text-gray-300 mb-3">
-                                                        No attachment selected.
-                                                    </p>
-                                                );
-                                            })()}
-
-                                            <div>
-                                                <input
-                                                    id="rte-file"
-                                                    type="file"
-                                                    onChange={(e) => {
-                                                        const file = e.target.files?.[0] || null;
-                                                        setRteFile(file);
-
-                                                        if (rteFilePreviewUrl) URL.revokeObjectURL(rteFilePreviewUrl);
-
-                                                        if (file) setRteFilePreviewUrl(URL.createObjectURL(file));
-                                                        else setRteFilePreviewUrl(null);
-                                                    }}
-                                                    className="hidden"
-                                                />
-
-                                                <label
-                                                    htmlFor="rte-file"
-                                                    className="text-white bg-linear-to-r from-purple-500 to-purple-700 hover:from-purple-600
-                                                     hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md
-                                                      text-sm px-4 py-2 transition whitespace-nowrap cursor-pointer inline-flex items-center">
-                                                    Choose file
-                                                </label>
-                                            </div>
-
+                                            <p className="text-xs text-gray-500 dark:text-gray-300 mt-2">
+                                                Tip: embed files/media by pasting links or using your editors embed options.
+                                            </p>
                                         </div>
                                     </div>
                                 </Dialog.Panel>
@@ -1038,7 +867,7 @@ export default function Home() {
                 )}
             </AnimatePresence>
 
-            {/* Full Request Modal */}
+            {/* Full Feature Request Modal + comments directly below HTML */}
             <AnimatePresence>
                 {isRequestOpen && activeRequest && (
                     <Dialog
@@ -1048,31 +877,27 @@ export default function Home() {
                     >
                         <motion.div
                             className="fixed inset-0 bg-black/50"
-                            initial={{opacity: 0}}
-                            animate={{opacity: 1}}
-                            exit={{opacity: 0}}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
                             aria-hidden="true"
                         />
 
                         <div className="fixed inset-0 flex items-center justify-center p-4">
                             <motion.div
                                 className="w-full max-w-3xl"
-                                initial={{opacity: 0, scale: 0.96, y: -8}}
-                                animate={{opacity: 1, scale: 1, y: 0}}
-                                exit={{opacity: 0, scale: 0.96, y: -8}}
-                                transition={{duration: 0.25, ease: [0.22, 1, 0.36, 1]}}
+                                initial={{ opacity: 0, scale: 0.96, y: -8 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.96, y: -8 }}
+                                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
                             >
-                                <Dialog.Panel
-                                    className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl overflow-hidden">
-                                    <div
-                                        className="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-start justify-between gap-4">
+                                <Dialog.Panel className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl overflow-hidden">
+                                    <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-start justify-between gap-4">
                                         <div className="min-w-0">
-                                            <Dialog.Title
-                                                className="text-xl font-bold text-gray-900 dark:text-gray-50 truncate">
+                                            <Dialog.Title className="text-xl font-bold text-gray-900 dark:text-gray-50 truncate">
                                                 {activeRequest.title}
                                             </Dialog.Title>
-                                            <div
-                                                className="mt-1 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                                            <div className="mt-1 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                                                 {activeRequest.status && (
                                                     <span
                                                         className={`px-2 py-0.5 text-xs font-medium rounded-full ${
@@ -1096,7 +921,6 @@ export default function Home() {
                                             className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white text-2xl leading-none"
                                             onClick={() => setIsRequestOpen(false)}
                                             title="Close"
-                                            type="button"
                                         >
                                             ×
                                         </button>
@@ -1111,29 +935,7 @@ export default function Home() {
                                             />
                                         </article>
 
-                                        {activeRequest.signed_file_url ? (
-                                            <div className="flex items-start gap-3">
-                                                <AttachmentPreview url={activeRequest.signed_file_url} size={80}/>
-                                                <div className="flex flex-col gap-2">
-                                                    <div
-                                                        className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
-                                                        <Paperclip className="w-4 h-4"/>
-                                                        Attachment
-                                                    </div>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            window.open(activeRequest.signed_file_url, "_blank")
-                                                        }
-                                                        className="w-fit text-sm px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-                                                    >
-                                                        Open attachment
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ) : null}
-
-                                        {/* Comments */}
+                                        {/* Comments BELOW the HTML */}
                                         <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                                             <div className="flex items-center justify-between mb-3">
                                                 <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
@@ -1144,67 +946,56 @@ export default function Home() {
                         </span>
                                             </div>
 
+                                            {/* existing comments */}
                                             {commentsLoading ? (
-                                                <p className="text-sm text-gray-500 dark:text-gray-400">
-                                                    Loading comments...
-                                                </p>
+                                                <p className="text-sm text-gray-500 dark:text-gray-400">Loading comments...</p>
                                             ) : comments.length === 0 ? (
-                                                <p className="text-sm text-gray-500 dark:text-gray-400">
-                                                    No comments yet.
-                                                </p>
+                                                <p className="text-sm text-gray-500 dark:text-gray-400">No comments yet.</p>
                                             ) : (
                                                 <div className="space-y-3">
-                                                    {comments.map((c) => {
-                                                        const displayName =
-                                                            c.username || c.user?.username || c.user_id || "User";
-
-                                                        return (
-                                                            <div
-                                                                key={c.id}
-                                                                className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-800"
-                                                            >
-                                                                <div
-                                                                    className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                                                                    {displayName} •{" "}
-                                                                    {c.created_at ? new Date(c.created_at).toLocaleString() : ""}
-                                                                </div>
-                                                                <p className="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-wrap">
-                                                                    {c.content || ""}
-                                                                </p>
+                                                    {comments.map((c) => (
+                                                        <div
+                                                            key={c.id}
+                                                            className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-800"
+                                                        >
+                                                            <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                                                                {c.username || c.user_id || "User"} •{" "}
+                                                                {c.created_at ? new Date(c.created_at).toLocaleString() : ""}
                                                             </div>
-                                                        );
-                                                    })}
+                                                            <p className="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-wrap">
+                                                                {c.content || ""}
+                                                            </p>
+
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             )}
 
+                                            {/* add comment */}
                                             <div className="mt-4">
                                                 <div className="flex items-center justify-between">
-                                                    <label
-                                                        className="block text-sm font-medium text-gray-900 dark:text-gray-100">
+                                                    <label className="block text-sm font-medium text-gray-900 dark:text-gray-100">
                                                         Add a comment
                                                     </label>
                                                     {commentPostError && (
-                                                        <span className="text-sm text-red-500">
-                              {commentPostError}
-                            </span>
+                                                        <span className="text-sm text-red-500">{commentPostError}</span>
                                                     )}
                                                 </div>
 
                                                 <div className="mt-2">
-                          <textarea
-                              value={commentText}
-                              onChange={(e) => setCommentText(e.target.value)}
-                              rows={4}
-                              placeholder="Write a comment…"
-                              className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-purple-300"
-                          />
+                                                      <textarea
+                                                          value={commentText}
+                                                          onChange={(e) => setCommentText(e.target.value)}
+                                                          rows={4}
+                                                          placeholder="Write a comment…"
+                                                          className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-purple-300"/>
                                                 </div>
 
                                                 <div className="mt-3 flex justify-end">
                                                     <button
                                                         type="button"
                                                         onClick={handleAddCommentInline}
-                                                        className="text-white bg-linear-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
+                                                        className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
                                                     >
                                                         Post Comment
                                                     </button>
@@ -1213,14 +1004,13 @@ export default function Home() {
                                         </div>
                                     </div>
 
-                                    <div
-                                        className="px-5 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                                    <div className="px-5 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
                                         <div className="flex items-center gap-2 text-gray-600 dark:text-gray-200">
-                                            <MessageSquare className="w-5 h-5"/>
+                                            <MessageSquare className="w-5 h-5" />
                                             <span className="text-sm">{activeRequest.commentCount || 0}</span>
                                         </div>
-                                        <div
-                                            className={!sameUser(activeRequest.user_id, currentUser?.id) ? "hidden" : ""}>
+
+                                        <div className={!sameUser(activeRequest.user_id, currentUser?.id) ? "hidden" : ""}>
                                             <CardDropdown
                                                 onEdit={() => openEditRte(activeRequest)}
                                                 onDelete={() => openDeleteModal(activeRequest)}
@@ -1244,22 +1034,19 @@ export default function Home() {
                     >
                         <motion.div
                             className="w-full max-w-3xl"
-                            initial={{opacity: 0, scale: 0.95}}
-                            animate={{opacity: 1, scale: 1}}
-                            exit={{opacity: 0, scale: 0.95}}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
                         >
                             <Dialog.Panel className="relative w-full">
-                                {/* Close Button */}
                                 <button
                                     className="absolute top-4 right-4 text-white text-2xl z-10"
                                     onClick={() => setVideoModalOpen(false)}
                                     title="Close video"
-                                    type="button"
                                 >
                                     ×
                                 </button>
 
-                                {/* Video */}
                                 <video
                                     src={activeVideoSrc}
                                     className="w-full h-auto max-h-screen rounded-lg"
