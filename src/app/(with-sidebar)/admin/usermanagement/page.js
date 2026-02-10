@@ -64,7 +64,16 @@ export default function AdminUsersPage() {
           const body = await res.json();
           throw new Error(body.error || "Failed to load users");
         }
-        setUsers(await res.json());
+        const data = await res.json();
+
+        setUsers(
+          Array.isArray(data)
+            ? data
+            : Array.isArray(data?.users)
+              ? data.users
+              : []
+        );
+
       } catch (err) {
         setError(err.message);
       } finally {
