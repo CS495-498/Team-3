@@ -26,7 +26,7 @@ export async function GET() {
     PERMISSIONS.VIEW_CONTENT
   );
 
-  if (error2) return error;
+  if (error2) return error2;
 
     const { data, error } = await supabase
         .from("feature_requests")

@@ -16,7 +16,7 @@ export async function PUT(req, { params }) {
     PERMISSIONS.PUBLISH_FEATURE_REQUESTS
   );
 
-  if (error2) return error;
+  if (error2) return error2;
 
     const body = await req.json();
     const { title, content, status } = body;
@@ -67,7 +67,7 @@ export async function DELETE(req, { params }) {
     PERMISSIONS.PUBLISH_FEATURE_REQUESTS
   );
 
-  if (error2) return error;
+  if (error2) return error2;
 
     try {
         const { data, error } = await supabase

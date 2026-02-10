@@ -1,18 +1,20 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/Supabase/server";
+import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
+import PERMISSIONS from "@/config/permissions";
 
 export async function GET(req, { params }) {
   const { id } = await params;
   const supabase = await createClient();
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  
+    // Get logged-in user
+     const { error2, profile } = await requireAuthWithPermission(
+  
+    PERMISSIONS.VIEW_CONTENT
+  );
 
-  if (userError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (error2) return error2
 
   const { data, error } = await supabase
       .from("feature_request_comments")
@@ -39,14 +41,13 @@ export async function POST(req, { params }) {
   const supabase = await createClient();
 
   // Authenticate user
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+    // Get logged-in user
+     const { error2, profile } = await requireAuthWithPermission(
+  
+    PERMISSIONS.COMMENT_VOTE_FEATURE_REQUESTS
+  );
 
-  if (userError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (error2) return error2
 
   // Parse request body
   const body = await req.json();
@@ -65,7 +66,7 @@ export async function POST(req, { params }) {
       .insert([
         {
           feature_request_id: id,
-          user_id: user.id,
+          user_id: profile.id,
           content,
         },
       ])
