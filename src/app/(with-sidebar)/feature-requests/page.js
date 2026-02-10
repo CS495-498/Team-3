@@ -177,7 +177,7 @@ export default function Home() {
         return list;
     }, [requests, statusFilter, sortOption]);
 
-    const { items: visibleRequests, hasMore, ref } = useInfiniteScroll(filteredSortedRequests, 6);
+    const {items: visibleRequests, hasMore, ref} = useInfiniteScroll(filteredSortedRequests, 6);
 
     const isImage = (url) => {
         if (!url) return false;
@@ -799,7 +799,8 @@ export default function Home() {
             {hasMore && (
                 <div ref={ref} className="flex flex-col justify-center items-center py-8 mt-6">
                     <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                        <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                        <div
+                            className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
                         <span className="text-sm">Loading more requests...</span>
                     </div>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
