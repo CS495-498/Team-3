@@ -11,7 +11,6 @@ export default async function requireAuthWithPermission(permission) {
     data: { user },
     error: authError,
   } = await supabase.auth.getUser();
-  console.log("🔐 requireAuthWithPermission");
 
 
 
@@ -36,13 +35,6 @@ export default async function requireAuthWithPermission(permission) {
   }
 
 
-console.log("User:", user);
-console.log("Role:", profile?.role);
-console.log("Permission required:", permission);
-console.log(
-  "Permissions for role:",
-  ROLE_PERMISSIONS[profile?.role]
-);
 
   const denial = requirePermission(profile.role, permission);
   if (denial) return { error: denial };
