@@ -6,26 +6,27 @@ import PERMISSIONS from "@/config/permissions";
 
 // GET all users/profiles
 export async function GET() {
-  // ---- AUTH: MUST HAVE MANAGE USERS PERMISSION ----
-    const { error, supabase } = await requireAuthWithPermission(
-        PERMISSIONS.MANAGE_USERS
-    );
+  const { error } = await requireAuthWithPermission(
+    PERMISSIONS.MANAGE_USERS
+  );
 
-    if (error) return error;
+  if (error) return error;
 
   const supabaseServiceRole = await createServiceRoleClient();
 
-  const { data, fetchError } = await supabaseServiceRole
-    .from("admin_user_view")
-    .select("*");
+  const { data, error: fetchError } = await supabaseServiceRole
+    .rpc("admin_get_users");
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
 
   if (fetchError) {
-    return NextResponse.json({ error: fetchError.message }, { status: 500 });
+    return NextResponse.json(
+      { error: fetchError.message },
+      { status: 500 }
+    );
   }
 
-  return NextResponse.json(data, { status: 200 });
+  const safeData = JSON.parse(JSON.stringify(data ?? []));
+
+  return NextResponse.json(safeData, { status: 200 });
 }
+
