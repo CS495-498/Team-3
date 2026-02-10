@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/utils/Supabase/server";
 import { fileTypeFromBuffer } from "file-type";
 import { createServiceRoleClient } from "@/utils/Supabase/server";
+import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
+import PERMISSIONS from "@/config/permissions";
 
 const ALLOWED_MIME_TYPES = [
   "image/jpeg",
@@ -17,17 +19,14 @@ const ALLOWED_MIME_TYPES = [
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
 
 export async function GET() {
-  
   const supabase = await createClient();
+  
+  const { error2, profile } = await requireAuthWithPermission(
+  
+    PERMISSIONS.VIEW_CONTENT
+  );
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (error2) return error;
 
     const { data, error } = await supabase
         .from("feature_requests")
@@ -74,14 +73,13 @@ export async function GET() {
 export async function POST(req) {
     const supabase = await createClient();
 
-    const {
-        data: { user },
-        error: userError
-    } = await supabase.auth.getUser();
+    const { error2, profile } = await requireAuthWithPermission(
+  
+    PERMISSIONS.PUBLISH_FEATURE_REQUESTS
+  );
 
-    if (userError || !user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (error2) return error;
+
 
     const contentLength = req.headers.get("content-length");
 
@@ -136,7 +134,7 @@ export async function POST(req) {
                 title,
                 content,
                 status: "open",
-                user_id: user.id,
+                user_id: profile.id,
                 file_url: filePath
             }
         ])
