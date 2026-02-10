@@ -270,11 +270,11 @@ export default function Home() {
 
         if (showImage) {
             return (
-                <div className={frameClass} style={{ width: size, height: size }}>
+                <div className={frameClass} style={{width: size, height: size}}>
                     <img
                         src={url}
                         alt="Attachment preview"
-                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        style={{width: "100%", height: "100%", objectFit: "cover"}}
                     />
                 </div>
             );
@@ -282,11 +282,11 @@ export default function Home() {
 
         if (showVideo) {
             return (
-                <div className="relative" style={{ width: size, height: size }}>
+                <div className="relative" style={{width: size, height: size}}>
                     <video
                         src={url}
                         className={frameClass}
-                        style={{ width: size, height: size, objectFit: "cover" }}
+                        style={{width: size, height: size, objectFit: "cover"}}
                         muted
                         loop
                         playsInline
@@ -297,7 +297,7 @@ export default function Home() {
                         }}
                     />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/30 text-white">
-                        <Film className="w-6 h-6" />
+                        <Film className="w-6 h-6"/>
                     </div>
                 </div>
             );
@@ -305,15 +305,15 @@ export default function Home() {
 
         if (showPDF) {
             return (
-                <div className={frameClass} style={{ width: size, height: size }}>
-                    <FileText className="w-8 h-8 text-gray-600 dark:text-gray-200" />
+                <div className={frameClass} style={{width: size, height: size}}>
+                    <FileText className="w-8 h-8 text-gray-600 dark:text-gray-200"/>
                 </div>
             );
         }
 
         return (
-            <div className={frameClass} style={{ width: size, height: size }}>
-                <File className="w-8 h-8 text-gray-600 dark:text-gray-200" />
+            <div className={frameClass} style={{width: size, height: size}}>
+                <File className="w-8 h-8 text-gray-600 dark:text-gray-200"/>
             </div>
         );
     }
@@ -408,7 +408,7 @@ export default function Home() {
                 else if (previousVote) change = type === "up" ? +2 : -2;
                 else change = type === "up" ? +1 : -1;
 
-                return { ...r, number_of_votes: r.number_of_votes + change };
+                return {...r, number_of_votes: r.number_of_votes + change};
             })
         );
 
@@ -586,7 +586,7 @@ export default function Home() {
                 )
             );
             setActiveRequest((prev) =>
-                prev ? { ...prev, commentCount: (prev.commentCount || 0) + 1 } : prev
+                prev ? {...prev, commentCount: (prev.commentCount || 0) + 1} : prev
             );
 
             setCommentText("");
@@ -627,7 +627,7 @@ export default function Home() {
                             <span className="text-sm text-muted-foreground">Filter by:</span>
                             <Select value={statusFilter} onValueChange={setStatusFilter}>
                                 <SelectTrigger className="w-40">
-                                    <SelectValue placeholder="Status" />
+                                    <SelectValue placeholder="Status"/>
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">All</SelectItem>
@@ -642,7 +642,7 @@ export default function Home() {
                             <span className="text-sm text-muted-foreground">Sort by:</span>
                             <Select value={sortOption} onValueChange={setSortOption}>
                                 <SelectTrigger className="w-40">
-                                    <SelectValue placeholder="Sort" />
+                                    <SelectValue placeholder="Sort"/>
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="votes_desc">Most Votes</SelectItem>
@@ -754,7 +754,7 @@ export default function Home() {
                                         }`}
                                         onClick={() => handleVote(req.id, "up")}
                                     >
-                                        <ChevronsUp className="w-5 h-5" />
+                                        <ChevronsUp className="w-5 h-5"/>
                                     </button>
 
                                     <span className="text-sm font-medium text-gray-800 dark:text-gray-50">
@@ -769,7 +769,7 @@ export default function Home() {
                                         }`}
                                         onClick={() => handleVote(req.id, "down")}
                                     >
-                                        <ChevronsDown className="w-5 h-5" />
+                                        <ChevronsDown className="w-5 h-5"/>
                                     </button>
                                 </div>
 
@@ -839,6 +839,24 @@ export default function Home() {
                                             <MessageSquare className="w-10 h-10 text-gray-600 dark:text-gray-300" />
                                         </button>
                                     )}
+                                    <button
+                                        type="button"
+                                        onClick={() => openRequest(req)}
+                                        aria-label={req.signed_file_url ? "Open attachment" : "Open request"}
+                                        className="rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
+                                    >
+                                        {req.signed_file_url ? (
+                                            <AttachmentPreview url={req.signed_file_url} size={64} />
+                                        ) : (
+                                            <div
+                                                className="w-16 h-16 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
+                                                title="No attachment"
+                                            >
+                                                <MessageSquare className="w-10 h-10 text-gray-600 dark:text-gray-300" />
+                                            </div>
+                                        )}
+                                    </button>
+
                                 </div>
 
                                 {/* Content */}
@@ -900,8 +918,12 @@ export default function Home() {
                                     </div>
 
                                     <div className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-200">
-                                        <MessageSquare className="w-5 h-5" />
-                                        <span className="text-sm">{req.commentCount}</span>
+                                        <button
+                                            className="flex items-center hover:bg-gray-100 dark:hover:bg-gray-800"
+                                            onClick={() => openRequest(req)}>
+                                            <MessageSquare className="w-5 h-5"/>
+                                            <span className="px-1 text-sm">{req.commentCount}</span>
+                                        </button>
                                     </div>
                                 </div>
                             </li>
@@ -913,7 +935,8 @@ export default function Home() {
             {hasMore && (
                 <div ref={ref} className="flex flex-col justify-center items-center py-8 mt-6">
                     <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                        <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                        <div
+                            className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
                         <span className="text-sm">Loading more requests...</span>
                     </div>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
@@ -938,23 +961,25 @@ export default function Home() {
                     >
                         <motion.div
                             className="fixed inset-0 bg-black/50"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.3 }}
+                            initial={{opacity: 0}}
+                            animate={{opacity: 1}}
+                            exit={{opacity: 0}}
+                            transition={{duration: 0.3}}
                             aria-hidden="true"
                         />
 
                         <div className="fixed inset-0 flex items-center justify-center p-6">
                             <motion.div
                                 className="w-full max-w-5xl mx-auto"
-                                initial={{ opacity: 0, scale: 0.96, y: -8 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.96, y: -8 }}
-                                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                                initial={{opacity: 0, scale: 0.96, y: -8}}
+                                animate={{opacity: 1, scale: 1, y: 0}}
+                                exit={{opacity: 0, scale: 0.96, y: -8}}
+                                transition={{duration: 0.25, ease: [0.22, 1, 0.36, 1]}}
                             >
-                                <Dialog.Panel className="w-full h-[95vh] max-h-[95vh] flex flex-col bg-white dark:bg-gray-700 rounded-xl shadow-2xl overflow-hidden">
-                                    <div className="sticky top-0 bg-white dark:bg-gray-700 px-4 py-3 border-b border-gray-200 dark:border-gray-600 z-10 flex items-center justify-between">
+                                <Dialog.Panel
+                                    className="w-full h-[95vh] max-h-[95vh] flex flex-col bg-white dark:bg-gray-700 rounded-xl shadow-2xl overflow-hidden">
+                                    <div
+                                        className="sticky top-0 bg-white dark:bg-gray-700 px-4 py-3 border-b border-gray-200 dark:border-gray-600 z-10 flex items-center justify-between">
                                         <Dialog.Title className="font-bold text-2xl">
                                             {rteMode === "add" ? "Add Feature Request" : "Edit Feature Request"}
                                         </Dialog.Title>
@@ -986,7 +1011,8 @@ export default function Home() {
 
                                     <div className="flex-1 overflow-y-auto p-8 space-y-5">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                            <label
+                                                className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                                                 Title
                                             </label>
                                             <input
@@ -999,18 +1025,21 @@ export default function Home() {
                                         </div>
 
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                            <label
+                                                className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                                                 Content
                                             </label>
-                                            <div className="w-full min-h-[300px] rounded-md p-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700">
-                                                <SimpleEditor html={dialogEditorContent} editorRef={editorRef} />
+                                            <div
+                                                className="w-full min-h-[300px] rounded-md p-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700">
+                                                <SimpleEditor html={dialogEditorContent} editorRef={editorRef}/>
                                             </div>
                                         </div>
 
                                         {/* Attachment chooser (new selection replaces old visually + open button uses displayed URL) */}
-                                        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white/60 dark:bg-gray-800/40 p-4">
+                                        <div
+                                            className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white/60 dark:bg-gray-800/40 p-4">
                                             <div className="flex items-center gap-2 mb-2">
-                                                <Paperclip className="w-4 h-4 text-gray-600 dark:text-gray-200" />
+                                                <Paperclip className="w-4 h-4 text-gray-600 dark:text-gray-200"/>
                                                 <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                                                     Attachment
                                                 </h4>
@@ -1029,6 +1058,8 @@ export default function Home() {
                                                             size={64}
                                                             fileName={displayName}
                                                         />
+                                                        <AttachmentPreview url={displayUrl} size={64}
+                                                                           fileName={displayName}/>
 
                                                         <button
                                                             type="button"
@@ -1039,7 +1070,8 @@ export default function Home() {
                                                         </button>
 
                                                         {displayName ? (
-                                                            <span className="text-xs text-gray-500 dark:text-gray-300 truncate max-w-[40ch]">
+                                                            <span
+                                                                className="text-xs text-gray-500 dark:text-gray-300 truncate max-w-[40ch]">
                                 {displayName}
                               </span>
                                                         ) : null}
@@ -1051,19 +1083,31 @@ export default function Home() {
                                                 );
                                             })()}
 
-                                            <input
-                                                type="file"
-                                                onChange={(e) => {
-                                                    const file = e.target.files?.[0] || null;
-                                                    setRteFile(file);
+                                            <div>
+                                                <input
+                                                    id="rte-file"
+                                                    type="file"
+                                                    onChange={(e) => {
+                                                        const file = e.target.files?.[0] || null;
+                                                        setRteFile(file);
 
-                                                    if (rteFilePreviewUrl) URL.revokeObjectURL(rteFilePreviewUrl);
+                                                        if (rteFilePreviewUrl) URL.revokeObjectURL(rteFilePreviewUrl);
 
-                                                    if (file) setRteFilePreviewUrl(URL.createObjectURL(file));
-                                                    else setRteFilePreviewUrl(null);
-                                                }}
-                                                className="block w-full text-sm text-gray-700 dark:text-gray-200"
-                                            />
+                                                        if (file) setRteFilePreviewUrl(URL.createObjectURL(file));
+                                                        else setRteFilePreviewUrl(null);
+                                                    }}
+                                                    className="hidden"
+                                                />
+
+                                                <label
+                                                    htmlFor="rte-file"
+                                                    className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600
+                                                     hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md
+                                                      text-sm px-4 py-2 transition whitespace-nowrap cursor-pointer inline-flex items-center">
+                                                    Choose file
+                                                </label>
+                                            </div>
+
                                         </div>
                                     </div>
                                 </Dialog.Panel>
@@ -1083,27 +1127,31 @@ export default function Home() {
                     >
                         <motion.div
                             className="fixed inset-0 bg-black/50"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
+                            initial={{opacity: 0}}
+                            animate={{opacity: 1}}
+                            exit={{opacity: 0}}
                             aria-hidden="true"
                         />
 
                         <div className="fixed inset-0 flex items-center justify-center p-4">
                             <motion.div
                                 className="w-full max-w-3xl"
-                                initial={{ opacity: 0, scale: 0.96, y: -8 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.96, y: -8 }}
-                                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                                initial={{opacity: 0, scale: 0.96, y: -8}}
+                                animate={{opacity: 1, scale: 1, y: 0}}
+                                exit={{opacity: 0, scale: 0.96, y: -8}}
+                                transition={{duration: 0.25, ease: [0.22, 1, 0.36, 1]}}
                             >
-                                <Dialog.Panel className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl overflow-hidden">
-                                    <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-start justify-between gap-4">
+                                <Dialog.Panel
+                                    className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl overflow-hidden">
+                                    <div
+                                        className="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-start justify-between gap-4">
                                         <div className="min-w-0">
-                                            <Dialog.Title className="text-xl font-bold text-gray-900 dark:text-gray-50 truncate">
+                                            <Dialog.Title
+                                                className="text-xl font-bold text-gray-900 dark:text-gray-50 truncate">
                                                 {activeRequest.title}
                                             </Dialog.Title>
-                                            <div className="mt-1 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                                            <div
+                                                className="mt-1 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                                                 {activeRequest.status && (
                                                     <span
                                                         className={`px-2 py-0.5 text-xs font-medium rounded-full ${
@@ -1144,10 +1192,11 @@ export default function Home() {
 
                                         {activeRequest.signed_file_url ? (
                                             <div className="flex items-start gap-3">
-                                                <AttachmentPreview url={activeRequest.signed_file_url} size={80} />
+                                                <AttachmentPreview url={activeRequest.signed_file_url} size={80}/>
                                                 <div className="flex flex-col gap-2">
-                                                    <div className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
-                                                        <Paperclip className="w-4 h-4" />
+                                                    <div
+                                                        className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                                        <Paperclip className="w-4 h-4"/>
                                                         Attachment
                                                     </div>
                                                     <button
@@ -1193,7 +1242,8 @@ export default function Home() {
                                                                 key={c.id}
                                                                 className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-800"
                                                             >
-                                                                <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                                                                <div
+                                                                    className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                                                                     {displayName} •{" "}
                                                                     {c.created_at ? new Date(c.created_at).toLocaleString() : ""}
                                                                 </div>
@@ -1208,7 +1258,8 @@ export default function Home() {
 
                                             <div className="mt-4">
                                                 <div className="flex items-center justify-between">
-                                                    <label className="block text-sm font-medium text-gray-900 dark:text-gray-100">
+                                                    <label
+                                                        className="block text-sm font-medium text-gray-900 dark:text-gray-100">
                                                         Add a comment
                                                     </label>
                                                     {commentPostError && (
@@ -1241,17 +1292,14 @@ export default function Home() {
                                         </div>
                                     </div>
 
-                                    <div className="px-5 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                                    <div
+                                        className="px-5 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
                                         <div className="flex items-center gap-2 text-gray-600 dark:text-gray-200">
-                                            <MessageSquare className="w-5 h-5" />
+                                            <MessageSquare className="w-5 h-5"/>
                                             <span className="text-sm">{activeRequest.commentCount || 0}</span>
                                         </div>
-
                                         <div
-                                            className={
-                                                !sameUser(activeRequest.user_id, currentUser?.id) ? "hidden" : ""
-                                            }
-                                        >
+                                            className={!sameUser(activeRequest.user_id, currentUser?.id) ? "hidden" : ""}>
                                             <CardDropdown
                                                 onEdit={() => openEditRte(activeRequest)}
                                                 onDelete={() => openDeleteModal(activeRequest)}
@@ -1275,9 +1323,9 @@ export default function Home() {
                     >
                         <motion.div
                             className="w-full max-w-3xl"
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
+                            initial={{opacity: 0, scale: 0.95}}
+                            animate={{opacity: 1, scale: 1}}
+                            exit={{opacity: 0, scale: 0.95}}
                         >
                             <Dialog.Panel className="relative w-full">
                                 {/* Close Button */}
