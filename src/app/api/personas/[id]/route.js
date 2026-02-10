@@ -6,7 +6,7 @@ export async function DELETE(req, { params }) {
     const { id } = await params;
 
     // ---- AUTH: MUST HAVE USE_PERSONAS PERMISSION ----
-    const { error, supabase } = await requireAuthWithPermission(
+    const { error, profile, supabase } = await requireAuthWithPermission(
         PERMISSIONS.USE_PERSONAS
     );
 
@@ -26,7 +26,7 @@ export async function DELETE(req, { params }) {
         );
     }
 
-    if (persona.owner_id !== user.id) {
+    if (persona.owner_id !== profile.id) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -34,7 +34,7 @@ export async function DELETE(req, { params }) {
     await supabase
         .from("profiles")
         .update({ active_persona_id: null })
-        .eq("id", user.id)
+        .eq("id", profile.id)
         .eq("active_persona_id", id);
 
     // ---- DELETE PERSONA ----
@@ -42,7 +42,7 @@ export async function DELETE(req, { params }) {
         .from("personas")
         .delete()
         .eq("id", id)
-        .eq("owner_id", user.id);
+        .eq("owner_id", profile.id);
 
     if (deleteError) {
         return NextResponse.json(

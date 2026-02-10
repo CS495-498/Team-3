@@ -5,7 +5,7 @@ import PERMISSIONS from "@/config/permissions";
 export async function POST(req) {
     const { displayName } = await req.json();
 
-    const { error2, supabase } = await requireAuthWithPermission(
+    const { error2, profile, supabase } = await requireAuthWithPermission(
         PERMISSIONS.USE_PERSONAS
     );
     if (error2) return error;
@@ -24,7 +24,7 @@ export async function POST(req) {
     const { data, error } = await supabase
         .from("personas")
         .insert({
-            owner_id: user.id,
+            owner_id: profile.id,
             full_name: displayName.trim(),
             username: null,
             avatar_url: null,
@@ -43,7 +43,7 @@ export async function POST(req) {
     await supabase
         .from("profiles")
         .update({ active_persona_id: data.id })
-        .eq("id", user.id);
+        .eq("id", profile.id);
 
     return NextResponse.json(data, { status: 201 });
 }

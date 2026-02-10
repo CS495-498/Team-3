@@ -5,7 +5,7 @@ import PERMISSIONS from "@/config/permissions";
 export async function PATCH(req) {
     const { personaId } = await req.json();
 
-    const { error, supabase } = await requireAuthWithPermission(
+    const { error, profile, supabase } = await requireAuthWithPermission(
         PERMISSIONS.USE_PERSONAS
     );
     if (error) return error;
@@ -15,7 +15,7 @@ export async function PATCH(req) {
         const { error } = await supabase
             .from("profiles")
             .update({ active_persona_id: null })
-            .eq("id", user.id);
+            .eq("id", profile.id);
 
         if (error) {
             return NextResponse.json(
@@ -32,7 +32,7 @@ export async function PATCH(req) {
         .from("personas")
         .select("id")
         .eq("id", personaId)
-        .eq("owner_id", user.id)
+        .eq("owner_id", profile.id)
         .single();
 
     if (personaError || !persona) {
@@ -46,7 +46,7 @@ export async function PATCH(req) {
     const { error: updateError } = await supabase
         .from("profiles")
         .update({ active_persona_id: personaId })
-        .eq("id", user.id);
+        .eq("id", profile.id);
 
     if (updateError) {
         return NextResponse.json(
