@@ -1002,7 +1002,7 @@ export default function Home() {
                                             <button
                                                 type="button"
                                                 onClick={handleRteSave}
-                                                className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
+                                                className="text-white bg-linear-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
                                             >
                                                 Save
                                             </button>
@@ -1030,7 +1030,7 @@ export default function Home() {
                                                 Content
                                             </label>
                                             <div
-                                                className="w-full min-h-[300px] rounded-md p-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700">
+                                                className="w-full min-h-75 rounded-md p-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700">
                                                 <SimpleEditor html={dialogEditorContent} editorRef={editorRef}/>
                                             </div>
                                         </div>
@@ -1101,7 +1101,7 @@ export default function Home() {
 
                                                 <label
                                                     htmlFor="rte-file"
-                                                    className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600
+                                                    className="text-white bg-linear-to-r from-purple-500 to-purple-700 hover:from-purple-600
                                                      hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md
                                                       text-sm px-4 py-2 transition whitespace-nowrap cursor-pointer inline-flex items-center">
                                                     Choose file
@@ -1283,7 +1283,7 @@ export default function Home() {
                                                     <button
                                                         type="button"
                                                         onClick={handleAddCommentInline}
-                                                        className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
+                                                        className="text-white bg-linear-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
                                                     >
                                                         Post Comment
                                                     </button>
