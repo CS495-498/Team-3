@@ -5,6 +5,7 @@ import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
 import PERMISSIONS from "@/config/permissions";
 import { isValidRole } from "@/config/rolePermissions";
 import { createServiceRoleClient } from "@/utils/Supabase/server";
+import { createClient as createClientServer } from "@/utils/Supabase/server";
 
 // Public client (used for auth + DB with RLS)
 const supabase = createClient(
@@ -24,6 +25,17 @@ const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp
 
 // -------------------- GET PROFILE --------------------
 export async function GET(req, context) {
+
+            const supabase = await createClientServer();
+    
+            const {
+                data: { user },
+                error: userError,
+            } = await supabase.auth.getUser();
+    
+            if (userError || !user) {
+                return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            }
     const { id } = await context.params;
 
     const { data, error } = await supabase
