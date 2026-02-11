@@ -78,7 +78,7 @@ export async function middleware(request) {
 }
 
 export const config = {
-    matcher: ['/((?!api/logs|api/forgot-password|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',]
+    matcher: ['/((?!api/logs|api/auth/session|api/forgot-password|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',]
     /*
  * Match all request paths except for the ones starting with:
  * - _next/static (static files)
