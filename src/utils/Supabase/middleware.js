@@ -4,6 +4,20 @@ import ROLE_PERMISSIONS from "@/config/rolePermissions";
 import PERMISSIONS from "@/config/permissions";
 
 export async function updateSession(request) {
+
+    const { pathname } = request.nextUrl
+
+    // Skip auth check for public API routes, login page, and Next.js internals
+    if (
+        pathname.startsWith('/api/auth/login') ||
+        pathname.startsWith('/api/auth/signup') ||
+        pathname.startsWith('/api/auth/session') ||
+        pathname.startsWith('/login') ||
+        pathname.startsWith('/_next/')
+    ) {
+        return NextResponse.next()
+    }
+
     let supabaseResponse = NextResponse.next({
         request: {
             headers: request.headers,
@@ -45,6 +59,9 @@ export async function updateSession(request) {
   }
     // 👇 Stop here if not logged in
     if (!user) return supabaseResponse;
+   if (user) {
+        supabaseResponse.headers.set('x-user-id', user.id)
+    }
 
     // -------------------------
     // 2. AUTHORIZATION (new)

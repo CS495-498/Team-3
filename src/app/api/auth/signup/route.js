@@ -1,0 +1,23 @@
+import { createClient } from '@/utils/Supabase/server.js'
+import { NextResponse } from 'next/server'
+import { signupHandler } from './handler.js'
+
+export async function POST(request) {
+    try {
+        const { email, password } = await request.json()
+
+        const supabase = await createClient()
+
+        const handler = signupHandler({
+            signUp: (args) => supabase.auth.signUp(args),
+        })
+
+        const result = await handler({ email, password })
+        return NextResponse.json(result.body, { status: result.status })
+    } catch {
+        return NextResponse.json(
+            { error: 'Internal server error' },
+            { status: 500 }
+        )
+    }
+}
