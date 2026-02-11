@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import EditUserModal from "@/components/EditUserModal";
+import { Trash2 } from "lucide-react";
+
 
 import {
   Card,
@@ -244,12 +246,14 @@ export default function AdminUsersPage() {
                       </Button>
 
                       <Button
-                        size="sm"
+                        size="icon"
                         variant="destructive"
                         onClick={() => handleDeleteUser(user)}
+                        className="h-8 w-8"
                       >
-                        Delete
+                        <Trash2 className="h-4 w-4" />
                       </Button>
+
                     </TableCell>
 
                   </TableRow>
