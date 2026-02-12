@@ -13,6 +13,10 @@ import LoadingIndicator from "@/components/ui/loading-indicator.jsx";
 import { AnimatePresence, motion } from "framer-motion";
 import normalizeDemoWebArray from "@/app/api/helper/normalizeDemoWebArray";
 
+import { useUser } from "@/context/UserContext";
+import { hasPermission } from "@/utils/hasPermission";
+import PERMISSIONS from "@/config/permissions";
+
 
 import {
     Card,
@@ -40,6 +44,12 @@ export default function Demos() {
     const [selectedItem, setSelectedItem] = useState(null);
     const [selectedIndex, setSelectedIndex] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const { user, loading } = useUser();
+
+    const canUploadDemoWebsites =
+        !!user && hasPermission(user.role, PERMISSIONS.UPLOAD_DEMO_WEBSITES);
+
 
 
     const {
@@ -397,13 +407,16 @@ export default function Demos() {
                     {entry?.title}
                 </h1>
                 <div className="flex items-center gap-2 mr-4">
-                    <button
-                        type="button"
-                        onClick={() => setIsOpen(true)}
-                        className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
-                    >
-                        Add Demo
-                    </button>
+                    {canUploadDemoWebsites && (
+                        <button
+                            type="button"
+                            onClick={() => setIsOpen(true)}
+                            className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
+                        >
+                            Add Demo
+                        </button>
+                    )}
+
 
                     <div className="relative w-full max-w-sm dark:text-black">
                         <input
@@ -581,10 +594,13 @@ export default function Demos() {
                                                     <CardTitle className="text-lg font-semibold leading-tight line-clamp-1">
                                                         {demo?.title}
                                                     </CardTitle>
-                                                    <CardDropdown
-                                                        onEdit={() => openEditModal(demo)}
-                                                        onDelete={() => openDeleteModal(demo)}
-                                                    />
+                                                    {canUploadDemoWebsites && (
+                                                        <CardDropdown
+                                                            onEdit={() => openEditModal(demo)}
+                                                            onDelete={() => openDeleteModal(demo)}
+                                                        />
+                                                    )}
+
                                                 </div>
                                                 <CardDescription
                                                     className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed overflow-y-auto pr-2"
