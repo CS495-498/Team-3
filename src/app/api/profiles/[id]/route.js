@@ -20,7 +20,7 @@ export async function GET(req, context) {
     const supabase = await createClient(); // cookie-based session client
 
     const { data, error } = await supabase
-        .from("profiles")
+        .from("public_profiles")
         .select("id, username, full_name, avatar_url")
         .eq("id", id)
         .maybeSingle();
