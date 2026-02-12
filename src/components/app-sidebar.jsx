@@ -269,37 +269,9 @@ export function NavProjects() {
             </SidebarFooter>
         </Sidebar>
     );
+e="w-full h-full object-cover"
+                                        
 
-            {/* Footer */}
-            <SidebarFooter className="border-t dark:border-gray-800">
-                <ModeToggle />
-                <SidebarMenu>
-                    <SidebarMenuItem>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <SidebarMenuButton className="dark:text-gray-200 dark:hover:bg-[#1b1b1f] flex items-center gap-2">
-                                    <div className="w-10 h-10 rounded-full border-4 border-white dark:border-gray-900 shadow-xl overflow-hidden">
-                                        <img
-                                            src={signedAvatarUrl || "/DefaultProfile.png"}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    </div>
-                                    {user.username} <ChevronUp className="ml-auto" />
-                                </SidebarMenuButton>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                                side="top"
-                                className="w-[--radix-popper-anchor-width] dark:bg-[#18181b] dark:border-gray-800"
-                            >
-                                <AccountPageButton />
-                                <SignOutButton />
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </SidebarMenuItem>
-                </SidebarMenu>
-            </SidebarFooter>
-        </Sidebar>
-    );
 }
 
 export function AppSidebar({ children }) {
