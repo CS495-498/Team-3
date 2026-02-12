@@ -3,23 +3,22 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/utils/Supabase/server";
 import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
 import PERMISSIONS from "@/config/permissions";
-
+import { hasPermission } from "@/utils/hasPermission";
 
 export async function PUT(req, { params }) {
-    const { id } = params;
-    const supabase = await createClient();
+  const { id } = await params;
+  const supabase = await createClient();
 
-  // Authenticate user
-  // Authenticate user
-     const { error2, profile } = await requireAuthWithPermission(
-  
-    PERMISSIONS.PUBLISH_FEATURE_REQUESTS
-  );
+  // Authenticate (must at least be able to publish)
+  const { error: authError, profile } =
+    await requireAuthWithPermission(
+      PERMISSIONS.PUBLISH_FEATURE_REQUESTS
+    );
 
-  if (error2) return error2;
+  if (authError) return authError;
 
-    const body = await req.json();
-    const { title, content, status } = body;
+  const body = await req.json();
+  const { title, content, status } = body;
 
   if (!title || title.trim() === "") {
     return NextResponse.json(
@@ -28,18 +27,37 @@ export async function PUT(req, { params }) {
     );
   }
 
-  // Update the feature request
-    const { data, error } = await supabase
-        .from("feature_requests")
-        .update({
-            title,
-            content,
-            status,
-            updated_at: new Date().toISOString(),
-        })
-        .eq("id", id)
-        .eq("user_id", profile.id)
-        .select(`
+  // 🔥 Check if user can manage all
+  const canManageAll = hasPermission(
+    profile.role,
+    PERMISSIONS.MANAGE_ALL_FEATURE_REQUESTS
+  );
+
+  // Base query
+  let query = supabase
+    .from("feature_requests")
+    .update({
+      title,
+      content,
+      status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  // If NOT admin → restrict to own record
+  if (!canManageAll) {
+    query = query.eq("user_id", profile.id);
+  }
+
+  console.log("ROLE:", profile.role);
+console.log(
+  "HAS MANAGE ALL:",
+  hasPermission(profile.role, PERMISSIONS.MANAGE_ALL_FEATURE_REQUESTS)
+);
+
+
+  const { data, error } = await query
+    .select(`
       *,
       profiles!fk_feature_requests_author (
         id,
@@ -47,51 +65,58 @@ export async function PUT(req, { params }) {
         avatar_url
       )
     `)
-        .single();
+    .single();
 
   if (error) {
-    console.error(error);
-    return NextResponse.json({ error: error.message }, { status: 403 });
-  }
+  console.error("SUPABASE ERROR:", error);
+}
 
-    return NextResponse.json(data, { status: 200 });
+if (error || !data) {
+  return NextResponse.json(
+    { error: error?.message || "Forbidden" },
+    { status: 403 }
+  );
+}
+
+
+  return NextResponse.json(data, { status: 200 });
 }
 
 export async function DELETE(req, { params }) {
-    const { id } = params;
-    const supabase = await createClient();
+  const { id } = params;
+  const supabase = await createClient();
 
-    // Authenticate user
-     const { error2, profile } = await requireAuthWithPermission(
-  
+  // Authenticate user
+  const { error2, profile } = await requireAuthWithPermission(
+
     PERMISSIONS.PUBLISH_FEATURE_REQUESTS
   );
 
   if (error2) return error2;
 
-    try {
-        const { data, error } = await supabase
-            .from("feature_requests")
-            .delete()
-            .eq("id", id)
-            .eq("user_id", profile.id)
-            .select();
+  try {
+    const { data, error } = await supabase
+      .from("feature_requests")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", profile.id)
+      .select();
 
-        if (error) {
-            console.error("Delete feature request error:", error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
-        }
+    if (error) {
+      console.error("Delete feature request error:", error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
 
-        if (!data || data.length === 0) {
-            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-        }
+    if (!data || data.length === 0) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (err) {
     console.error("Delete request failed:", err);
     return NextResponse.json(
-        { error: err.message || "Failed to delete" },
-        { status: 500 }
+      { error: err.message || "Failed to delete" },
+      { status: 500 }
     );
   }
 }

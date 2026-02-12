@@ -529,8 +529,8 @@ export default function Home() {
                                     <div>
                                         {canEditRequest(req) && (
                                             <CardDropdown
-                                                onEdit={() => openEditModal(request)}
-                                                onDelete={() => openDeleteModal(request)}
+                                                onEdit={() => openEditModal(req)}
+                                                onDelete={() => openDeleteModal(req)}
                                             />
                                         )}
 
