@@ -65,15 +65,12 @@ export default function Home() {
         return false;
     });
 
-    const [selectedRequest, setSelectedRequest] = useState(null);
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
+
     const [showToast, setShowToast] = useState(false);
-    const [isEditOpen, setIsEditOpen] = useState(false);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
 
     const [videoModalOpen, setVideoModalOpen] = useState(false);
-    const [activeVideoSrc, setActiveVideoSrc] = useState(null);
 
     // Full request viewer
     const { user, loading: userLoading } = useUser();
@@ -243,11 +240,7 @@ export default function Home() {
     // strict sanitization (no embeds)
     const sanitizeHTML = (html) => DOMPurify.sanitize(html || "");
 
-    /**
-     * IMPORTANT: This component NEVER renders a button.
-     * It only renders a visual preview (image/pdf icon/video thumb/generic icon).
-     * The "Open attachment" button is rendered once by the parent.
-     */
+
     function AttachmentPreview({ url, size = 80, fileName = "" }) {
         if (!url) return null;
 
@@ -774,84 +767,17 @@ export default function Home() {
                                 </div>
 
                                 <div className="flex-shrink-0 flex items-center justify-center mr-4">
-                                    {req.signed_file_url ? (
-                                        <>
-                                            <AttachmentPreview url={req.signed_file_url} size={64} />
-
-                                            {/* (kept intent) extra interactive preview behaviors */}
-                                            {isImage(req.signed_file_url) && (
-                                                <img
-                                                    src={req.signed_file_url}
-                                                    alt="Attached"
-                                                    className="w-16 h-16 object-cover rounded-lg cursor-pointer border border-gray-200 dark:border-gray-700"
-                                                    onClick={() =>
-                                                        window.open(req.signed_file_url, "_blank")
-                                                    }
-                                                    title="Click to enlarge image"
-                                                />
-                                            )}
-                                            {isPDF(req.signed_file_url) && (
-                                                <img
-                                                    src="/pdf-icon.png"
-                                                    alt="PDF"
-                                                    className="w-16 h-16 object-cover rounded-lg cursor-pointer border border-gray-200 dark:border-gray-700"
-                                                    onClick={() =>
-                                                        window.open(req.signed_file_url, "_blank")
-                                                    }
-                                                    title="Click to view PDF"
-                                                />
-                                            )}
-                                            {isVideo(req.signed_file_url) && (
-                                                <div className="relative w-16 h-16">
-                                                    <video
-                                                        src={req.signed_file_url}
-                                                        className="w-16 h-16 rounded-lg object-cover border border-gray-200 dark:border-gray-700"
-                                                        muted
-                                                        loop
-                                                        playsInline
-                                                        onMouseEnter={(e) => e.currentTarget.play()}
-                                                        onMouseLeave={(e) => {
-                                                            e.currentTarget.pause();
-                                                            e.currentTarget.currentTime = 0;
-                                                        }}
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/40 text-white text-xl hover:bg-black/50 transition"
-                                                        title="Play video"
-                                                        onClick={() => {
-                                                            setActiveVideoSrc(req.signed_file_url);
-                                                            setVideoModalOpen(true);
-                                                        }}
-                                                    >
-                                                        ▶
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <button
-                                            onClick={() => openCommentsDialog(req)}
-                                            className="w-16 h-16 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-                                            title="Add/view comments"
-                                            type="button"
-                                        >
-                                            <MessageSquare className="w-10 h-10 text-gray-600 dark:text-gray-300" />
-                                        </button>
-                                    )}
                                     <button
                                         type="button"
                                         onClick={() => openRequest(req)}
-                                        aria-label={req.signed_file_url ? "Open attachment" : "Open request"}
+                                        aria-label={req.signed_file_url ? "Open request (has attachment)" : "Open request"}
                                         className="rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
+                                        title={req.signed_file_url ? "Open feature request (attachment inside)" : "Open feature request"}
                                     >
                                         {req.signed_file_url ? (
                                             <AttachmentPreview url={req.signed_file_url} size={64} />
                                         ) : (
-                                            <div
-                                                className="w-16 h-16 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
-                                                title="No attachment"
-                                            >
+                                            <div className="w-16 h-16 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
                                                 <MessageSquare className="w-10 h-10 text-gray-600 dark:text-gray-300" />
                                             </div>
                                         )}
@@ -1053,11 +979,6 @@ export default function Home() {
 
                                                 return displayUrl ? (
                                                     <div className="flex items-center gap-3 mb-3">
-                                                        <AttachmentPreview
-                                                            url={displayUrl}
-                                                            size={64}
-                                                            fileName={displayName}
-                                                        />
                                                         <AttachmentPreview url={displayUrl} size={64}
                                                                            fileName={displayName}/>
 
