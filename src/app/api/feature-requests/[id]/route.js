@@ -3,6 +3,21 @@ import { createClient } from "@/utils/Supabase/server";
 import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
 import PERMISSIONS from "@/config/permissions";
 import { hasPermission } from "@/utils/hasPermission";
+import { createServiceRoleClient } from "@/utils/Supabase/server";
+import { fileTypeFromBuffer } from "file-type";
+import { sanitizeHtmlServer } from "@/lib/featureRequests/requests/sanitizeHtmlServer.js";
+
+
+const ALLOWED_MIME_TYPES = [
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+    "application/pdf",
+    "video/mp4",
+    "video/webm",
+    "video/ogg",
+];
 
 export async function PUT(req, { params }) {
   const { id } = await params;
@@ -37,7 +52,7 @@ export async function PUT(req, { params }) {
     .from("feature_requests")
     .update({
       title,
-      content,
+      content : sanitizeHtmlServer(content),
       status,
       updated_at: new Date().toISOString(),
     })
