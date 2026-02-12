@@ -60,14 +60,6 @@ export async function POST(req, { params }) {
 
         const total = upCount - downCount;
 
-        // Update feature_requests table
-        const { error: updateErr } = await supabase
-            .from("feature_requests")
-            .update({ number_of_votes: total })
-            .eq("id", id);
-
-        if (updateErr) throw updateErr;
-
         return NextResponse.json({ number_of_votes: total }, { status: 200 });
 
     } catch (err) {
