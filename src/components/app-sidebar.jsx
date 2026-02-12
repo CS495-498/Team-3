@@ -124,6 +124,17 @@ export function NavProjects() {
         hasPermission(user.role, page.permission)
     );
     const hasAnyAdminAccess = allowedAdminPages.length > 0;
+    if (isLoading)
+        return (
+            <SidebarMenu>
+                {Array.from({ length: 5 }).map((_, index) => (
+                    <SidebarMenuItem key={index}>
+                        <SidebarMenuSkeleton showIcon />
+                    </SidebarMenuItem>
+                ))}
+            </SidebarMenu>
+        );
+
 
     return (
         <Sidebar
@@ -220,6 +231,44 @@ export function NavProjects() {
                 </SidebarGroup>
             </SidebarContent>
 
+            <SidebarFooter className="border-t dark:border-gray-800">
+                <ModeToggle />
+                <SidebarMenu>
+                    <SidebarMenuItem>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <SidebarMenuButton
+                                    className="
+                                    dark:text-gray-200 
+                                    dark:hover:bg-[#1b1b1f]
+                                "
+                                >
+                                    <div className="w-10 h-10 rounded-full border-4 border-white dark:border-gray-900 shadow-xl overflow-hidden">{
+                                        <img
+                                            src={signedAvatarUrl ? signedAvatarUrl : "/DefaultProfile.png"}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    }</div>{user?.username ?? "Username"} <ChevronUp className="ml-auto" />
+                                </SidebarMenuButton>
+                            </DropdownMenuTrigger>
+
+                            <DropdownMenuContent
+                                side="top"
+                                className="
+                                w-[--radix-popper-anchor-width]
+                                dark:bg-[#18181b]
+                                dark:border-gray-800
+                            "
+                            >
+                                <AccountPageButton />
+                                <SignOutButton />
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </SidebarMenuItem>
+                </SidebarMenu>
+            </SidebarFooter>
+        </Sidebar>
+    );
 
             {/* Footer */}
             <SidebarFooter className="border-t dark:border-gray-800">

@@ -5,6 +5,7 @@ import { ChevronsUp, ChevronsDown, MessageSquare } from "lucide-react";
 import SuccessToast from "@/components/ui/success-toast.jsx";
 import LoadingIndicator from "@/components/ui/loading-indicator.jsx";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 
 import AddFeatureRequest from "@/components/featureRequestModal";
 import CommentsDialog from "@/components/commentsDialog";
@@ -34,6 +35,13 @@ export default function Home() {
     const [isLoading, setIsLoading] = useState(true);
     const [deleteToast, setDeleteToast] = useState(false);
     const [statusFilter, setStatusFilter] = useState("all");
+    const [showCompleted, setShowCompleted] = useState(() => {
+        if (typeof window !== "undefined") {
+            const saved = sessionStorage.getItem("featureRequests_showCompleted");
+            return saved === "true";
+        }
+        return false;
+    });
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [comments, setComments] = useState([]);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -77,6 +85,13 @@ export default function Home() {
             .finally(() => setIsLoading(false));
     }, []);
 
+    // Persist showCompleted preference to sessionStorage
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            sessionStorage.setItem("featureRequests_showCompleted", showCompleted.toString());
+        }
+    }, [showCompleted]);
+
     useEffect(() => {
         let mounted = true;
         fetch("/api/profiles/me")
@@ -97,11 +112,22 @@ export default function Home() {
         return () => { mounted = false; };
     }, []);
 
+    // Persist showCompleted preference to sessionStorage
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            sessionStorage.setItem("featureRequests_showCompleted", showCompleted.toString());
+        }
+    }, [showCompleted]);
 
     const filteredSortedRequests = useMemo(() => {
         let list = [...requests];
 
-        // FILTER
+        // FILTER: Hide completed by default unless showCompleted is true
+        if (!showCompleted) {
+            list = list.filter((req) => req.status !== "completed");
+        }
+
+        // FILTER: Apply status filter if not "all"
         if (statusFilter !== "all") {
             list = list.filter((req) => req.status === statusFilter);
         }
@@ -134,7 +160,7 @@ export default function Home() {
         }
 
         return list;
-    }, [requests, statusFilter, sortOption]);
+    }, [requests, statusFilter, sortOption, showCompleted]);
 
 
 
@@ -326,6 +352,18 @@ export default function Home() {
                             </Select>
                         </div>
 
+                        {/* Show Completed Toggle */}
+                        <div className="flex items-center gap-2 ml-4 pl-4 border-l border-gray-300 dark:border-gray-700">
+                            <label htmlFor="show-completed" className="text-sm text-muted-foreground cursor-pointer">
+                                Show completed
+                            </label>
+                            <Switch
+                                id="show-completed"
+                                checked={showCompleted}
+                                onCheckedChange={setShowCompleted}
+                            />
+                        </div>
+
                     </div>
                 </div>
 
@@ -399,10 +437,14 @@ export default function Home() {
                         }
 
 
+                        const isCompleted = req.status === "completed";
+                        
                         return (
                             <li
                                 key={req.id}
-                                className="flex items-center py-4 px-4 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                className={`flex items-center py-4 px-4 hover:bg-gray-100 dark:hover:bg-gray-800 ${
+                                    isCompleted ? "opacity-60 dark:opacity-50" : ""
+                                }`}
                             >
                                 {/* Votes */}
                                 <div className="flex flex-col items-center space-y-2 mr-4">
