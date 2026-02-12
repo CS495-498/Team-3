@@ -1,16 +1,11 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient as createAnonClient } from "@supabase/supabase-js";
+import { createClient } from "@/utils/Supabase/server.js";
 import { fileTypeFromBuffer } from "file-type";
 
-// Public client (used for auth + DB with RLS)
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
-
 // Service role client (used for storage + signed URLs, bypasses RLS)
-const supabaseServiceRole = createClient(
-    process.env.SUPABASE_URL,
+const supabaseServiceRole = createAnonClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
@@ -20,9 +15,11 @@ const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp
 
 // -------------------- GET PROFILE --------------------
 export async function GET(req, context) {
-    const {id} = await context.params;
+    const { id } = await context.params;
 
-    const {data, error} = await supabase
+    const supabase = await createClient(); // cookie-based session client
+
+    const { data, error } = await supabase
         .from("profiles")
         .select("id, username, full_name, avatar_url")
         .eq("id", id)
@@ -30,18 +27,18 @@ export async function GET(req, context) {
 
     if (error) {
         console.error("PROFILE API ERROR:", error);
-        return NextResponse.json({error: error.message}, {status: 500});
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     if (!data) {
-        return NextResponse.json({error: "Profile not found"}, {status: 404});
+        return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 
-// Add signed avatar URL if avatar exists
-    let enriched = {...data};
+    // Add signed avatar URL if avatar exists
+    let enriched = { ...data };
 
     if (data.avatar_url) {
-        const {data: urlData, error: urlError} =
+        const { data: urlData, error: urlError } =
             await supabaseServiceRole.storage
                 .from("avatars")
                 .createSignedUrl(data.avatar_url, 60 * 60); // 1 hour
@@ -53,7 +50,7 @@ export async function GET(req, context) {
         }
     }
 
-    return NextResponse.json(enriched, {status: 200});
+    return NextResponse.json(enriched, { status: 200 });
 }
 
 
@@ -61,18 +58,12 @@ export async function GET(req, context) {
 export async function PUT(req, context) {
     const { id } = await context.params;
 
-    const accessToken = req.headers
-        .get("authorization")
-        ?.replace("Bearer ", "");
-
-    if (!accessToken) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const supabase = await createClient(); // cookie-based session client
 
     const {
         data: { user },
         error: userError,
-    } = await supabase.auth.getUser(accessToken);
+    } = await supabase.auth.getUser();
 
     if (userError || !user) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
