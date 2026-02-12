@@ -83,40 +83,40 @@ if (error || !data) {
 }
 
 export async function DELETE(req, { params }) {
-  const { id } = params;
+  const { id } = await params;
   const supabase = await createClient();
 
-  // Authenticate user
-  const { error2, profile } = await requireAuthWithPermission(
+  const { error: authError, profile } =
+    await requireAuthWithPermission(
+      PERMISSIONS.PUBLISH_FEATURE_REQUESTS
+    );
 
-    PERMISSIONS.PUBLISH_FEATURE_REQUESTS
+  if (authError) return authError;
+
+  const canManageAll = hasPermission(
+    profile.role,
+    PERMISSIONS.MANAGE_ALL_FEATURE_REQUESTS
   );
 
-  if (error2) return error2;
+  let query = supabase
+    .from("feature_requests")
+    .delete()
+    .eq("id", id);
 
-  try {
-    const { data, error } = await supabase
-      .from("feature_requests")
-      .delete()
-      .eq("id", id)
-      .eq("user_id", profile.id)
-      .select();
+  // 🔥 Only restrict ownership if NOT admin
+  if (!canManageAll) {
+    query = query.eq("user_id", profile.id);
+  }
 
-    if (error) {
-      console.error("Delete feature request error:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+  const { data, error } = await query.select();
 
-    if (!data || data.length === 0) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    return NextResponse.json({ success: true }, { status: 200 });
-  } catch (err) {
-    console.error("Delete request failed:", err);
+  if (error || !data || data.length === 0) {
     return NextResponse.json(
-      { error: err.message || "Failed to delete" },
-      { status: 500 }
+      { error: "Forbidden" },
+      { status: 403 }
     );
   }
+
+  return NextResponse.json({ success: true }, { status: 200 });
 }
+

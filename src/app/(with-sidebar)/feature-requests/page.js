@@ -163,7 +163,6 @@ export default function Home() {
     };
 
     async function handleEditSave(updatedItem) {
-        if (!sameUser(selectedItem.user_id, currentUser.id)) return;
         if (!updatedItem.id) return;
 
         const res = await fetch(`/api/feature-requests/${updatedItem.id}`, {
@@ -196,7 +195,6 @@ export default function Home() {
     }
 
     const handleConfirmDelete = async () => {
-        if (!sameUser(selectedItem.user_id, currentUser.id)) return;
 
         try {
             const res = await fetch(`/api/feature-requests/${selectedItem.id}`, {
