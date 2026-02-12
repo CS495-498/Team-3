@@ -20,8 +20,11 @@ import DeleteModal from "@/components/deleteModal.jsx";
 import EditFeatureRequestModal from "@/components/editFeatureRequestModal.jsx";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog } from "@headlessui/react";
-import {createClient} from "@/utils/Supabase/client.js";
-import {onEntryChange} from "@/lib/cstack.js";
+
+import { useUser } from "@/context/UserContext";
+import { hasPermission } from "@/utils/hasPermission";
+import PERMISSIONS from "@/config/permissions";
+
 
 
 export default function Home() {
@@ -42,6 +45,25 @@ export default function Home() {
 
     const [videoModalOpen, setVideoModalOpen] = useState(false);
     const [activeVideoSrc, setActiveVideoSrc] = useState(null);
+
+    const { user, loading: userLoading } = useUser();
+
+    const canManageAll =
+        !!user && hasPermission(user.role, PERMISSIONS.MANAGE_ALL_FEATURE_REQUESTS);
+
+    const canPublish =
+        !!user && hasPermission(user.role, PERMISSIONS.PUBLISH_FEATURE_REQUESTS);
+
+    const canEditRequest = (request) => {
+        if (!user) return false;
+
+        // Admins
+        if (canManageAll) return true;
+
+        // Normal users → only their own
+        return canPublish && request.user_id === user.id;
+    };
+
 
 
     useEffect(() => {
@@ -141,7 +163,7 @@ export default function Home() {
     };
 
     async function handleEditSave(updatedItem) {
-        if(!sameUser(selectedItem.user_id, currentUser.id)) return;
+        if (!sameUser(selectedItem.user_id, currentUser.id)) return;
         if (!updatedItem.id) return;
 
         const res = await fetch(`/api/feature-requests/${updatedItem.id}`, {
@@ -174,7 +196,7 @@ export default function Home() {
     }
 
     const handleConfirmDelete = async () => {
-        if(!sameUser(selectedItem.user_id, currentUser.id)) return;
+        if (!sameUser(selectedItem.user_id, currentUser.id)) return;
 
         try {
             const res = await fetch(`/api/feature-requests/${selectedItem.id}`, {
@@ -248,9 +270,10 @@ export default function Home() {
         }
     };
 
-    if (isLoading) {
+    if (isLoading || userLoading) {
         return <LoadingIndicator label="Loading feature requests..." />;
     }
+
 
     return (
         <main className="pt-6 px-10 min-h-screen w-full">
@@ -309,43 +332,45 @@ export default function Home() {
                 </div>
 
 
-                <AddFeatureRequest
-                    onAdded={async ({ title, content, file }) => {
-                        // DO NOT set local error here — let modal handle it
-                        const formData = new FormData();
-                        formData.append("title", title);
-                        formData.append("content", content);
-                        if (file) formData.append("file", file);
+                {canPublish && (
+                    <AddFeatureRequest
+                        onAdded={async ({ title, content, file }) => {
+                            const formData = new FormData();
+                            formData.append("title", title);
+                            formData.append("content", content);
+                            if (file) formData.append("file", file);
 
-                        const res = await fetch("/api/feature-requests", {
-                            method: "POST",
-                            body: formData,
-                        });
+                            const res = await fetch("/api/feature-requests", {
+                                method: "POST",
+                                body: formData,
+                            });
 
-                        const data = await res.json(); // ✅ parse ONCE
+                            const data = await res.json();
 
-                        if (!res.ok) {
-                            throw new Error(data.error || "Failed to add feature request");
-                        }
+                            if (!res.ok) {
+                                throw new Error(data.error || "Failed to add feature request");
+                            }
 
-                        const usernameFromServer =
-                            data.username || data.user?.username;
-                        const username =
-                            usernameFromServer || currentUser?.username || "Unknown";
+                            const usernameFromServer =
+                                data.username || data.user?.username;
+                            const username =
+                                usernameFromServer || currentUser?.username || "Unknown";
 
-                        const requestWithExtras = {
-                            ...data,
-                            username,
-                            user: undefined,
-                            commentCount: 0,
-                            number_of_votes: data.number_of_votes ?? 0,
-                        };
+                            const requestWithExtras = {
+                                ...data,
+                                username,
+                                user: undefined,
+                                commentCount: 0,
+                                number_of_votes: data.number_of_votes ?? 0,
+                            };
 
-                        setRequests(prev => [requestWithExtras, ...prev]);
-                        setShowToast(true);
-                        setTimeout(() => setShowToast(false), 2000);
-                    }}
-                />
+                            setRequests(prev => [requestWithExtras, ...prev]);
+                            setShowToast(true);
+                            setTimeout(() => setShowToast(false), 2000);
+                        }}
+                    />
+                )}
+
 
 
             </div>
@@ -501,17 +526,20 @@ export default function Home() {
 
                                 {/* Comments & dropdown */}
                                 <div className="flex justify-between items-center ml-4">
-                                    <div className={!sameUser(req.user_id, currentUser.id) ? 'hidden' : ''}>
-                                        <CardDropdown
-                                            onEdit={() => openEditModal(req)}
-                                            onDelete={() => openDeleteModal(req)}
-                                        />
+                                    <div>
+                                        {canEditRequest(req) && (
+                                            <CardDropdown
+                                                onEdit={() => openEditModal(request)}
+                                                onDelete={() => openDeleteModal(request)}
+                                            />
+                                        )}
+
                                     </div>
                                     <button
                                         onClick={() => openCommentsDialog(req)}
                                         className="flex items-center gap-1 px-3 py-2 rounded-md text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700"
                                     >
-                                        <MessageSquare className="w-5 h-5"/>
+                                        <MessageSquare className="w-5 h-5" />
                                         <span className="text-sm">{req.commentCount}</span>
                                     </button>
                                 </div>

@@ -12,7 +12,7 @@ const { error2, profile, supabase } = await requireAuthWithPermission(
     const { data, error } = await supabase
         .from("votes")
         .select("req_id, Upvoted")
-        .eq("user_id", user.id);
+        .eq("user_id", profile.id);
 
     if (error) {
         return NextResponse.json([], { status: 500 });

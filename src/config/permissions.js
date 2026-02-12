@@ -11,6 +11,7 @@ const PERMISSIONS = {
   // Content publishing
   PUBLISH_DEMO_INSTRUCTIONS: "publish_demo_instructions",
   PUBLISH_FEATURE_REQUESTS: "publish_feature_requests",
+  MANAGE_ALL_FEATURE_REQUESTS: "manage_all_feature_requests",
   COMMENT_VOTE_FEATURE_REQUESTS: "comment_vote_feature_requests",
   VIEW_CONTENT: "view_content",
 
