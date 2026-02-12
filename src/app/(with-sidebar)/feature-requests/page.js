@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import DOMPurify from "isomorphic-dompurify";
 import { ChevronsUp, ChevronsDown, MessageSquare } from "lucide-react";
 import SuccessToast from "@/components/ui/success-toast.jsx";
 import LoadingIndicator from "@/components/ui/loading-indicator.jsx";
@@ -26,6 +27,8 @@ import { useUser } from "@/context/UserContext";
 import { hasPermission } from "@/utils/hasPermission";
 import PERMISSIONS from "@/config/permissions";
 
+import { createClient } from "@/utils/Supabase/client.js";
+import { onEntryChange } from "@/lib/cstack.js";
 
 
 export default function Home() {
@@ -73,6 +76,9 @@ export default function Home() {
     };
 
 
+    // ✅ NEW: “open feature request to see whole thing”
+    const [isRequestOpen, setIsRequestOpen] = useState(false);
+    const [activeRequest, setActiveRequest] = useState(null);
 
     useEffect(() => {
         Promise.all([getFeatureRequests(), getUserVotes()])
@@ -217,6 +223,9 @@ export default function Home() {
             )
         );
 
+        // keep modal view in sync if it’s open for this request
+        setActiveRequest((prev) => (prev?.id === updated.id ? { ...prev, ...updated } : prev));
+
         setIsEditOpen(false);
     }
 
@@ -234,6 +243,12 @@ export default function Home() {
             }
 
             setRequests((prev) => prev.filter((r) => r.id !== selectedItem.id));
+
+            // close full-view modal if deleting the active request
+            if (activeRequest?.id === selectedItem.id) {
+                setIsRequestOpen(false);
+                setActiveRequest(null);
+            }
 
             setIsDeleteOpen(false);
 
@@ -294,6 +309,11 @@ export default function Home() {
         }
     };
 
+    // ✅ NEW: open full request viewer
+    const openRequest = (req) => {
+        setActiveRequest(req);
+        setIsRequestOpen(true);
+    };
     if (isLoading || userLoading) {
         return <LoadingIndicator label="Loading feature requests..." />;
     }
@@ -420,7 +440,7 @@ export default function Home() {
 
                         const isImage = (url) => {
                             if (!url) return false;
-                            const path = url.split("?")[0]; // remove ?token=...
+                            const path = url.split("?")[0];
                             return /\.(jpg|jpeg|png|gif|webp)$/i.test(path);
                         };
 
@@ -434,11 +454,13 @@ export default function Home() {
                             if (!url) return false;
                             const path = url.split("?")[0];
                             return /\.(mp4|webm|ogg)$/i.test(path);
-                        }
+                        };
 
+                        // ✅ NEW: sanitize once per item render
+                        const safeHTML = DOMPurify.sanitize(req.content || "");
 
                         const isCompleted = req.status === "completed";
-                        
+
                         return (
                             <li
                                 key={req.id}
@@ -452,7 +474,7 @@ export default function Home() {
                                         className={`p-1 rounded-md transition ${voteState === "up"
                                             ? "text-green-600"
                                             : "text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
-                                            }`}
+                                        }`}
                                         onClick={() => handleVote(req.id, "up")}
                                     >
                                         <ChevronsUp className="w-5 h-5" />
@@ -464,7 +486,7 @@ export default function Home() {
                                         className={`p-1 rounded-md transition ${voteState === "down"
                                             ? "text-red-600"
                                             : "text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
-                                            }`}
+                                        }`}
                                         onClick={() => handleVote(req.id, "down")}
                                     >
                                         <ChevronsDown className="w-5 h-5" />
@@ -540,7 +562,16 @@ export default function Home() {
                                 {/* Content */}
                                 <div className="flex-1 flex flex-col gap-2">
                                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-50 flex items-center gap-2">
-                                        <span>{req.title}</span>
+                                        {/* ✅ Click title to open full request */}
+                                        <button
+                                            type="button"
+                                            onClick={() => openRequest(req)}
+                                            className="text-left hover:underline"
+                                            title="Open feature request"
+                                        >
+                                            {req.title}
+                                        </button>
+
                                         {req.status && (
                                             <span
                                                 className={`px-2 py-0.5 text-xs font-medium rounded-full ${req.status === "open"
@@ -550,7 +581,7 @@ export default function Home() {
                                                         : req.status === "completed"
                                                             ? "bg-green-100 text-green-700"
                                                             : "bg-gray-200 text-gray-700"
-                                                    }`}
+                                                }`}
                                             >
                                                 {req.status.replace("_", " ")}
                                             </span>
@@ -558,7 +589,30 @@ export default function Home() {
                                         <span className="text-sm text-gray-500">— {req.username}</span>
                                     </h3>
 
-                                    <p className="text-sm text-gray-600 dark:text-gray-200">{req.content}</p>
+                                    {/* ✅ RTE HTML PREVIEW (clamped by height + gradient) */}
+                                    <button
+                                        type="button"
+                                        onClick={() => openRequest(req)}
+                                        className="text-left"
+                                        title="Open feature request"
+                                    >
+                                        <div className="relative">
+                                            <article className="prose prose-sm dark:prose-invert max-w-none">
+                                                <div
+                                                    className="max-h-24 overflow-hidden"
+                                                    dangerouslySetInnerHTML={{ __html: safeHTML }}
+                                                />
+                                            </article>
+
+                                            {/* subtle fade */}
+                                            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-b from-transparent to-white dark:to-gray-900" />
+                                        </div>
+
+                                        <span className="mt-1 inline-block text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                                            View full request →
+                                        </span>
+                                    </button>
+
                                     <p className="text-xs text-gray-400 mt-1">
                                         Created: {new Date(req.created_at).toLocaleString()}
                                     </p>
@@ -586,16 +640,13 @@ export default function Home() {
                             </li>
                         );
                     })}
-
                 </ul>
-
             )}
 
             {hasMore && (
                 <div ref={ref} className="flex flex-col justify-center items-center py-8 mt-6">
                     <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                        <div
-                            className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                        <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
                         <span className="text-sm">Loading more requests...</span>
                     </div>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
@@ -623,6 +674,96 @@ export default function Home() {
                 closeModal={() => setIsDeleteOpen(false)}
                 onDeleteConfirm={handleConfirmDelete}
             />
+
+            {/* ✅ Full Feature Request Modal */}
+            <AnimatePresence>
+                {isRequestOpen && activeRequest && (
+                    <Dialog
+                        open={isRequestOpen}
+                        onClose={() => setIsRequestOpen(false)}
+                        className="fixed inset-0 z-50"
+                    >
+                        <motion.div
+                            className="fixed inset-0 bg-black/50"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            aria-hidden="true"
+                        />
+
+                        <div className="fixed inset-0 flex items-center justify-center p-4">
+                            <motion.div
+                                className="w-full max-w-3xl"
+                                initial={{ opacity: 0, scale: 0.96, y: -8 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.96, y: -8 }}
+                                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                            >
+                                <Dialog.Panel className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl overflow-hidden">
+                                    <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-start justify-between gap-4">
+                                        <div>
+                                            <Dialog.Title className="text-xl font-bold text-gray-900 dark:text-gray-50">
+                                                {activeRequest.title}
+                                            </Dialog.Title>
+                                            <div className="mt-1 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                                                {activeRequest.status && (
+                                                    <span
+                                                        className={`px-2 py-0.5 text-xs font-medium rounded-full ${activeRequest.status === "open"
+                                                            ? "bg-blue-100 text-blue-700"
+                                                            : activeRequest.status === "in_progress"
+                                                                ? "bg-yellow-100 text-yellow-700"
+                                                                : activeRequest.status === "completed"
+                                                                    ? "bg-green-100 text-green-700"
+                                                                    : "bg-gray-200 text-gray-700"
+                                                        }`}
+                                                    >
+                                                        {activeRequest.status.replace("_", " ")}
+                                                    </span>
+                                                )}
+                                                <span>— {activeRequest.username}</span>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white text-2xl leading-none"
+                                            onClick={() => setIsRequestOpen(false)}
+                                            title="Close"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+
+                                    <div className="p-5 max-h-[70vh] overflow-y-auto">
+                                        <article className="prose dark:prose-invert max-w-none">
+                                            <div
+                                                dangerouslySetInnerHTML={{
+                                                    __html: DOMPurify.sanitize(activeRequest.content || ""),
+                                                }}
+                                            />
+                                        </article>
+                                    </div>
+
+                                    <div className="px-5 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                                        <span className="text-xs text-gray-400">
+                                            Created: {new Date(activeRequest.created_at).toLocaleString()}
+                                        </span>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => openCommentsDialog(activeRequest)}
+                                            className="flex items-center gap-2 px-3 py-2 rounded-md text-gray-600 hover:bg-gray-200 dark:text-gray-200 dark:hover:bg-gray-800"
+                                        >
+                                            <MessageSquare className="w-5 h-5" />
+                                            <span className="text-sm">{activeRequest.commentCount}</span>
+                                        </button>
+                                    </div>
+                                </Dialog.Panel>
+                            </motion.div>
+                        </div>
+                    </Dialog>
+                )}
+            </AnimatePresence>
+
             {/* Video Fullscreen Modal */}
             <AnimatePresence>
                 {videoModalOpen && (
