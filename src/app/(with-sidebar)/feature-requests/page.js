@@ -26,6 +26,7 @@ import {onEntryChange} from "@/lib/cstack.js";
 
 
 export default function Home() {
+    const DESCRIPTION_PREVIEW_LIMIT = 220;
     const [currentUser, setCurrentUser] = useState(null);
     const [requests, setRequests] = useState([]);
     const [votes, setVotes] = useState({});
@@ -47,6 +48,7 @@ export default function Home() {
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
     const [sortOption, setSortOption] = useState("votes_desc");
+    const [expandedRequestIds, setExpandedRequestIds] = useState({});
 
     const [videoModalOpen, setVideoModalOpen] = useState(false);
     const [activeVideoSrc, setActiveVideoSrc] = useState(null);
@@ -166,8 +168,15 @@ export default function Home() {
         return user_id === feature_request_user_id;
     };
 
+    const toggleExpandedDescription = (requestId) => {
+        setExpandedRequestIds((prev) => ({
+            ...prev,
+            [requestId]: !prev[requestId],
+        }));
+    };
+
     async function handleEditSave(updatedItem) {
-        if(!sameUser(selectedItem.user_id, currentUser.id)) return;
+        if(!sameUser(selectedItem.user_id, currentUser?.id)) return;
         if (!updatedItem.id) return;
 
         const res = await fetch(`/api/feature-requests/${updatedItem.id}`, {
@@ -200,7 +209,7 @@ export default function Home() {
     }
 
     const handleConfirmDelete = async () => {
-        if(!sameUser(selectedItem.user_id, currentUser.id)) return;
+        if(!sameUser(selectedItem.user_id, currentUser?.id)) return;
 
         try {
             const res = await fetch(`/api/feature-requests/${selectedItem.id}`, {
@@ -394,6 +403,12 @@ export default function Home() {
                 <ul className="divide-y divide-gray-200">
                     {visibleRequests.map((req) => {
                         const voteState = votes[req.id];
+                        const fullContent = req.content || "";
+                        const isTruncated = fullContent.length > DESCRIPTION_PREVIEW_LIMIT;
+                        const isExpanded = !!expandedRequestIds[req.id];
+                        const displayContent = isTruncated && !isExpanded
+                            ? `${fullContent.slice(0, DESCRIPTION_PREVIEW_LIMIT).trimEnd()}...`
+                            : fullContent;
 
                         const isImage = (url) => {
                             if (!url) return false;
@@ -419,12 +434,12 @@ export default function Home() {
                         return (
                             <li
                                 key={req.id}
-                                className={`flex items-center py-4 px-4 hover:bg-gray-100 dark:hover:bg-gray-800 ${
+                                className={`flex flex-col gap-4 py-4 px-4 hover:bg-gray-100 dark:hover:bg-gray-800 sm:flex-row sm:items-start ${
                                     isCompleted ? "opacity-60 dark:opacity-50" : ""
                                 }`}
                             >
                                 {/* Votes */}
-                                <div className="flex flex-col items-center space-y-2 mr-4">
+                                <div className="flex shrink-0 flex-row items-center gap-2 sm:mr-2 sm:flex-col sm:space-y-2">
                                     <button
                                         className={`p-1 rounded-md transition ${voteState === "up"
                                             ? "text-green-600"
@@ -449,7 +464,7 @@ export default function Home() {
                                 </div>
 
                                 {/* File / Image / Video / Placeholder */}
-                                <div className="flex-shrink-0 flex items-center justify-center mr-4">
+                                <div className="flex-shrink-0 flex items-center justify-center sm:mr-2">
                                     {req.signed_file_url ? (
                                         <>
                                             {isImage(req.signed_file_url) && (
@@ -512,10 +527,10 @@ export default function Home() {
                                         </button>
                                     )}
                                 </div>
-
+                                
 
                                 {/* Content */}
-                                <div className="flex-1 flex flex-col gap-2">
+                                <div className="min-w-0 flex-1 flex flex-col gap-2">
                                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-50 flex items-center gap-2">
                                         <span>{req.title}</span>
                                         {req.status && (
@@ -535,15 +550,28 @@ export default function Home() {
                                         <span className="text-sm text-gray-500">— {req.username}</span>
                                     </h3>
 
-                                    <p className="text-sm text-gray-600 dark:text-gray-200">{req.content}</p>
+                                    <div>
+                                        <p className="text-sm text-gray-600 dark:text-gray-200 whitespace-pre-wrap break-words">
+                                            {displayContent}
+                                        </p>
+                                        {isTruncated && (
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleExpandedDescription(req.id)}
+                                                className="mt-1 text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+                                            >
+                                                {isExpanded ? "Read less" : "Read more"}
+                                            </button>
+                                        )}
+                                    </div>
                                     <p className="text-xs text-gray-400 mt-1">
                                         Created: {new Date(req.created_at).toLocaleString()}
                                     </p>
                                 </div>
 
                                 {/* Comments & dropdown */}
-                                <div className="flex justify-between items-center ml-4">
-                                    <div className={!sameUser(req.user_id, currentUser.id) ? 'hidden' : ''}>
+                                <div className="flex shrink-0 justify-between items-center sm:ml-2">
+                                    <div className={!sameUser(req.user_id, currentUser?.id) ? 'hidden' : ''}>
                                         <CardDropdown
                                             onEdit={() => openEditModal(req)}
                                             onDelete={() => openDeleteModal(req)}
