@@ -17,23 +17,8 @@ export async function GET(request) {
 
         let query = supabase.from("daily_api_metrics").select("*");
 
-        if (startDate) {
-            const [startMonth, startDay] = startDate.split("-").map(Number);
-            query = query.filter(
-                "date",
-                "gte",
-                new Date(2000, startMonth - 1, startDay).toISOString() // dummy year
-            );
-        }
-
-        if (endDate) {
-            const [endMonth, endDay] = endDate.split("-").map(Number);
-            query = query.filter(
-                "date",
-                "lte",
-                new Date(2000, endMonth - 1, endDay).toISOString()
-            );
-        }
+        if (startDate) query = query.gte("date", startDate);
+        if (endDate) query = query.lte("date", endDate);
 
         const { data, error } = await query;
 

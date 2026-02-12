@@ -68,9 +68,20 @@ export default function MetricsPage() {
             ]);
 
             // After fetching lineData
-            const sortedLineData = requestsOverTime
-                .map(row => ({ ...row, date: row.date })) // ensure date is string
-                .sort((a, b) => new Date(a.date) - new Date(b.date));
+            const sortedLineData = requestsOverTime.map(row => ({ ...row, date: row.date })).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            if (sortedLineData.length > 0 && !startDate && !endDate) {
+                // parse earliest date (first element)
+                const [y1, m1, d1] = sortedLineData[0].date.split("-").map(Number);
+                const localStartDate = new Date(y1, m1 - 1, d1);
+
+                // parse latest date (last element)
+                const [y2, m2, d2] = sortedLineData[sortedLineData.length - 1].date.split("-").map(Number);
+                const localEndDate = new Date(y2, m2 - 1, d2);
+
+                setStartDate(localStartDate);
+                setEndDate(localEndDate);
+            }
 
             setCrudOps(userTable);
             setLineData(sortedLineData);
@@ -135,15 +146,18 @@ export default function MetricsPage() {
                     <CardContent className="pt-6">
                         <h2 className="text-lg font-semibold mb-4">
                             Most Used Endpoints
+                            {startDate && endDate && (
+                                <> from {startDate.toLocaleDateString()} to {endDate.toLocaleDateString()}</>
+                            )}
                         </h2>
 
                         <ResponsiveContainer width="100%" height={300}>
                             <BarChart layout="vertical" data={endpointData}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis type="number" />
+                                <CartesianGrid strokeDasharray="3 3"/>
+                                <XAxis type="number"/>
                                 <YAxis type="category" dataKey="endpoint" width={200} interval={0}/>
-                                <Tooltip />
-                                <Bar dataKey="total_requests" />
+                                <Tooltip/>
+                                <Bar dataKey="total_requests"/>
                             </BarChart>
                         </ResponsiveContainer>
                     </CardContent>
