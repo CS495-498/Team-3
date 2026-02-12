@@ -139,7 +139,7 @@ export async function POST(req) {
         .insert([
             {
                 title,
-                cleanContent,
+                content: cleanContent,
                 status: "open",
                 user_id: profile.id,
                 file_url: filePath

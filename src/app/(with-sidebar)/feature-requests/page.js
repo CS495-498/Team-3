@@ -822,7 +822,7 @@ export default function Home() {
                                         className="text-left"
                                         title="Open feature request"
                                     >
-                                        <p className="text-sm text-gray-700 dark:text-gray-200 truncate">
+                                        <p className="text-sm text-gray-700 dark:text-gray-200 line-clamp-3 wrap-anywhere">
                                             {previewText || "No description"}
                                         </p>
                                     </button>
