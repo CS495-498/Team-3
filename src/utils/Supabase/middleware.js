@@ -1,5 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
+import ROLE_PERMISSIONS from "@/config/rolePermissions";
+import PERMISSIONS from "@/config/permissions";
 
 export async function updateSession(request) {
 
@@ -44,14 +46,47 @@ export async function updateSession(request) {
         }
     )
 
-    const { data: { user }, error } = await supabase.auth.getUser()
-    if (!request.nextUrl.pathname.startsWith('/login') && error) {
-        return NextResponse.redirect(new URL('/login', request.url))
-    }
+    // refreshing the auth token
 
-    if (user) {
+    const { data, error: authError } = await supabase.auth.getUser();
+    const user = data?.user;
+
+    if (!user || authError) {
+    if (!request.nextUrl.pathname.startsWith("/login")) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+    return NextResponse.next();
+  }
+    // 👇 Stop here if not logged in
+    if (!user) return supabaseResponse;
+   if (user) {
         supabaseResponse.headers.set('x-user-id', user.id)
     }
+
+    // -------------------------
+    // 2. AUTHORIZATION (new)
+    // -------------------------
+    const pathname = request.nextUrl.pathname;
+
+    // Only guard protected sections
+    if (pathname.startsWith("/admin")) {
+        const { data: profile, error: profileError } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", user.id)   // <- now user.id is defined
+            .single();
+
+        if (profileError || !profile) {
+            console.log("Profile error:", profileError);
+            return NextResponse.redirect(new URL("/unauthorized", request.url));
+        }
+
+        const permissions = ROLE_PERMISSIONS[profile.role] || [];
+        if (!permissions.includes(PERMISSIONS.MANAGE_USERS)) {
+            return NextResponse.redirect(new URL("/unauthorized", request.url));
+        }
+    }
+
 
     return supabaseResponse
 }

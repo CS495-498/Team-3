@@ -1,20 +1,14 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/Supabase/server";
+import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
+import PERMISSIONS from "@/config/permissions";
 
 export async function PATCH(req) {
     const { personaId } = await req.json();
 
-    const supabase = await createClient();
-
-    // ---- AUTH ----
-    const {
-        data: { user },
-        error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { error, supabase } = await requireAuthWithPermission(
+        PERMISSIONS.USE_PERSONAS
+    );
+    if (error) return error;
 
     // ---- CLEAR ACTIVE PERSONA ----
     if (!personaId) {

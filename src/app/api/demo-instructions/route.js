@@ -1,35 +1,22 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/Supabase/server";
 const BASE = "https://api.contentstack.io/v3";
 const API_KEY = process.env.CONTENTSTACK_API_KEY;
 const MANAGEMENT_TOKEN = process.env.CONTENTSTACK_MANAGEMENT_TOKEN;
 const LIBRARY_ENTRY_ID = "blt56af12999b14b723";
 const ENVIRONMENT = process.env.CONTENTSTACK_ENVIRONMENT;
+import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
+import PERMISSIONS from "@/config/permissions";
 
 export async function POST(req) {
-  const supabase = await createClient();
+  const { error, profile } = await requireAuthWithPermission(
+    req,
+    PERMISSIONS.PUBLISH_CONTENT
+  );
 
-  // Authenticate user
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  if (error) return error;
 
-  if (userError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    // or redirect("/login") if desired
-  }
-   const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("id, full_name")
-      .eq("id", user.id)
-      .maybeSingle();
 
-    if (profileError || !profile) {
-      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
-    }
-
-    const author = profile.full_name || "Unknown";
+  const author = profile.full_name || "Unknown";
   try {
     const { title, html } = await req.json();
 

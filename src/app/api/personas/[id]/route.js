@@ -1,20 +1,16 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/Supabase/server";
+import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
+import PERMISSIONS from "@/config/permissions";
 
 export async function DELETE(req, { params }) {
     const { id } = await params;
 
-    const supabase = await createClient();
+    // ---- AUTH: MUST HAVE USE_PERSONAS PERMISSION ----
+    const { error, supabase } = await requireAuthWithPermission(
+        PERMISSIONS.USE_PERSONAS
+    );
 
-    // ---- AUTH ----
-    const {
-        data: { user },
-        error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    if (error) return error;
 
     // ---- FETCH PERSONA ----
     const { data: persona, error: personaError } = await supabase
