@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Dialog } from "@headlessui/react";
 import { motion, AnimatePresence } from "framer-motion";
 
+const TITLE_MAX_LENGTH = 100;
+
 export default function AddFeatureRequest({ onAdded }) {
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -16,6 +18,11 @@ export default function AddFeatureRequest({ onAdded }) {
 
     if (!title.trim()) {
       setError("Title is required.");
+      return;
+    }
+
+    if (title.trim().length > TITLE_MAX_LENGTH) {
+      setError(`Title cannot exceed ${TITLE_MAX_LENGTH} characters.`);
       return;
     }
 
@@ -82,8 +89,12 @@ export default function AddFeatureRequest({ onAdded }) {
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         placeholder="Enter feature title"
+                        maxLength={TITLE_MAX_LENGTH}
                         className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-4 py-2 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 outline-none transition"
                       />
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        {title.length}/{TITLE_MAX_LENGTH}
+                      </p>
                     </div>
 
                     <div>

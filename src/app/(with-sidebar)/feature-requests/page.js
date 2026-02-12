@@ -531,8 +531,8 @@ export default function Home() {
 
                                 {/* Content */}
                                 <div className="min-w-0 flex-1 flex flex-col gap-2">
-                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-50 flex items-center gap-2">
-                                        <span>{req.title}</span>
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-50 flex flex-wrap items-center gap-2">
+                                        <span className="min-w-0 break-words" title={req.title}>{req.title}</span>
                                         {req.status && (
                                             <span
                                                 className={`px-2 py-0.5 text-xs font-medium rounded-full ${req.status === "open"

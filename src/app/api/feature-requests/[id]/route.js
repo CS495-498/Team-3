@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/Supabase/server";
 
+const TITLE_MAX_LENGTH = 100;
+
 export async function POST(req, { params }) {
   const { id } = params;
   const supabase = await createClient();
@@ -89,10 +91,18 @@ export async function PUT(req, { params }) {
 
     const body = await req.json();
     const { title, content, status } = body;
+    const normalizedTitle = title?.toString().trim() || "";
 
-  if (!title || title.trim() === "") {
+  if (!normalizedTitle) {
     return NextResponse.json(
       { error: "Title is required" },
+      { status: 400 }
+    );
+  }
+
+  if (normalizedTitle.length > TITLE_MAX_LENGTH) {
+    return NextResponse.json(
+      { error: `Title cannot exceed ${TITLE_MAX_LENGTH} characters` },
       { status: 400 }
     );
   }
@@ -101,7 +111,7 @@ export async function PUT(req, { params }) {
     const { data, error } = await supabase
         .from("feature_requests")
         .update({
-            title,
+            title: normalizedTitle,
             content,
             status,
             updated_at: new Date().toISOString(),

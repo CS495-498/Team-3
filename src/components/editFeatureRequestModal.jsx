@@ -1,10 +1,17 @@
 "use client";
 import { Dialog } from "@headlessui/react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X } from "lucide-react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+
+const TITLE_MAX_LENGTH = 100;
 
 export default function EditFeatureRequestModal({ isOpen, closeModal, item, onSave }) {
+    const [title, setTitle] = useState("");
+
+    useEffect(() => {
+        setTitle(item?.title || "");
+    }, [item, isOpen]);
+
     return (
         <AnimatePresence>
             {isOpen && (
@@ -13,7 +20,6 @@ export default function EditFeatureRequestModal({ isOpen, closeModal, item, onSa
                     open={isOpen}
                     onClose={closeModal}
                 >
-
                     <motion.div
                         className="fixed inset-0 bg-black/50"
                         initial={{ opacity: 0 }}
@@ -42,8 +48,8 @@ export default function EditFeatureRequestModal({ isOpen, closeModal, item, onSa
                                         const formData = new FormData(e.target);
 
                                         const updatedItem = {
-                                            id: item?.id,               // ✅ include the id
-                                            title: formData.get("title"),
+                                            id: item?.id,
+                                            title: formData.get("title")?.toString().trim(),
                                             content: formData.get("content"),
                                             status: formData.get("status"),
                                         };
@@ -58,10 +64,15 @@ export default function EditFeatureRequestModal({ isOpen, closeModal, item, onSa
                                         </label>
                                         <input
                                             name="title"
-                                            defaultValue={item?.title || ""}
+                                            value={title}
+                                            onChange={(e) => setTitle(e.target.value)}
+                                            maxLength={TITLE_MAX_LENGTH}
                                             required
                                             className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-4 py-2 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 outline-none transition"
                                         />
+                                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                            {title.length}/{TITLE_MAX_LENGTH}
+                                        </p>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium dark:text-gray-200 mb-1">

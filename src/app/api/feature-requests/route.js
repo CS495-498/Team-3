@@ -15,6 +15,7 @@ const ALLOWED_MIME_TYPES = [
 ];
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
+const TITLE_MAX_LENGTH = 100;
 
 export async function GET() {
   
@@ -94,8 +95,17 @@ export async function POST(req) {
     const content = formData.get("content");
     const file = formData.get("file");
 
-  if (!title || title.trim() === "") {
+  const normalizedTitle = title?.toString().trim() || "";
+
+  if (!normalizedTitle) {
     return NextResponse.json({ error: "Title is required" }, { status: 400 });
+  }
+
+  if (normalizedTitle.length > TITLE_MAX_LENGTH) {
+    return NextResponse.json(
+      { error: `Title cannot exceed ${TITLE_MAX_LENGTH} characters` },
+      { status: 400 }
+    );
   }
 
     let filePath = null;
@@ -133,7 +143,7 @@ export async function POST(req) {
         .from("feature_requests")
         .insert([
             {
-                title,
+                title: normalizedTitle,
                 content,
                 status: "open",
                 user_id: user.id,
