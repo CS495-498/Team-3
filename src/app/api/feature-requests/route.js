@@ -1,7 +1,3 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@/utils/Supabase/server";
-import { fileTypeFromBuffer } from "file-type";
-import { createServiceRoleClient } from "@/utils/Supabase/server";
 import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
 import PERMISSIONS from "@/config/permissions";
 import {NextResponse} from "next/server";
@@ -118,7 +114,6 @@ export async function POST(req) {
       return NextResponse.json({ error: "Invalid file type" }, { status: 400 });
     }
 
-    // Optional: sanitize images
     filePath = `uploads/${crypto.randomUUID()}.${detectedType.ext}`;
 
         const { error: uploadError } = await supabase.storage

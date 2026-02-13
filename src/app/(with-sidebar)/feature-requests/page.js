@@ -9,7 +9,6 @@ import {
     Paperclip,
     FileText,
     File,
-    Image as ImageIcon,
     Film,
 } from "lucide-react";
 import SuccessToast from "@/components/ui/success-toast.jsx";
@@ -42,10 +41,6 @@ import { useUser } from "@/context/UserContext";
 import { hasPermission } from "@/utils/hasPermission";
 import PERMISSIONS from "@/config/permissions";
 
-import { createClient } from "@/utils/Supabase/client.js";
-import { onEntryChange } from "@/lib/cstack.js";
-
-
 export default function Home() {
     const [currentUser, setCurrentUser] = useState(null);
     const [requests, setRequests] = useState([]);
@@ -75,16 +70,11 @@ export default function Home() {
 
     const canEditRequest = (request) => {
         if (!user) return false;
-
-        // Admins
-        if (canManageAll) return true;
-
-        // Normal users → only their own
-        return canPublish && request.user_id === user.id;
+        if (canManageAll) return true; // Admins
+        return canPublish && request.user_id === user.id; // Normal users → only their own
     };
 
-
-    // ✅ NEW: “open feature request to see whole thing”
+    // “open feature request to see whole thing”
     const [isRequestOpen, setIsRequestOpen] = useState(false);
     const [activeRequest, setActiveRequest] = useState(null);
 
@@ -142,7 +132,8 @@ export default function Home() {
         }
     }, [rteModalOpen, rteFilePreviewUrl]);
 
-    const sameUser = (feature_request_user_id, user_id) => user_id === feature_request_user_id;
+    const sameUser = (feature_request_user_id, user_id) =>
+        user_id === feature_request_user_id;
 
     const filteredSortedRequests = useMemo(() => {
         let list = [...requests];
@@ -177,7 +168,10 @@ export default function Home() {
         return list;
     }, [requests, statusFilter, sortOption]);
 
-    const {items: visibleRequests, hasMore, ref} = useInfiniteScroll(filteredSortedRequests, 6);
+    const { items: visibleRequests, hasMore, ref } = useInfiniteScroll(
+        filteredSortedRequests,
+        6
+    );
 
     const isImage = (url) => {
         if (!url) return false;
@@ -205,11 +199,7 @@ export default function Home() {
      * It only renders a visual preview (image/pdf icon/video thumb/generic icon).
      * The "Open attachment" button is rendered once by the parent.
      */
-    function AttachmentPreview({
-                                   url,
-                                   size = 80,
-                                   fileName = "",
-                               }) {
+    function AttachmentPreview({ url, size = 80, fileName = "" }) {
         if (!url) return null;
 
         const frameClass =
@@ -220,9 +210,13 @@ export default function Home() {
         const name = fileName || rteFile?.name || "";
 
         const showImage =
-            isImage(url) || mime.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp)$/i.test(name);
+            isImage(url) ||
+            mime.startsWith("image/") ||
+            /\.(jpg|jpeg|png|gif|webp)$/i.test(name);
         const showVideo =
-            isVideo(url) || mime.startsWith("video/") || /\.(mp4|webm|ogg)$/i.test(name);
+            isVideo(url) ||
+            mime.startsWith("video/") ||
+            /\.(mp4|webm|ogg)$/i.test(name);
         const showPDF =
             isPDF(url) || mime === "application/pdf" || /\.pdf$/i.test(name);
 
@@ -281,46 +275,8 @@ export default function Home() {
         setIsDeleteOpen(true);
     };
 
-    const sameUser = (feature_request_user_id, user_id) => {
-        return user_id === feature_request_user_id;
-    };
-
-    async function handleEditSave(updatedItem) {
-        if (!updatedItem.id) return;
-
-        const res = await fetch(`/api/feature-requests/${updatedItem.id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(updatedItem),
-        });
-
-        if (!res.ok) {
-            let errorMessage = "Unknown error";
-            try {
-                const err = await res.json();
-                errorMessage = err.error || JSON.stringify(err);
-            } catch { }
-            console.error("Error saving feature request:", errorMessage);
-            return;
-        }
-
-        const updated = await res.json();
-
-        setRequests((prev) =>
-            prev.map((req) =>
-                req.id === updated.id
-                    ? { ...updated, username: req.username, commentCount: req.commentCount }
-                    : req
-            )
-        );
-
-        // keep modal view in sync if it’s open for this request
-        setActiveRequest((prev) => (prev?.id === updated.id ? { ...prev, ...updated } : prev));
-
-        setIsEditOpen(false);
-    }
-
     const handleConfirmDelete = async () => {
+        if (!selectedItem) return;
 
         try {
             const res = await fetch(`/api/feature-requests/${selectedItem.id}`, {
@@ -370,7 +326,8 @@ export default function Home() {
             })
         );
 
-        const apiVote = previousVote === type ? "remove" : type === "up" ? "up" : "down";
+        const apiVote =
+            previousVote === type ? "remove" : type === "up" ? "up" : "down";
 
         try {
             await castVote(id, apiVote);
@@ -477,9 +434,17 @@ export default function Home() {
                 if (!selectedItem || !currentUser) return;
                 if (!sameUser(selectedItem.user_id, currentUser.id)) return;
 
+                const html = editorRef.current?.getHTML?.() ?? "";
+                const payload = {
+                    title: (rteTitle || "").trim(),
+                    content: html,
+                    // status: selectedItem.status, // include if you allow status updates
+                };
+
                 const res = await fetch(`/api/feature-requests/${selectedItem.id}`, {
                     method: "PUT",
-                    body: formData,
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
                 });
 
                 const data = await res.json().catch(() => ({}));
@@ -538,7 +503,9 @@ export default function Home() {
 
             setRequests((prev) =>
                 prev.map((r) =>
-                    r.id === activeRequest.id ? { ...r, commentCount: (r.commentCount || 0) + 1 } : r
+                    r.id === activeRequest.id
+                        ? { ...r, commentCount: (r.commentCount || 0) + 1 }
+                        : r
                 )
             );
             setActiveRequest((prev) =>
@@ -552,13 +519,9 @@ export default function Home() {
         }
     };
 
-
-
-
     if (isLoading || userLoading) {
         return <LoadingIndicator label="Loading feature requests..." />;
     }
-
 
     return (
         <main className="pt-6 px-10 min-h-screen w-full">
@@ -620,55 +583,7 @@ export default function Home() {
                     >
                         Add Feature Request
                     </button>
-                    <AddFeatureRequest
-                        onAdded={async ({ title, content, file }) => {
-                            // DO NOT set local error here — let modal handle it
-                            const formData = new FormData();
-                            formData.append("title", title);
-                            formData.append("content", content);
-                            if (file) formData.append("file", file);
-
-                                const res = await fetch("/api/feature-requests", {
-                                    method: "POST",
-                                    body: formData,
-                                });
-
-                                const data = await res.json();
-
-                                if (!res.ok) {
-                                    throw new Error(data.error || "Failed to add feature request");
-                                }
-
-                                const usernameFromServer =
-                                    data.username || data.user?.username;
-                                const username =
-                                    usernameFromServer || currentUser?.username || "Unknown";
-
-                                const requestWithExtras = {
-                                    ...data,
-                                    username,
-                                    user: undefined,
-                                    commentCount: 0,
-                                    number_of_votes: data.number_of_votes ?? 0,
-                                };
-
-                                setRequests(prev => [requestWithExtras, ...prev]);
-                                setShowToast(true);
-                                setTimeout(() => setShowToast(false), 2000);
-                            }}
-                        />
-                    )}
                 )}
-
-
-
-                <button
-                    onClick={openAddRte}
-                    type="button"
-                    className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
-                >
-                    Add Feature Request
-                </button>
             </div>
 
             {visibleRequests.length === 0 ? (
@@ -690,6 +605,7 @@ export default function Home() {
                             >
                                 <div className="flex flex-col items-center space-y-2 mr-4">
                                     <button
+                                        type="button"
                                         className={`p-1 rounded-md transition ${
                                             voteState === "up"
                                                 ? "text-green-600"
@@ -705,6 +621,7 @@ export default function Home() {
                   </span>
 
                                     <button
+                                        type="button"
                                         className={`p-1 rounded-md transition ${
                                             voteState === "down"
                                                 ? "text-red-600"
@@ -717,16 +634,23 @@ export default function Home() {
                                 </div>
 
                                 <div className="flex-shrink-0 flex items-center justify-center mr-4">
-                                    {req.signed_file_url ? (
-                                        <AttachmentPreview url={req.signed_file_url} size={64} />
-                                    ) : (
-                                        <div
-                                            className="w-16 h-16 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
-                                            title="No attachment"
-                                        >
-                                            <MessageSquare className="w-10 h-10 text-gray-600 dark:text-gray-300" />
-                                        </div>
-                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={() => openRequest(req)}
+                                        aria-label={req.signed_file_url ? "Open attachment" : "Open request"}
+                                        className="rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
+                                    >
+                                        {req.signed_file_url ? (
+                                            <AttachmentPreview url={req.signed_file_url} size={64} />
+                                        ) : (
+                                            <div
+                                                className="w-16 h-16 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
+                                                title="No attachment"
+                                            >
+                                                <MessageSquare className="w-10 h-10 text-gray-600 dark:text-gray-300" />
+                                            </div>
+                                        )}
+                                    </button>
                                 </div>
 
                                 <div className="flex-1 flex flex-col gap-2">
@@ -752,7 +676,7 @@ export default function Home() {
                                                                 : "bg-gray-200 text-gray-700"
                                                 }`}
                                             >
-                        {req.status.replace("_", " ")}
+                        {String(req.status).replace("_", " ")}
                       </span>
                                         )}
 
@@ -765,7 +689,8 @@ export default function Home() {
                                         className="text-left"
                                         title="Open feature request"
                                     >
-                                        <p className="text-sm text-gray-700 dark:text-gray-200 truncate">
+                                        {/* 3 lines + wraps long unbroken strings */}
+                                        <p className="text-sm text-gray-700 dark:text-gray-200 line-clamp-3 [overflow-wrap:anywhere]">
                                             {previewText || "No description"}
                                         </p>
                                     </button>
@@ -786,8 +711,14 @@ export default function Home() {
                                     </div>
 
                                     <div className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-200">
-                                        <MessageSquare className="w-5 h-5" />
-                                        <span className="text-sm">{req.commentCount}</span>
+                                        <button
+                                            type="button"
+                                            className="flex items-center hover:bg-gray-100 dark:hover:bg-gray-800"
+                                            onClick={() => openRequest(req)}
+                                        >
+                                            <MessageSquare className="w-5 h-5" />
+                                            <span className="text-sm px-1">{req.commentCount}</span>
+                                        </button>
                                     </div>
                                 </div>
                             </li>
@@ -799,8 +730,7 @@ export default function Home() {
             {hasMore && (
                 <div ref={ref} className="flex flex-col justify-center items-center py-8 mt-6">
                     <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                        <div
-                            className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                        <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
                         <span className="text-sm">Loading more requests...</span>
                     </div>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
@@ -848,7 +778,9 @@ export default function Home() {
 
                                         <div className="flex items-center gap-3">
                                             {rteError && (
-                                                <p className="text-red-500 text-sm max-w-[50ch] truncate">{rteError}</p>
+                                                <p className="text-red-500 text-sm max-w-[50ch] truncate">
+                                                    {rteError}
+                                                </p>
                                             )}
 
                                             <button
@@ -883,16 +815,6 @@ export default function Home() {
                                             />
                                         </div>
 
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                                                Content
-                                            </label>
-                                            <div className="w-full min-h-[300px] rounded-md p-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700">
-                                                <SimpleEditor html={dialogEditorContent} editorRef={editorRef} />
-                                            </div>
-                                        </div>
-
-                                        {/* Attachment chooser (new selection replaces old visually + open button uses displayed URL) */}
                                         <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white/60 dark:bg-gray-800/40 p-4">
                                             <div className="flex items-center gap-2 mb-2">
                                                 <Paperclip className="w-4 h-4 text-gray-600 dark:text-gray-200" />
@@ -903,7 +825,9 @@ export default function Home() {
 
                                             {(() => {
                                                 const displayUrl = rteFilePreviewUrl || selectedItem?.signed_file_url;
-                                                const displayName = rteFile?.name || (selectedItem?.file_url ? selectedItem.file_url.split("/").pop() : "");
+                                                const displayName =
+                                                    rteFile?.name ||
+                                                    (selectedItem?.file_url ? selectedItem.file_url.split("/").pop() : "");
 
                                                 return displayUrl ? (
                                                     <div className="flex items-center gap-3 mb-3">
@@ -931,6 +855,7 @@ export default function Home() {
                                             })()}
 
                                             <input
+                                                id="rte-file"
                                                 type="file"
                                                 onChange={(e) => {
                                                     const file = e.target.files?.[0] || null;
@@ -941,9 +866,27 @@ export default function Home() {
                                                     if (file) setRteFilePreviewUrl(URL.createObjectURL(file));
                                                     else setRteFilePreviewUrl(null);
                                                 }}
-                                                className="block w-full text-sm text-gray-700 dark:text-gray-200"
+                                                className="hidden"
                                             />
+
+                                            <label
+                                                htmlFor="rte-file"
+                                                className="text-white bg-linear-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap cursor-pointer inline-flex items-center"
+                                            >
+                                                Choose file
+                                            </label>
+
                                         </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                                Content
+                                            </label>
+                                            <div className="w-full min-h-[300px] rounded-md p-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700">
+                                                <SimpleEditor html={dialogEditorContent} editorRef={editorRef} />
+                                            </div>
+                                        </div>
+
                                     </div>
                                 </Dialog.Panel>
                             </motion.div>
@@ -995,7 +938,7 @@ export default function Home() {
                                                                         : "bg-gray-200 text-gray-700"
                                                         }`}
                                                     >
-                            {activeRequest.status.replace("_", " ")}
+                            {String(activeRequest.status).replace("_", " ")}
                           </span>
                                                 )}
                                                 <span>— {activeRequest.username}</span>
@@ -1003,6 +946,7 @@ export default function Home() {
                                         </div>
 
                                         <button
+                                            type="button"
                                             className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white text-2xl leading-none"
                                             onClick={() => setIsRequestOpen(false)}
                                             title="Close"
@@ -1041,42 +985,17 @@ export default function Home() {
 
                                         {/* Comments */}
                                         <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+
+
                                             <div className="flex items-center justify-between mb-3">
                                                 <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                                                     Comments ({activeRequest.commentCount || 0})
                                                 </h4>
+
                                                 <span className="text-xs text-gray-400">
                           Created: {new Date(activeRequest.created_at).toLocaleString()}
                         </span>
                                             </div>
-
-                                            {commentsLoading ? (
-                                                <p className="text-sm text-gray-500 dark:text-gray-400">Loading comments...</p>
-                                            ) : comments.length === 0 ? (
-                                                <p className="text-sm text-gray-500 dark:text-gray-400">No comments yet.</p>
-                                            ) : (
-                                                <div className="space-y-3">
-                                                    {comments.map((c) => {
-                                                        const displayName =
-                                                            c.username || c.user?.username || c.user_id || "User";
-
-                                                        return (
-                                                            <div
-                                                                key={c.id}
-                                                                className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-800"
-                                                            >
-                                                                <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                                                                    {displayName} •{" "}
-                                                                    {c.created_at ? new Date(c.created_at).toLocaleString() : ""}
-                                                                </div>
-                                                                <p className="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-wrap">
-                                                                    {c.content || ""}
-                                                                </p>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            )}
 
                                             <div className="mt-4">
                                                 <div className="flex items-center justify-between">
@@ -1098,7 +1017,7 @@ export default function Home() {
                           />
                                                 </div>
 
-                                                <div className="mt-3 flex justify-end">
+                                                <div className="mt-3 flex justify-end py-4">
                                                     <button
                                                         type="button"
                                                         onClick={handleAddCommentInline}
@@ -1108,6 +1027,42 @@ export default function Home() {
                                                     </button>
                                                 </div>
                                             </div>
+
+
+                                            {commentsLoading ? (
+                                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                    Loading comments...
+                                                </p>
+                                            ) : comments.length === 0 ? (
+                                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                    No comments yet.
+                                                </p>
+                                            ) : (
+                                                <div className="space-y-3">
+                                                    {comments.map((c) => {
+                                                        const displayName =
+                                                            c.username || c.user?.username || c.user_id || "User";
+
+                                                        return (
+                                                            <div
+                                                                key={c.id}
+                                                                className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-800"
+                                                            >
+                                                                <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                                                                    {displayName} •{" "}
+                                                                    {c.created_at
+                                                                        ? new Date(c.created_at).toLocaleString()
+                                                                        : ""}
+                                                                </div>
+                                                                <p className="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-wrap">
+                                                                    {c.content || ""}
+                                                                </p>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+
                                         </div>
                                     </div>
 
@@ -1118,10 +1073,12 @@ export default function Home() {
                                         </div>
 
                                         <div className={!sameUser(activeRequest.user_id, currentUser?.id) ? "hidden" : ""}>
-                                            <CardDropdown
-                                                onEdit={() => openEditRte(activeRequest)}
-                                                onDelete={() => openDeleteModal(activeRequest)}
-                                            />
+                                            {canEditRequest(activeRequest) && (
+                                                <CardDropdown
+                                                    onEdit={() => openEditRte(activeRequest)}
+                                                    onDelete={() => openDeleteModal(activeRequest)}
+                                                />
+                                            )}
                                         </div>
                                     </div>
                                 </Dialog.Panel>
@@ -1147,6 +1104,7 @@ export default function Home() {
                         >
                             <Dialog.Panel className="relative w-full">
                                 <button
+                                    type="button"
                                     className="absolute top-4 right-4 text-white text-2xl z-10"
                                     onClick={() => setVideoModalOpen(false)}
                                     title="Close video"

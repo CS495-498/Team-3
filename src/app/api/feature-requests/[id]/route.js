@@ -3,8 +3,6 @@ import { createClient } from "@/utils/Supabase/server";
 import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
 import PERMISSIONS from "@/config/permissions";
 import { hasPermission } from "@/utils/hasPermission";
-import { createServiceRoleClient } from "@/utils/Supabase/server";
-import { fileTypeFromBuffer } from "file-type";
 import { sanitizeHtmlServer } from "@/lib/featureRequests/requests/sanitizeHtmlServer.js";
 
 
@@ -41,7 +39,6 @@ export async function PUT(req, { params }) {
     );
   }
 
-  // 🔥 Check if user can manage all
   const canManageAll = hasPermission(
     profile.role,
     PERMISSIONS.MANAGE_ALL_FEATURE_REQUESTS
@@ -58,7 +55,6 @@ export async function PUT(req, { params }) {
     })
     .eq("id", id);
 
-  // If NOT admin → restrict to own record
   if (!canManageAll) {
     query = query.eq("user_id", profile.id);
   }
@@ -117,7 +113,6 @@ export async function DELETE(req, { params }) {
     .delete()
     .eq("id", id);
 
-  // 🔥 Only restrict ownership if NOT admin
   if (!canManageAll) {
     query = query.eq("user_id", profile.id);
   }
