@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { deleteNotification } from "../deleteAlert.js";
-
+import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission.js";
+import PERMISSIONS from "@/config/permissions";
 export async function PUT(request) {
+    const { error, supabase } = await requireAuthWithPermission(
+    PERMISSIONS.UPLOAD_NOTIFICATIONS
+  );
+  if (error) return error;
     try {
         const { entryUid, alerts } = await request.json();
 

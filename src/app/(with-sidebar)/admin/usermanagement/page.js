@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import EditUserModal from "@/components/EditUserModal";
+import { Trash2 } from "lucide-react";
+
 
 import {
   Card,
@@ -64,7 +66,16 @@ export default function AdminUsersPage() {
           const body = await res.json();
           throw new Error(body.error || "Failed to load users");
         }
-        setUsers(await res.json());
+        const data = await res.json();
+
+        setUsers(
+          Array.isArray(data)
+            ? data
+            : Array.isArray(data?.users)
+              ? data.users
+              : []
+        );
+
       } catch (err) {
         setError(err.message);
       } finally {
@@ -99,6 +110,37 @@ export default function AdminUsersPage() {
         return "outline";
     }
   };
+
+  const handleDeleteUser = async (user) => {
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete ${user.full_name || user.username || user.email || "this user"
+      }? This action cannot be undone.`
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      const res = await fetch(`/api/profiles/${user.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const body = await res.json();
+        throw new Error(body.error || "Failed to delete user");
+      }
+
+      // Remove user from UI immediately
+      setUsers((prev) => prev.filter((u) => u.id !== user.id));
+
+      showToast(
+        `${user.full_name || user.username || user.email || "User"} has been deleted`
+      );
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
 
   return (
     <div className="p-6">
@@ -194,7 +236,7 @@ export default function AdminUsersPage() {
                     <TableCell className="text-right text-muted-foreground">
                       {user.updated_at ? new Date(user.updated_at).toLocaleString() : "—"}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right space-x-2">
                       <Button
                         size="sm"
                         variant="outline"
@@ -202,7 +244,18 @@ export default function AdminUsersPage() {
                       >
                         Edit
                       </Button>
+
+                      <Button
+                        size="icon"
+                        variant="destructive"
+                        onClick={() => handleDeleteUser(user)}
+                        className="h-8 w-8"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+
                     </TableCell>
+
                   </TableRow>
                 ))}
               </TableBody>

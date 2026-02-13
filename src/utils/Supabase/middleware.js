@@ -59,6 +59,7 @@ export async function updateSession(request) {
   }
     // 👇 Stop here if not logged in
     if (!user) return supabaseResponse;
+
    if (user) {
         supabaseResponse.headers.set('x-user-id', user.id)
     }
@@ -66,7 +67,6 @@ export async function updateSession(request) {
     // -------------------------
     // 2. AUTHORIZATION (new)
     // -------------------------
-    const pathname = request.nextUrl.pathname;
 
     // Only guard protected sections
     if (pathname.startsWith("/admin")) {
@@ -86,6 +86,7 @@ export async function updateSession(request) {
             return NextResponse.redirect(new URL("/unauthorized", request.url));
         }
     }
+
 
 
     return supabaseResponse

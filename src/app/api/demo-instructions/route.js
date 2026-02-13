@@ -9,8 +9,8 @@ import PERMISSIONS from "@/config/permissions";
 
 export async function POST(req) {
   const { error, profile } = await requireAuthWithPermission(
-    req,
-    PERMISSIONS.PUBLISH_CONTENT
+  
+    PERMISSIONS.PUBLISH_DEMO_INSTRUCTIONS
   );
 
   if (error) return error;

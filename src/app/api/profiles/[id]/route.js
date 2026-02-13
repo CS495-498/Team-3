@@ -5,6 +5,7 @@ import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
 import PERMISSIONS from "@/config/permissions";
 import { isValidRole } from "@/config/rolePermissions";
 import { createServiceRoleClient } from "@/utils/Supabase/server";
+import { createClient as createClientServer } from "@/utils/Supabase/server";
 
 // Public client (used for auth + DB with RLS)
 const supabase = createClient(
@@ -24,6 +25,17 @@ const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp
 
 // -------------------- GET PROFILE --------------------
 export async function GET(req, context) {
+
+            const supabase = await createClientServer();
+    
+            const {
+                data: { user },
+                error: userError,
+            } = await supabase.auth.getUser();
+    
+            if (userError || !user) {
+                return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            }
     const { id } = await context.params;
 
     const { data, error } = await supabase
@@ -346,4 +358,91 @@ export async function PATCH(request, { params }) {
     );
 
 }
+
+// -------------------- DELETE PROFILE (ADMIN) --------------------
+export async function DELETE(request, { params }) {
+    const { id: profileId } = await params;
+
+    // -------------------------
+    // 1. AUTHORIZATION (ADMIN ONLY)
+    // -------------------------
+    const { error, supabase, user } = await requireAuthWithPermission(
+        PERMISSIONS.MANAGE_USERS
+    );
+
+    if (error) return error;
+
+    // Prevent admin from deleting themselves
+    if (user.id === profileId) {
+        return NextResponse.json(
+            { error: "You cannot delete your own account." },
+            { status: 400 }
+        );
+    }
+
+    const serviceSupabase = await createServiceRoleClient();
+
+    // -------------------------
+    // 2. GET PROFILE (for avatar cleanup)
+    // -------------------------
+    const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("avatar_url")
+        .eq("id", profileId)
+        .single();
+
+    if (profileError) {
+        return NextResponse.json(
+            { error: "Profile not found" },
+            { status: 404 }
+        );
+    }
+
+    // -------------------------
+    // 3. DELETE AVATAR FROM STORAGE (if exists)
+    // -------------------------
+    if (profile?.avatar_url) {
+        await serviceSupabase.storage
+            .from("avatars")
+            .remove([profile.avatar_url]);
+        // no need to hard fail if this errors
+    }
+
+    // -------------------------
+    // 4. DELETE PROFILE ROW
+    // -------------------------
+    const { error: deleteProfileError } = await supabase
+        .from("profiles")
+        .delete()
+        .eq("id", profileId);
+
+    if (deleteProfileError) {
+        return NextResponse.json(
+            { error: deleteProfileError.message },
+            { status: 500 }
+        );
+    }
+
+    // -------------------------
+    // 5. DELETE AUTH USER (CRITICAL STEP)
+    // -------------------------
+    const { error: deleteAuthError } =
+        await serviceSupabase.auth.admin.deleteUser(profileId);
+
+    if (deleteAuthError) {
+        return NextResponse.json(
+            { error: deleteAuthError.message },
+            { status: 500 }
+        );
+    }
+
+    // -------------------------
+    // 6. SUCCESS
+    // -------------------------
+    return NextResponse.json(
+        { message: "User deleted successfully" },
+        { status: 200 }
+    );
+}
+
 

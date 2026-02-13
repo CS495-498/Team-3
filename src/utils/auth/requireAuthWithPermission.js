@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/Supabase/server";
 import requirePermission from "@/utils/auth/requirePermission";
+import ROLE_PERMISSIONS from "@/config/rolePermissions";
 
 
 export default async function requireAuthWithPermission(permission) {
@@ -10,6 +11,8 @@ export default async function requireAuthWithPermission(permission) {
     data: { user },
     error: authError,
   } = await supabase.auth.getUser();
+
+
 
   if (authError || !user) {
     return {
@@ -27,7 +30,11 @@ export default async function requireAuthWithPermission(permission) {
     return {
       error: NextResponse.json({ error: "Profile not found" }, { status: 404 }),
     };
+
+
   }
+
+
 
   const denial = requirePermission(profile.role, permission);
   if (denial) return { error: denial };
