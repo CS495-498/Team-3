@@ -20,6 +20,7 @@ import {
     SelectItem,
     SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 
@@ -52,6 +53,15 @@ export default function Home() {
 
     const [statusFilter, setStatusFilter] = useState("all");
     const [sortOption, setSortOption] = useState("votes_desc");
+
+    // ✅ Show completed toggle (persisted in sessionStorage)
+    const [showCompleted, setShowCompleted] = useState(() => {
+        if (typeof window !== "undefined") {
+            const saved = sessionStorage.getItem("featureRequests_showCompleted");
+            return saved === "true";
+        }
+        return false;
+    });
 
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
@@ -124,6 +134,16 @@ export default function Home() {
         };
     }, []);
 
+    // ✅ Persist showCompleted preference to sessionStorage
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            sessionStorage.setItem(
+                "featureRequests_showCompleted",
+                showCompleted.toString()
+            );
+        }
+    }, [showCompleted]);
+
     // cleanup blob URL to avoid memory leaks
     useEffect(() => {
         if (!rteModalOpen && rteFilePreviewUrl) {
@@ -138,6 +158,12 @@ export default function Home() {
     const filteredSortedRequests = useMemo(() => {
         let list = [...requests];
 
+        // ✅ Hide completed by default unless showCompleted is true
+        if (!showCompleted) {
+            list = list.filter((req) => req.status !== "completed");
+        }
+
+        // FILTER: Apply status filter if not "all"
         if (statusFilter !== "all") {
             list = list.filter((req) => req.status === statusFilter);
         }
@@ -166,7 +192,7 @@ export default function Home() {
         }
 
         return list;
-    }, [requests, statusFilter, sortOption]);
+    }, [requests, statusFilter, sortOption, showCompleted]);
 
     const { items: visibleRequests, hasMore, ref } = useInfiniteScroll(
         filteredSortedRequests,
@@ -217,8 +243,7 @@ export default function Home() {
             isVideo(url) ||
             mime.startsWith("video/") ||
             /\.(mp4|webm|ogg)$/i.test(name);
-        const showPDF =
-            isPDF(url) || mime === "application/pdf" || /\.pdf$/i.test(name);
+        const showPDF = isPDF(url) || mime === "application/pdf" || /\.pdf$/i.test(name);
 
         if (showImage) {
             return (
@@ -326,8 +351,7 @@ export default function Home() {
             })
         );
 
-        const apiVote =
-            previousVote === type ? "remove" : type === "up" ? "up" : "down";
+        const apiVote = previousVote === type ? "remove" : type === "up" ? "up" : "down";
 
         try {
             await castVote(id, apiVote);
@@ -572,6 +596,21 @@ export default function Home() {
                                 </SelectContent>
                             </Select>
                         </div>
+
+                        {/* ✅ Show Completed Toggle */}
+                        <div className="flex items-center gap-2 ml-4 pl-4 border-l border-gray-300 dark:border-gray-700">
+                            <label
+                                htmlFor="show-completed"
+                                className="text-sm text-muted-foreground cursor-pointer"
+                            >
+                                Show completed
+                            </label>
+                            <Switch
+                                id="show-completed"
+                                checked={showCompleted}
+                                onCheckedChange={setShowCompleted}
+                            />
+                        </div>
                     </div>
                 </div>
 
@@ -598,10 +637,14 @@ export default function Home() {
                             .replace(/\s+/g, " ")
                             .trim();
 
+                        const isCompleted = req.status === "completed";
+
                         return (
                             <li
                                 key={req.id}
-                                className="flex items-center py-4 px-4 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                className={`flex items-center py-4 px-4 hover:bg-gray-100 dark:hover:bg-gray-800 ${
+                                    isCompleted ? "opacity-60 dark:opacity-50" : ""
+                                }`}
                             >
                                 <div className="flex flex-col items-center space-y-2 mr-4">
                                     <button
@@ -637,7 +680,9 @@ export default function Home() {
                                     <button
                                         type="button"
                                         onClick={() => openRequest(req)}
-                                        aria-label={req.signed_file_url ? "Open attachment" : "Open request"}
+                                        aria-label={
+                                            req.signed_file_url ? "Open attachment" : "Open request"
+                                        }
                                         className="rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
                                     >
                                         {req.signed_file_url ? (
@@ -701,7 +746,9 @@ export default function Home() {
                                 </div>
 
                                 <div className="flex justify-between items-center ml-4 gap-2">
-                                    <div className={!sameUser(req.user_id, currentUser?.id) ? "hidden" : ""}>
+                                    <div
+                                        className={!sameUser(req.user_id, currentUser?.id) ? "hidden" : ""}
+                                    >
                                         {canEditRequest(req) && (
                                             <CardDropdown
                                                 onEdit={() => openEditRte(req)}
@@ -728,7 +775,10 @@ export default function Home() {
             )}
 
             {hasMore && (
-                <div ref={ref} className="flex flex-col justify-center items-center py-8 mt-6">
+                <div
+                    ref={ref}
+                    className="flex flex-col justify-center items-center py-8 mt-6"
+                >
                     <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
                         <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
                         <span className="text-sm">Loading more requests...</span>
@@ -773,7 +823,9 @@ export default function Home() {
                                 <Dialog.Panel className="w-full h-[95vh] max-h-[95vh] flex flex-col bg-white dark:bg-gray-700 rounded-xl shadow-2xl overflow-hidden">
                                     <div className="sticky top-0 bg-white dark:bg-gray-700 px-4 py-3 border-b border-gray-200 dark:border-gray-600 z-10 flex items-center justify-between">
                                         <Dialog.Title className="font-bold text-2xl">
-                                            {rteMode === "add" ? "Add Feature Request" : "Edit Feature Request"}
+                                            {rteMode === "add"
+                                                ? "Add Feature Request"
+                                                : "Edit Feature Request"}
                                         </Dialog.Title>
 
                                         <div className="flex items-center gap-3">
@@ -824,14 +876,21 @@ export default function Home() {
                                             </div>
 
                                             {(() => {
-                                                const displayUrl = rteFilePreviewUrl || selectedItem?.signed_file_url;
+                                                const displayUrl =
+                                                    rteFilePreviewUrl || selectedItem?.signed_file_url;
                                                 const displayName =
                                                     rteFile?.name ||
-                                                    (selectedItem?.file_url ? selectedItem.file_url.split("/").pop() : "");
+                                                    (selectedItem?.file_url
+                                                        ? selectedItem.file_url.split("/").pop()
+                                                        : "");
 
                                                 return displayUrl ? (
                                                     <div className="flex items-center gap-3 mb-3">
-                                                        <AttachmentPreview url={displayUrl} size={64} fileName={displayName} />
+                                                        <AttachmentPreview
+                                                            url={displayUrl}
+                                                            size={64}
+                                                            fileName={displayName}
+                                                        />
 
                                                         <button
                                                             type="button"
@@ -861,9 +920,11 @@ export default function Home() {
                                                     const file = e.target.files?.[0] || null;
                                                     setRteFile(file);
 
-                                                    if (rteFilePreviewUrl) URL.revokeObjectURL(rteFilePreviewUrl);
+                                                    if (rteFilePreviewUrl)
+                                                        URL.revokeObjectURL(rteFilePreviewUrl);
 
-                                                    if (file) setRteFilePreviewUrl(URL.createObjectURL(file));
+                                                    if (file)
+                                                        setRteFilePreviewUrl(URL.createObjectURL(file));
                                                     else setRteFilePreviewUrl(null);
                                                 }}
                                                 className="hidden"
@@ -875,7 +936,6 @@ export default function Home() {
                                             >
                                                 Choose file
                                             </label>
-
                                         </div>
 
                                         <div>
@@ -883,10 +943,12 @@ export default function Home() {
                                                 Content
                                             </label>
                                             <div className="w-full min-h-[300px] rounded-md p-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700">
-                                                <SimpleEditor html={dialogEditorContent} editorRef={editorRef} />
+                                                <SimpleEditor
+                                                    html={dialogEditorContent}
+                                                    editorRef={editorRef}
+                                                />
                                             </div>
                                         </div>
-
                                     </div>
                                 </Dialog.Panel>
                             </motion.div>
@@ -966,7 +1028,10 @@ export default function Home() {
 
                                         {activeRequest.signed_file_url ? (
                                             <div className="flex items-start gap-3">
-                                                <AttachmentPreview url={activeRequest.signed_file_url} size={80} />
+                                                <AttachmentPreview
+                                                    url={activeRequest.signed_file_url}
+                                                    size={80}
+                                                />
                                                 <div className="flex flex-col gap-2">
                                                     <div className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
                                                         <Paperclip className="w-4 h-4" />
@@ -974,7 +1039,9 @@ export default function Home() {
                                                     </div>
                                                     <button
                                                         type="button"
-                                                        onClick={() => window.open(activeRequest.signed_file_url, "_blank")}
+                                                        onClick={() =>
+                                                            window.open(activeRequest.signed_file_url, "_blank")
+                                                        }
                                                         className="w-fit text-sm px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
                                                     >
                                                         Open attachment
@@ -985,15 +1052,14 @@ export default function Home() {
 
                                         {/* Comments */}
                                         <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-
-
                                             <div className="flex items-center justify-between mb-3">
                                                 <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                                                     Comments ({activeRequest.commentCount || 0})
                                                 </h4>
 
                                                 <span className="text-xs text-gray-400">
-                          Created: {new Date(activeRequest.created_at).toLocaleString()}
+                          Created:{" "}
+                                                    {new Date(activeRequest.created_at).toLocaleString()}
                         </span>
                                             </div>
 
@@ -1003,7 +1069,9 @@ export default function Home() {
                                                         Add a comment
                                                     </label>
                                                     {commentPostError && (
-                                                        <span className="text-sm text-red-500">{commentPostError}</span>
+                                                        <span className="text-sm text-red-500">
+                              {commentPostError}
+                            </span>
                                                     )}
                                                 </div>
 
@@ -1027,7 +1095,6 @@ export default function Home() {
                                                     </button>
                                                 </div>
                                             </div>
-
 
                                             {commentsLoading ? (
                                                 <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -1062,17 +1129,24 @@ export default function Home() {
                                                     })}
                                                 </div>
                                             )}
-
                                         </div>
                                     </div>
 
                                     <div className="px-5 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
                                         <div className="flex items-center gap-2 text-gray-600 dark:text-gray-200">
                                             <MessageSquare className="w-5 h-5" />
-                                            <span className="text-sm">{activeRequest.commentCount || 0}</span>
+                                            <span className="text-sm">
+                        {activeRequest.commentCount || 0}
+                      </span>
                                         </div>
 
-                                        <div className={!sameUser(activeRequest.user_id, currentUser?.id) ? "hidden" : ""}>
+                                        <div
+                                            className={
+                                                !sameUser(activeRequest.user_id, currentUser?.id)
+                                                    ? "hidden"
+                                                    : ""
+                                            }
+                                        >
                                             {canEditRequest(activeRequest) && (
                                                 <CardDropdown
                                                     onEdit={() => openEditRte(activeRequest)}
