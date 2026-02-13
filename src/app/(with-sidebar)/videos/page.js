@@ -84,7 +84,10 @@ export default function VideoLibrary() {
 
 
     const { user, loading: userLoading } = useUser();
-    const canUploadVideo = hasPermission(user.role, "upload_video_library");
+    const canUploadVideo =
+        user?.role && hasPermission(user.role, "upload_video_library");
+
+
 
     /* -----------------------------------------------------------------------------------
         BOOKMARK HANDLER
