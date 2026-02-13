@@ -1,9 +1,21 @@
 import { NextResponse } from "next/server";
-import { redirect } from "next/navigation";
 import { createClient } from "@/utils/Supabase/server";
 import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
 import PERMISSIONS from "@/config/permissions";
 import { hasPermission } from "@/utils/hasPermission";
+import { sanitizeHtmlServer } from "@/lib/featureRequests/requests/sanitizeHtmlServer.js";
+
+
+const ALLOWED_MIME_TYPES = [
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+    "application/pdf",
+    "video/mp4",
+    "video/webm",
+    "video/ogg",
+];
 
 export async function PUT(req, { params }) {
   const { id } = await params;
@@ -27,7 +39,6 @@ export async function PUT(req, { params }) {
     );
   }
 
-  // 🔥 Check if user can manage all
   const canManageAll = hasPermission(
     profile.role,
     PERMISSIONS.MANAGE_ALL_FEATURE_REQUESTS
@@ -38,13 +49,12 @@ export async function PUT(req, { params }) {
     .from("feature_requests")
     .update({
       title,
-      content,
+      content : sanitizeHtmlServer(content),
       status,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id);
 
-  // If NOT admin → restrict to own record
   if (!canManageAll) {
     query = query.eq("user_id", profile.id);
   }
@@ -103,7 +113,6 @@ export async function DELETE(req, { params }) {
     .delete()
     .eq("id", id);
 
-  // 🔥 Only restrict ownership if NOT admin
   if (!canManageAll) {
     query = query.eq("user_id", profile.id);
   }

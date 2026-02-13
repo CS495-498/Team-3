@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@/utils/Supabase/server";
-import { fileTypeFromBuffer } from "file-type";
-import { createServiceRoleClient } from "@/utils/Supabase/server";
 import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
 import PERMISSIONS from "@/config/permissions";
+import {NextResponse} from "next/server";
+import {createClient} from "@/utils/Supabase/server";
+import {fileTypeFromBuffer} from "file-type";
+import {createServiceRoleClient} from "@/utils/Supabase/server";
+import { sanitizeHtmlServer } from "@/lib/featureRequests/requests/sanitizeHtmlServer.js";
 
 const ALLOWED_MIME_TYPES = [
   "image/jpeg",
@@ -20,9 +21,9 @@ const MAX_FILE_SIZE = 25 * 1024 * 1024;
 
 export async function GET() {
   const supabase = await createClient();
-  
+
   const { error2, profile } = await requireAuthWithPermission(
-  
+
     PERMISSIONS.VIEW_CONTENT
   );
 
@@ -74,7 +75,7 @@ export async function POST(req) {
     const supabase = await createClient();
 
     const { error2, profile } = await requireAuthWithPermission(
-  
+
     PERMISSIONS.PUBLISH_FEATURE_REQUESTS
   );
 
@@ -96,6 +97,8 @@ export async function POST(req) {
     return NextResponse.json({ error: "Title is required" }, { status: 400 });
   }
 
+    const cleanContent = sanitizeHtmlServer(content)
+
     let filePath = null;
 
   if (file) {
@@ -111,7 +114,6 @@ export async function POST(req) {
       return NextResponse.json({ error: "Invalid file type" }, { status: 400 });
     }
 
-    // Optional: sanitize images
     filePath = `uploads/${crypto.randomUUID()}.${detectedType.ext}`;
 
         const { error: uploadError } = await supabase.storage
@@ -132,7 +134,7 @@ export async function POST(req) {
         .insert([
             {
                 title,
-                content,
+                content: cleanContent,
                 status: "open",
                 user_id: profile.id,
                 file_url: filePath
