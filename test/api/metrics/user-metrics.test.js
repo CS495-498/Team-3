@@ -1,95 +1,124 @@
 import { expect } from "chai";
 import sinon from "sinon";
-import { GET as userMetricsHandler } from "../../../../src/app/api/metrics/user-metrics/route.js";
-import * as supabaseModule from "@/utils/Supabase/server.js";
+import { GET } from "../../../../src/app/api/metrics/user-metrics/route.js";
+import * as supabaseServer from "../../../../src/utils/Supabase/server.js";
 
-describe("user-metrics API GET handler", () => {
+describe("GET /api/metrics/user-metrics", () => {
     let createClientStub;
+    let supabaseMock;
+    let queryMock;
+
+    const mockRows = [
+        {
+            user_id: "user-1",
+            date: "2024-02-01",
+            post_count: 2,
+            get_count: 3,
+            put_count: 1,
+            delete_count: 0,
+            request_count: 6,
+        },
+        {
+            user_id: "user-1",
+            date: "2024-02-02",
+            post_count: 1,
+            get_count: 2,
+            put_count: 0,
+            delete_count: 1,
+            request_count: 4,
+        },
+        {
+            user_id: "user-2",
+            date: "2024-02-01",
+            post_count: 5,
+            get_count: 5,
+            put_count: 0,
+            delete_count: 0,
+            request_count: 10,
+        },
+    ];
 
     beforeEach(() => {
-        createClientStub = sinon.stub(supabaseModule, "createClient");
+        queryMock = {
+            select: sinon.stub().returnsThis(),
+            gte: sinon.stub().returnsThis(),
+            lte: sinon.stub().returnsThis(),
+            then: undefined,
+        };
+
+        supabaseMock = {
+            auth: {
+                getUser: sinon.stub().resolves({
+                    data: { user: { id: "u1" } },
+                    error: null,
+                }),
+            },
+            from: sinon.stub().returns(queryMock),
+        };
+
+        queryMock.then = (resolve) =>
+            resolve({ data: mockRows, error: null });
+
+        createClientStub = sinon
+            .stub(supabaseServer, "createClient")
+            .resolves(supabaseMock);
     });
 
     afterEach(() => {
         sinon.restore();
     });
 
-    it("returns grouped user metrics on success", async () => {
-        // mock Supabase client
-        const mockSupabase = {
-            auth: {
-                getUser: sinon.stub().resolves({ data: { user: { id: "u1" } }, error: null }),
-            },
-            from: sinon.stub().returnsThis(),
-            select: sinon.stub().returnsThis(),
-            gte: sinon.stub().returnsThis(),
-            lte: sinon.stub().returnsThis(),
-            then: undefined,
-            query: undefined,
-        };
+    it("returns 401 when unauthorized", async () => {
+        supabaseMock.auth.getUser.resolves({
+            data: { user: null },
+            error: null,
+        });
 
-        // mock the final query
-        const mockData = [
-            { user_id: "u1", date: "2026-02-08", post_count: "1", get_count: "2", put_count: "0", delete_count: "0", request_count: "3" },
-            { user_id: "u1", date: "2026-02-09", post_count: "0", get_count: "1", put_count: "0", delete_count: "0", request_count: "1" },
-            { user_id: "u2", date: "2026-02-08", post_count: "0", get_count: "1", put_count: "0", delete_count: "1", request_count: "2" },
-        ];
+        const req = { url: "http://localhost/api/metrics/user-metrics" };
+        const res = await GET(req);
+        const body = await res.json();
 
-        const queryStub = sinon.stub().resolves({ data: mockData, error: null });
-        mockSupabase.from.returns({ select: queryStub, gte: () => ({ lte: queryStub }) });
+        expect(res.status).to.equal(401);
+        expect(body.error).to.equal("Unauthorized");
+    });
 
-        createClientStub.resolves(mockSupabase);
+    it("groups metrics per user", async () => {
+        const req = { url: "http://localhost/api/metrics/user-metrics" };
 
-        // simulate request object
-        const request = new Request("http://localhost/api/metrics/user-metrics?start_date=2026-02-08&end_date=2026-02-09");
+        const res = await GET(req);
+        const body = await res.json();
 
-        const response = await userMetricsHandler(request);
-        const body = await response.json();
-
-        expect(response.status).to.equal(200);
+        expect(res.status).to.equal(200);
         expect(body).to.be.an("array");
-        const u1 = body.find((u) => u.user_id === "u1");
-        expect(u1.total_post).to.equal(1);
-        expect(u1.total_get).to.equal(2 + 1);
-        expect(u1.total_requests).to.equal(3 + 1);
-        expect(u1.start_date).to.equal("2026-02-08");
-        expect(u1.end_date).to.equal("2026-02-09");
+
+        const user1 = body.find(u => u.user_id === "user-1");
+        expect(user1.total_requests).to.equal(10);
+        expect(user1.total_post).to.equal(3);
+        expect(user1.start_date).to.equal("2024-02-01");
+        expect(user1.end_date).to.equal("2024-02-02");
     });
 
-    it("returns 401 if user is not authenticated", async () => {
-        const mockSupabase = {
-            auth: { getUser: sinon.stub().resolves({ data: { user: null }, error: null }) },
-            from: sinon.stub().returnsThis(),
-            select: sinon.stub().returnsThis(),
+    it("filters by start and end date", async () => {
+        const req = {
+            url: "http://localhost/api/metrics/user-metrics?start_date=2024-02-02&end_date=2024-02-02",
         };
-        createClientStub.resolves(mockSupabase);
 
-        const request = new Request("http://localhost/api/metrics/user-metrics");
+        const res = await GET(req);
+        const body = await res.json();
 
-        const response = await userMetricsHandler(request);
-        const body = await response.json();
-
-        expect(response.status).to.equal(401);
-        expect(body).to.deep.equal({ error: "Unauthorized" });
+        expect(res.status).to.equal(200);
+        expect(body.length).to.be.greaterThan(0);
     });
 
-    it("returns 500 if Supabase query errors", async () => {
-        const mockSupabase = {
-            auth: { getUser: sinon.stub().resolves({ data: { user: { id: "u1" } }, error: null }) },
-            from: sinon.stub().returnsThis(),
-            select: sinon.stub().returnsThis(),
-        };
-        createClientStub.resolves(mockSupabase);
+    it("returns 500 on DB error", async () => {
+        queryMock.then = (resolve) =>
+            resolve({ data: null, error: { message: "DB crash" } });
 
-        const request = new Request("http://localhost/api/metrics/user-metrics");
+        const req = { url: "http://localhost/api/metrics/user-metrics" };
+        const res = await GET(req);
+        const body = await res.json();
 
-        // simulate .then() throwing error
-        sinon.stub(mockSupabase, "from").throws(new Error("DB down"));
-
-        const response = await userMetricsHandler(request);
-        const body = await response.json();
-
-        expect(response.status).to.equal(500);
-        expect(body).to.deep.equal({ error: "Server error" });
+        expect(res.status).to.equal(500);
+        expect(body.error).to.equal("DB crash");
     });
 });

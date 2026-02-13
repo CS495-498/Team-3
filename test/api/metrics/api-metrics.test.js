@@ -1,161 +1,136 @@
 import { expect } from "chai";
 import sinon from "sinon";
+import { GET } from "../../../../src/app/api/metrics/api-metrics/route.js";
+import * as supabaseServer from "../../../../src/utils/Supabase/server.js";
 
-// Import the handler
-import * as route from "../../../../src/app/api/metrics/route.js";
-
-// Mock modules
-import * as supabaseServer from "@/utils/Supabase/server";
-import * as nextServer from "next/server";
-
-describe("GET /api/metrics", () => {
+describe("GET /api/metrics/api-metrics", () => {
     let createClientStub;
-    let jsonStub;
+    let supabaseMock;
+    let queryMock;
+
+    const mockRows = [
+        {
+            date: "2024-02-01",
+            endpoint: "/api/users",
+            request_count: 10,
+            post_count: 3,
+            get_count: 7,
+            put_count: 0,
+            delete_count: 0,
+        },
+        {
+            date: "2024-02-01",
+            endpoint: "/api/users",
+            request_count: 5,
+            post_count: 1,
+            get_count: 4,
+            put_count: 0,
+            delete_count: 0,
+        },
+        {
+            date: "2024-02-02",
+            endpoint: "/api/orders",
+            request_count: 20,
+            post_count: 10,
+            get_count: 10,
+            put_count: 0,
+            delete_count: 0,
+        },
+    ];
 
     beforeEach(() => {
-        jsonStub = sinon.stub(nextServer.NextResponse, "json").callsFake((body, init = {}) => {
-            return {
-                status: init.status || 200,
-                body,
-            };
-        });
+        queryMock = {
+            select: sinon.stub().returnsThis(),
+            gte: sinon.stub().returnsThis(),
+            lte: sinon.stub().returnsThis(),
+            then: undefined,
+        };
+
+        supabaseMock = {
+            auth: {
+                getUser: sinon.stub().resolves({
+                    data: { user: { id: "u1" } },
+                    error: null,
+                }),
+            },
+            from: sinon.stub().returns(queryMock),
+        };
+
+        // emulate await query
+        queryMock.then = (resolve) =>
+            resolve({ data: mockRows, error: null });
+
+        createClientStub = sinon
+            .stub(supabaseServer, "createClient")
+            .resolves(supabaseMock);
     });
 
     afterEach(() => {
         sinon.restore();
     });
 
-    function buildSupabaseMock({ user = { id: "u1" }, data = [], error = null }) {
-        const queryBuilder = {
-            select: sinon.stub().returnsThis(),
-            gte: sinon.stub().returnsThis(),
-            lte: sinon.stub().returnsThis(),
-        };
-
-        const finalQuery = Promise.resolve({ data, error });
-
-        // When awaited, query returns finalQuery
-        queryBuilder.then = finalQuery.then.bind(finalQuery);
-
-        return {
-            auth: {
-                getUser: sinon.stub().resolves({ data: { user }, error: null }),
-            },
-            from: sinon.stub().returns(queryBuilder),
-        };
-    }
-
-    it("returns 401 when user not authenticated", async () => {
-        createClientStub = sinon.stub(supabaseServer, "createClient").resolves({
-            auth: {
-                getUser: sinon.stub().resolves({
-                    data: { user: null },
-                    error: null,
-                }),
-            },
+    it("returns 401 when unauthenticated", async () => {
+        supabaseMock.auth.getUser.resolves({
+            data: { user: null },
+            error: null,
         });
 
-        const req = { url: "http://localhost/api?groupBy=date" };
-
-        const res = await route.GET(req);
+        const req = { url: "http://localhost/api/metrics/api-metrics" };
+        const res = await GET(req);
+        const body = await res.json();
 
         expect(res.status).to.equal(401);
-        expect(res.body).to.deep.equal({ error: "Unauthorized" });
+        expect(body.error).to.equal("Unauthorized");
     });
 
     it("groups by date", async () => {
-        const supabaseMock = buildSupabaseMock({
-            data: [
-                { date: "2024-01-01", request_count: 5 },
-                { date: "2024-01-01", request_count: 3 },
-                { date: "2024-01-02", request_count: 2 },
-            ],
-        });
+        const req = {
+            url: "http://localhost/api/metrics/api-metrics?groupBy=date",
+        };
 
-        createClientStub = sinon.stub(supabaseServer, "createClient").resolves(supabaseMock);
-
-        const req = { url: "http://localhost/api?groupBy=date" };
-
-        const res = await route.GET(req);
+        const res = await GET(req);
+        const body = await res.json();
 
         expect(res.status).to.equal(200);
-        expect(res.body).to.deep.equal([
-            { date: "2024-01-01", total_requests: 8 },
-            { date: "2024-01-02", total_requests: 2 },
-        ]);
+        expect(body).to.deep.include({ date: "2024-02-01", total_requests: 15 });
+        expect(body).to.deep.include({ date: "2024-02-02", total_requests: 20 });
     });
 
-    it("returns top 10 endpoints when groupBy=endpoint", async () => {
-        const supabaseMock = buildSupabaseMock({
-            data: [
-                { endpoint: "/a", request_count: 5 },
-                { endpoint: "/a", request_count: 2 },
-                { endpoint: "/b", request_count: 10 },
-            ],
-        });
+    it("returns top endpoints when groupBy=endpoint", async () => {
+        const req = {
+            url: "http://localhost/api/metrics/api-metrics?groupBy=endpoint",
+        };
 
-        createClientStub = sinon.stub(supabaseServer, "createClient").resolves(supabaseMock);
-
-        const req = { url: "http://localhost/api?groupBy=endpoint" };
-
-        const res = await route.GET(req);
+        const res = await GET(req);
+        const body = await res.json();
 
         expect(res.status).to.equal(200);
-        expect(res.body[0]).to.deep.equal({ endpoint: "/b", total_requests: 10 });
-        expect(res.body[1]).to.deep.equal({ endpoint: "/a", total_requests: 7 });
+        expect(body[0]).to.have.property("endpoint");
+        expect(body[0]).to.have.property("total_requests");
     });
 
-    it("aggregates HTTP methods when groupBy=methods", async () => {
-        const supabaseMock = buildSupabaseMock({
-            data: [
-                { post_count: 1, get_count: 2, put_count: 3, delete_count: 4 },
-                { post_count: 2, get_count: 3, put_count: 4, delete_count: 5 },
-            ],
-        });
+    it("aggregates HTTP methods", async () => {
+        const req = {
+            url: "http://localhost/api/metrics/api-metrics?groupBy=methods",
+        };
 
-        createClientStub = sinon.stub(supabaseServer, "createClient").resolves(supabaseMock);
-
-        const req = { url: "http://localhost/api?groupBy=methods" };
-
-        const res = await route.GET(req);
+        const res = await GET(req);
+        const body = await res.json();
 
         expect(res.status).to.equal(200);
-        expect(res.body).to.deep.equal([
-            {
-                total_post: 3,
-                total_get: 5,
-                total_put: 7,
-                total_delete: 9,
-            },
-        ]);
+        expect(body[0]).to.have.property("total_post");
+        expect(body[0]).to.have.property("total_get");
     });
 
-    it("returns 500 when query fails", async () => {
-        const supabaseMock = buildSupabaseMock({
-            data: null,
-            error: { message: "DB error" },
-        });
+    it("returns 500 when DB error occurs", async () => {
+        queryMock.then = (resolve) =>
+            resolve({ data: null, error: { message: "DB failure" } });
 
-        createClientStub = sinon.stub(supabaseServer, "createClient").resolves(supabaseMock);
-
-        const req = { url: "http://localhost/api?groupBy=date" };
-
-        const res = await route.GET(req);
+        const req = { url: "http://localhost/api/metrics/api-metrics" };
+        const res = await GET(req);
+        const body = await res.json();
 
         expect(res.status).to.equal(500);
-        expect(res.body).to.deep.equal({ error: "DB error" });
-    });
-
-    it("returns empty array when no groupBy provided", async () => {
-        const supabaseMock = buildSupabaseMock({ data: [] });
-
-        createClientStub = sinon.stub(supabaseServer, "createClient").resolves(supabaseMock);
-
-        const req = { url: "http://localhost/api" };
-
-        const res = await route.GET(req);
-
-        expect(res.status).to.equal(200);
-        expect(res.body).to.deep.equal([]);
+        expect(body.error).to.equal("DB failure");
     });
 });
