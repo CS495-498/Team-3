@@ -1,21 +1,18 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/Supabase/server";
+import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission.js";
+import PERMISSIONS from "@/config/permissions";
 
 export async function GET() {
-    const supabase = await createClient();
-
-    const {
-        data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-        return NextResponse.json([], { status: 200 });
-    }
+const { error2, profile, supabase } = await requireAuthWithPermission(
+    PERMISSIONS.VIEW_CONTENT
+  );
+  if (error2) return error2;
 
     const { data, error } = await supabase
         .from("votes")
         .select("req_id, Upvoted")
-        .eq("user_id", user.id);
+        .eq("user_id", profile.id);
 
     if (error) {
         return NextResponse.json([], { status: 500 });

@@ -1,16 +1,15 @@
 import { NextResponse } from "next/server";
 import { updateAndPublishVideos } from "./updateAndPublishVideos.js";
 import { createClient } from "@/utils/Supabase/server";
+import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission.js";
+import PERMISSIONS from "@/config/permissions";
 
 export async function PUT(req) {
 
-  const supabase = await createClient();
-
-  // Authenticate user
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+const { error, profile, supabase } = await requireAuthWithPermission(
+    PERMISSIONS.UPLOAD_VIDEO_LIBRARY
+  );
+  if (error) return error;
 
   if (userError || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

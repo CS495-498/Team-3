@@ -1,18 +1,20 @@
 import { NextResponse } from "next/server";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/Supabase/server";
+import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
+import PERMISSIONS from "@/config/permissions";
 
 export async function POST(req, { params }) {
     const { id } = await params;
     const supabase = await createClient();
 
     // Get logged-in user
-    const {
-        data: { user },
-        error: userError,
-    } = await supabase.auth.getUser();
+     const { error, profile } = await requireAuthWithPermission(
+  
+    PERMISSIONS.COMMENT_VOTE_FEATURE_REQUESTS
+  );
 
-    if (userError || !user) redirect("/login");
+  if (error) return error;
 
     const { vote } = await req.json();
 
@@ -28,7 +30,7 @@ export async function POST(req, { params }) {
             const { error: delErr } = await supabase
                 .from("votes")
                 .delete()
-                .eq("user_id", user.id)
+                .eq("user_id", profile.id)
                 .eq("req_id", id);
 
             if (delErr) throw delErr;
@@ -38,7 +40,7 @@ export async function POST(req, { params }) {
                 .from("votes")
                 .upsert(
                     {
-                        user_id: user.id,
+                        user_id: profile.id,
                         req_id: id,
                         Upvoted: vote === "up" ? true : false,
                     },
