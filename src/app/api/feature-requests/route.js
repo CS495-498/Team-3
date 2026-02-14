@@ -1,7 +1,10 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@/utils/Supabase/server";
-import { fileTypeFromBuffer } from "file-type";
-import { createServiceRoleClient } from "@/utils/Supabase/server";
+import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
+import PERMISSIONS from "@/config/permissions";
+import {NextResponse} from "next/server";
+import {createClient} from "@/utils/Supabase/server";
+import {fileTypeFromBuffer} from "file-type";
+import {createServiceRoleClient} from "@/utils/Supabase/server";
+import { sanitizeHtmlServer } from "@/lib/featureRequests/requests/sanitizeHtmlServer.js";
 
 const ALLOWED_MIME_TYPES = [
   "image/jpeg",
@@ -18,17 +21,14 @@ const MAX_FILE_SIZE = 25 * 1024 * 1024;
 const TITLE_MAX_LENGTH = 100;
 
 export async function GET() {
-  
   const supabase = await createClient();
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  const { error2, profile } = await requireAuthWithPermission(
 
-  if (userError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+    PERMISSIONS.VIEW_CONTENT
+  );
+
+  if (error2) return error2;
 
     const { data, error } = await supabase
         .from("feature_requests")
@@ -75,14 +75,13 @@ export async function GET() {
 export async function POST(req) {
     const supabase = await createClient();
 
-    const {
-        data: { user },
-        error: userError
-    } = await supabase.auth.getUser();
+    const { error2, profile } = await requireAuthWithPermission(
 
-    if (userError || !user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    PERMISSIONS.PUBLISH_FEATURE_REQUESTS
+  );
+
+  if (error2) return error;
+
 
     const contentLength = req.headers.get("content-length");
 
@@ -107,6 +106,7 @@ export async function POST(req) {
       { status: 400 }
     );
   }
+    const cleanContent = sanitizeHtmlServer(content)
 
     let filePath = null;
 
@@ -123,7 +123,6 @@ export async function POST(req) {
       return NextResponse.json({ error: "Invalid file type" }, { status: 400 });
     }
 
-    // Optional: sanitize images
     filePath = `uploads/${crypto.randomUUID()}.${detectedType.ext}`;
 
         const { error: uploadError } = await supabase.storage
@@ -144,9 +143,9 @@ export async function POST(req) {
         .insert([
             {
                 title: normalizedTitle,
-                content,
+                content: cleanContent,
                 status: "open",
-                user_id: user.id,
+                user_id: profile.id,
                 file_url: filePath
             }
         ])

@@ -2,19 +2,15 @@ import { NextResponse } from "next/server";
 import { updateAndPublishDemoWeb } from "./updateAndPublishDemoWeb.js";
 import { deleteDemoWeb } from "./deleteDemoWeb.js";
 import { createClient } from "@/utils/Supabase/server";
+import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission.js";
+import PERMISSIONS from "@/config/permissions";
 
 export async function PUT(req) {
-  const supabase = await createClient();
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    // or redirect("/login") if desired
-  }
+const { error, profile, supabase } = await requireAuthWithPermission(
+    PERMISSIONS.UPLOAD_DEMO_WEBSITES
+  );
+  if (error) return error;
 
   try {
     const { entryUid, demos } = await req.json();
@@ -30,16 +26,10 @@ export async function PUT(req) {
 }
 
 export async function DELETE(req) {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { error, profile, supabase } = await requireAuthWithPermission(
+    PERMISSIONS.UPLOAD_DEMO_WEBSITES
+  );
+  if (error) return error;
 
   try {
     const { entryUid, demos } = await req.json();

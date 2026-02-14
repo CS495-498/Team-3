@@ -5,20 +5,16 @@ const BASE = "https://api.contentstack.io/v3";
 const API_KEY = process.env.CONTENTSTACK_API_KEY;
 const MANAGEMENT_TOKEN = process.env.CONTENTSTACK_MANAGEMENT_TOKEN;
 const ENVIRONMENT = process.env.CONTENTSTACK_ENVIRONMENT;
+import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
+import PERMISSIONS from "@/config/permissions";
 
 export async function POST(req) {
-  const supabase = await createClient();
+  const { error, profile } = await requireAuthWithPermission(
+  
+    PERMISSIONS.PUBLISH_DEMO_INSTRUCTIONS
+  );
 
-  // Authenticate user
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    // or redirect("/login") if desired
-  }
+  if (error) return error;
 
   try {
     const { uid, title, html, author } = await req.json();

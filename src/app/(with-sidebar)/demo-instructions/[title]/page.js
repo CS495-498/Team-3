@@ -9,6 +9,11 @@ import { Dialog, DialogPanel, DialogTitle, Description } from "@headlessui/react
 import DOMPurify from "isomorphic-dompurify";
 import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor";
 
+import { useUser } from "@/context/UserContext";
+import { hasPermission } from "@/utils/hasPermission";
+import PERMISSIONS from "@/config/permissions";
+
+
 export default function ArticleWithEditor({ params }) {
   const [entry, setEntry] = useState({});
   const [isOpen, setIsOpen] = useState(false);
@@ -16,6 +21,12 @@ export default function ArticleWithEditor({ params }) {
   const [isLoading, setIsLoading] = useState(true);
   const [dialogEditorContent, setDialogEditorContent] = useState("");
   const editorRef = useRef(null);
+
+  const { user, loading } = useUser();
+
+  const canPublishDemoInstructions =
+    !!user && hasPermission(user.role, PERMISSIONS.PUBLISH_DEMO_INSTRUCTIONS);
+
 
   const getContent = async () => {
     const { title } = await params;
@@ -36,7 +47,7 @@ export default function ArticleWithEditor({ params }) {
 
   const safeHTML = DOMPurify.sanitize(
     entry?.blog_content ||
-      `<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px 20px; color: #6b7280; font-size: 1rem;">
+    `<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px 20px; color: #6b7280; font-size: 1rem;">
         <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 12px;">
           <circle cx="12" cy="12" r="10"></circle>
           <line x1="22" y1="22" x2="16.65" y2="16.65"></line>
@@ -70,7 +81,7 @@ export default function ArticleWithEditor({ params }) {
         throw new Error(`Failed to save: ${text}`);
       }
 
-      
+
 
     } catch (err) {
       console.error(err);
@@ -79,8 +90,8 @@ export default function ArticleWithEditor({ params }) {
     setIsOpen(false);
     setShowToast(true);
     setTimeout(() => {
-            setShowToast(false);
-        }, 2000);
+      setShowToast(false);
+    }, 2000);
   };
 
   if (isLoading) {
@@ -114,15 +125,18 @@ export default function ArticleWithEditor({ params }) {
       </article>
 
       {/* Floating Edit Button */}
-      <Button
-        className="fixed bottom-6 right-6 z-50"
-        onClick={() => {
-          setDialogEditorContent(entry.blog_content || safeHTML);
-          setIsOpen(true);
-        }}
-      >
-        Edit
-      </Button>
+      {canPublishDemoInstructions && (
+        <Button
+          className="fixed bottom-6 right-6 z-50"
+          onClick={() => {
+            setDialogEditorContent(entry.blog_content || safeHTML);
+            setIsOpen(true);
+          }}
+        >
+          Edit
+        </Button>
+      )}
+
 
       {/* Dialog */}
       <Dialog

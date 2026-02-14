@@ -1,103 +1,30 @@
 import { NextResponse } from "next/server";
-import { redirect } from "next/navigation";
 import { createClient } from "@/utils/Supabase/server";
+import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
+import PERMISSIONS from "@/config/permissions";
+import { hasPermission } from "@/utils/hasPermission";
+import { sanitizeHtmlServer } from "@/lib/featureRequests/requests/sanitizeHtmlServer.js";
 
 const TITLE_MAX_LENGTH = 100;
 
 export async function POST(req, { params }) {
-  const { id } = params;
+  const { id } = params; // <-- removed await
   const supabase = await createClient();
 
-  // Authenticate user
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  // Authenticate (must at least be able to publish)
+  const { error: authError, profile } = await requireAuthWithPermission(
+    PERMISSIONS.PUBLISH_FEATURE_REQUESTS
+  );
 
-  if (userError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (authError) return authError;
 
-    const body = await req.json();
-    const { vote } = body;
+  const body = await req.json();
+  const { title, content, status } = body;
 
-  if (!vote || !["up", "down"].includes(vote)) {
-    return NextResponse.json(
-        { error: "Invalid vote type" },
-        { status: 400 }
-    );
-  }
-
-    try {
-        const { error: voteError } = await supabase
-            .from("votes")
-            .upsert(
-                {
-                    user_id: user.id,
-                    req_id: Number(id),
-                    vote,
-                },
-                { onConflict: "user_id,req_id" }
-            );
-
-        if (voteError) throw voteError;
-
-        const { data: votes, error: fetchError } = await supabase
-            .from("votes")
-            .select("vote")
-            .eq("req_id", Number(id));
-
-    if (fetchError) throw fetchError;
-
-    const up = votes.filter(v => v.vote === "up").length;
-    const down = votes.filter(v => v.vote === "down").length;
-
-    const total = up - down;
-
-    // 3. Update total votes in feature_requests table
-    const { error: updateError } = await supabase
-        .from("feature_requests")
-        .update({ number_of_votes: total })
-        .eq("id", Number(id));
-
-        if (updateError) throw updateError;
-
-    return NextResponse.json(
-        { number_of_votes: total },
-        { status: 200 }
-    );
-  } catch (error) {
-    console.error("Vote error:", error);
-    return NextResponse.json(
-        { error: error.message || "Failed to cast vote" },
-        { status: 500 }
-    );
-  }
-}
-
-export async function PUT(req, { params }) {
-    const { id } = params;
-    const supabase = await createClient();
-
-  // Authenticate user
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-    const body = await req.json();
-    const { title, content, status } = body;
-    const normalizedTitle = title?.toString().trim() || "";
+  const normalizedTitle = title?.toString().trim() || "";
 
   if (!normalizedTitle) {
-    return NextResponse.json(
-      { error: "Title is required" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Title is required" }, { status: 400 });
   }
 
   if (normalizedTitle.length > TITLE_MAX_LENGTH) {
@@ -107,71 +34,85 @@ export async function PUT(req, { params }) {
     );
   }
 
-  // Update the feature request
-    const { data, error } = await supabase
-        .from("feature_requests")
-        .update({
-            title: normalizedTitle,
-            content,
-            status,
-            updated_at: new Date().toISOString(),
-        })
-        .eq("id", id)
-        .eq("user_id", user.id)
-        .select(`
+  const canManageAll = hasPermission(
+    profile.role,
+    PERMISSIONS.MANAGE_ALL_FEATURE_REQUESTS
+  );
+
+  // Base query
+  let query = supabase
+    .from("feature_requests")
+    .update({
+      title: normalizedTitle,
+      content: sanitizeHtmlServer(content),
+      status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (!canManageAll) {
+    query = query.eq("user_id", profile.id);
+  }
+
+  console.log("ROLE:", profile.role);
+  console.log(
+    "HAS MANAGE ALL:",
+    hasPermission(profile.role, PERMISSIONS.MANAGE_ALL_FEATURE_REQUESTS)
+  );
+
+  const { data, error } = await query
+    .select(
+      `
       *,
       profiles!fk_feature_requests_author (
         id,
         username,
         avatar_url
       )
-    `)
-        .single();
+    `
+    )
+    .single();
 
   if (error) {
-    console.error(error);
-    return NextResponse.json({ error: error.message }, { status: 403 });
+    console.error("SUPABASE ERROR:", error);
   }
 
-    return NextResponse.json(data, { status: 200 });
-}
-
-export async function DELETE(req, { params }) {
-    const { id } = params;
-    const supabase = await createClient();
-
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    try {
-        const { data, error } = await supabase
-            .from("feature_requests")
-            .delete()
-            .eq("id", id)
-            .eq("user_id", user.id)
-            .select();
-
-        if (error) {
-            console.error("Delete feature request error:", error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
-        }
-
-        if (!data || data.length === 0) {
-            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-        }
-
-    return NextResponse.json({ success: true }, { status: 200 });
-  } catch (err) {
-    console.error("Delete request failed:", err);
+  if (error || !data) {
     return NextResponse.json(
-        { error: err.message || "Failed to delete" },
-        { status: 500 }
+      { error: error?.message || "Forbidden" },
+      { status: 403 }
     );
   }
+
+  return NextResponse.json(data, { status: 200 });
+
+
+export async function DELETE(req, { params }) {
+  const { id } = params; // <-- removed await
+  const supabase = await createClient();
+
+  const { error: authError, profile } = await requireAuthWithPermission(
+    PERMISSIONS.PUBLISH_FEATURE_REQUESTS
+  );
+
+  if (authError) return authError;
+
+  const canManageAll = hasPermission(
+    profile.role,
+    PERMISSIONS.MANAGE_ALL_FEATURE_REQUESTS
+  );
+
+  let query = supabase.from("feature_requests").delete().eq("id", id);
+
+  if (!canManageAll) {
+    query = query.eq("user_id", profile.id);
+  }
+
+  const { data, error } = await query.select();
+
+  if (error || !data || data.length === 0) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  return NextResponse.json({ success: true }, { status: 200 });
 }
