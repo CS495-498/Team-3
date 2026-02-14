@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/Supabase/server";
+import { withLogging } from '@/utils/withLogging';
 
-export async function POST(req, { params }) {
+async function handlePost(req, { params }) {
   const { id } = params;
   const supabase = await createClient();
 
@@ -73,7 +74,7 @@ export async function POST(req, { params }) {
   }
 }
 
-export async function PUT(req, { params }) {
+async function handlePut(req, { params }) {
     const { id } = params;
     const supabase = await createClient();
 
@@ -126,7 +127,7 @@ export async function PUT(req, { params }) {
     return NextResponse.json(data, { status: 200 });
 }
 
-export async function DELETE(req, { params }) {
+async function handleDelete(req, { params }) {
     const { id } = params;
     const supabase = await createClient();
 
@@ -165,3 +166,7 @@ export async function DELETE(req, { params }) {
     );
   }
 }
+
+export const POST = withLogging(handlePost);
+export const PUT = withLogging(handlePut);
+export const DELETE = withLogging(handleDelete);

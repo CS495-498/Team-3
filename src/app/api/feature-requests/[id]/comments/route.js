@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/Supabase/server";
+import { withLogging } from '@/utils/withLogging';
 
-export async function GET(req, { params }) {
+async function handleGet(req, { params }) {
   const { id } = await params;
   const supabase = await createClient();
 
@@ -34,7 +35,7 @@ export async function GET(req, { params }) {
   return NextResponse.json(data, { status: 200 });
 }
 
-export async function POST(req, { params }) {
+async function handlePost(req, { params }) {
   const { id } = await params; // feature_request_id
   const supabase = await createClient();
 
@@ -78,3 +79,6 @@ export async function POST(req, { params }) {
 
   return NextResponse.json(data, { status: 201 });
 }
+
+export const GET = withLogging(handleGet);
+export const POST = withLogging(handlePost);

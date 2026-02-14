@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/Supabase/server";
+import { withLogging } from '@/utils/withLogging';
 
-export async function DELETE(req, { params }) {
+async function handleDelete(req, { params }) {
     const { id } = await params;
 
     const supabase = await createClient();
@@ -57,3 +58,5 @@ export async function DELETE(req, { params }) {
 
     return NextResponse.json({ success: true });
 }
+
+export const DELETE = withLogging(handleDelete);

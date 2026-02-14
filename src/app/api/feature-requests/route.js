@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/utils/Supabase/server";
 import { fileTypeFromBuffer } from "file-type";
 import { createServiceRoleClient } from "@/utils/Supabase/server";
+import { withLogging } from '@/utils/withLogging';
 
 const ALLOWED_MIME_TYPES = [
   "image/jpeg",
@@ -16,7 +17,7 @@ const ALLOWED_MIME_TYPES = [
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
 
-export async function GET() {
+async function handleGet() {
   
   const supabase = await createClient();
 
@@ -71,7 +72,7 @@ export async function GET() {
     return NextResponse.json(enriched, { status: 200 });
 }
 
-export async function POST(req) {
+async function handlePost(req) {
     const supabase = await createClient();
 
     const {
@@ -161,3 +162,6 @@ export async function POST(req) {
 
     return NextResponse.json(response, { status: 201 });
 }
+
+export const GET = withLogging(handleGet);
+export const POST = withLogging(handlePost);

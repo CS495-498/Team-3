@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/Supabase/server";
+import { withLogging } from '@/utils/withLogging';
 
-export async function POST(req, { params }) {
+async function handlePost(req, { params }) {
     const { id } = await params;
     const supabase = await createClient();
 
@@ -75,3 +76,5 @@ export async function POST(req, { params }) {
         return NextResponse.json({ error: err.message }, { status: 500 });
     }
 }
+
+export const POST = withLogging(handlePost);

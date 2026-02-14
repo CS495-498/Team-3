@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { fileTypeFromBuffer } from "file-type";
+import { withLogging } from '@/utils/withLogging';
 
 // Public client (used for auth + DB with RLS)
 const supabase = createClient(
@@ -19,7 +20,7 @@ const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp
 
 
 // -------------------- GET PROFILE --------------------
-export async function GET(req, context) {
+async function handleGet(req, context) {
     const {id} = await context.params;
 
     const {data, error} = await supabase
@@ -58,7 +59,7 @@ export async function GET(req, context) {
 
 
 // -------------------- UPDATE PROFILE --------------------
-export async function PUT(req, context) {
+async function handlePut(req, context) {
     const { id } = await context.params;
 
     const accessToken = req.headers
@@ -196,3 +197,6 @@ export async function PUT(req, context) {
 
     return NextResponse.json(enriched, { status: 200 });
 }
+
+export const GET = withLogging(handleGet);
+export const PUT = withLogging(handlePut);

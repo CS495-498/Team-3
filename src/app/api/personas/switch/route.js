@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/Supabase/server";
+import { withLogging } from '@/utils/withLogging';
 
-export async function PATCH(req) {
+async function handlePatch(req) {
     const { personaId } = await req.json();
 
     const supabase = await createClient();
@@ -63,3 +64,5 @@ export async function PATCH(req) {
 
     return NextResponse.json({ success: true });
 }
+
+export const PATCH = withLogging(handlePatch);

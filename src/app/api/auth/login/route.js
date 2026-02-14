@@ -2,8 +2,9 @@
 import { createClient } from '@/utils/Supabase/server.js'
 import { NextResponse } from 'next/server'
 import { loginHandler } from './handler.js'
+import { withLogging } from '@/utils/withLogging'
 
-export async function POST(request) {
+async function handlePost(request) {
     try {
         const { email, password } = await request.json()
 
@@ -23,3 +24,5 @@ export async function POST(request) {
         )
     }
 }
+
+export const POST = withLogging(handlePost)

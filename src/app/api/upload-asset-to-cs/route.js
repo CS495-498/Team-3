@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { uploadAndPublishAsset } from "./uploadAndPublishAsset";
 import { createClient } from "@/utils/Supabase/server";
+import { withLogging } from '@/utils/withLogging';
 
-export async function POST(req) {
+async function handlePost(req) {
 
   const supabase = await createClient();
 
@@ -20,3 +21,5 @@ export async function POST(req) {
   const result = await uploadAndPublishAsset(formData);
   return NextResponse.json(result, { status: result.status });
 }
+
+export const POST = withLogging(handlePost);

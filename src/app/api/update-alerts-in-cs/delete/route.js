@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { deleteNotification } from "../deleteAlert.js";
+import { withLogging } from '@/utils/withLogging';
 
-export async function PUT(request) {
+async function handlePut(request) {
     try {
         const { entryUid, alerts } = await request.json();
 
@@ -22,3 +23,5 @@ export async function PUT(request) {
         );
     }
 }
+
+export const PUT = withLogging(handlePut);

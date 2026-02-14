@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { updateAndPublishVideos } from "./updateAndPublishVideos.js";
 import { createClient } from "@/utils/Supabase/server";
+import { withLogging } from '@/utils/withLogging';
 
-export async function PUT(req) {
+async function handlePut(req) {
 
   const supabase = await createClient();
 
@@ -27,3 +28,5 @@ export async function PUT(req) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+export const PUT = withLogging(handlePut);

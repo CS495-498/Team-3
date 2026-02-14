@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/Supabase/server";
+import { withLogging } from '@/utils/withLogging';
 
-export async function GET() {
+async function handleGet() {
     const supabase = await createClient();
 
     const {
@@ -23,3 +24,5 @@ export async function GET() {
 
     return NextResponse.json(data, { status: 200 });
 }
+
+export const GET = withLogging(handleGet);

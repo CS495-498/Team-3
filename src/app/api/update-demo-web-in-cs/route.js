@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { updateAndPublishDemoWeb } from "./updateAndPublishDemoWeb.js";
 import { deleteDemoWeb } from "./deleteDemoWeb.js";
 import { createClient } from "@/utils/Supabase/server";
+import { withLogging } from '@/utils/withLogging';
 
-export async function PUT(req) {
+async function handlePut(req) {
   const supabase = await createClient();
 
   const {
@@ -29,7 +30,7 @@ export async function PUT(req) {
   }
 }
 
-export async function DELETE(req) {
+async function handleDelete(req) {
   const supabase = await createClient();
 
   const {
@@ -53,3 +54,6 @@ export async function DELETE(req) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+export const PUT = withLogging(handlePut);
+export const DELETE = withLogging(handleDelete);

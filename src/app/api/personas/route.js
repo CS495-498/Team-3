@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/Supabase/server";
+import { withLogging } from '@/utils/withLogging';
 
-export async function POST(req) {
+async function handlePost(req) {
     const { displayName } = await req.json();
 
     if (!displayName?.trim()) {
@@ -50,3 +51,5 @@ export async function POST(req) {
 
     return NextResponse.json(data, { status: 201 });
 }
+
+export const POST = withLogging(handlePost);

@@ -1,7 +1,8 @@
 import { createClient } from '@/utils/Supabase/server.js'
 import { NextResponse } from 'next/server'
+import { withLogging } from '@/utils/withLogging'
 
-export async function GET() {
+async function handleGet() {
     try {
         const supabase = await createClient()
         const { data: { user }, error } = await supabase.auth.getUser()
@@ -16,3 +17,5 @@ export async function GET() {
         return NextResponse.json({ user: null }, { status: 200 })
     }
 }
+
+export const GET = withLogging(handleGet)
