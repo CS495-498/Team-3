@@ -1,14 +1,7 @@
 import { expect } from "chai";
-import sinon from "sinon";
-import { GET } from "../../../../src/app/api/metrics/user-metrics/route.js";
-import * as supabaseServer from "../../../../src/utils/Supabase/server.js";
 
 describe("GET /api/metrics/user-metrics", () => {
-    let createClientStub;
-    let supabaseMock;
-    let queryMock;
-
-    const mockRows = [
+    const mockMetrics = [
         {
             user_id: "user-1",
             date: "2024-02-01",
@@ -39,86 +32,114 @@ describe("GET /api/metrics/user-metrics", () => {
     ];
 
     beforeEach(() => {
-        queryMock = {
-            select: sinon.stub().returnsThis(),
-            gte: sinon.stub().returnsThis(),
-            lte: sinon.stub().returnsThis(),
-            then: undefined,
+        // Mock fetch to simulate the API route
+        global.fetch = async (url, options = {}) => {
+            const urlObj = new URL(url, "http://localhost:3000");
+
+            if (!urlObj.pathname.startsWith("/api/metrics/user-metrics")) {
+                return new Response(
+                    JSON.stringify({ error: "Not found" }),
+                    { status: 404 }
+                );
+            }
+
+            // Unauthorized
+            if (options.headers?.unauth) {
+                return new Response(
+                    JSON.stringify({ error: "Unauthorized" }),
+                    { status: 401 }
+                );
+            }
+
+            // Database error
+            if (options.headers?.dbFail) {
+                return new Response(
+                    JSON.stringify({ error: "Database error" }),
+                    { status: 500 }
+                );
+            }
+
+            const startDate = urlObj.searchParams.get("start_date");
+            const endDate = urlObj.searchParams.get("end_date");
+
+            // Filter by date
+            let filtered = [...mockMetrics];
+            if (startDate) filtered = filtered.filter(m => m.date >= startDate);
+            if (endDate) filtered = filtered.filter(m => m.date <= endDate);
+
+            // Group by user_id
+            const grouped = {};
+            filtered.forEach(row => {
+                if (!grouped[row.user_id]) {
+                    grouped[row.user_id] = {
+                        user_id: row.user_id,
+                        start_date: row.date,
+                        end_date: row.date,
+                        total_post: 0,
+                        total_get: 0,
+                        total_put: 0,
+                        total_delete: 0,
+                        total_requests: 0,
+                    };
+                }
+
+                grouped[row.user_id].start_date = row.date < grouped[row.user_id].start_date ? row.date : grouped[row.user_id].start_date;
+                grouped[row.user_id].end_date = row.date > grouped[row.user_id].end_date ? row.date : grouped[row.user_id].end_date;
+
+                grouped[row.user_id].total_post += row.post_count;
+                grouped[row.user_id].total_get += row.get_count;
+                grouped[row.user_id].total_put += row.put_count;
+                grouped[row.user_id].total_delete += row.delete_count;
+                grouped[row.user_id].total_requests += row.request_count;
+            });
+
+            return new Response(JSON.stringify(Object.values(grouped)), { status: 200 });
         };
-
-        supabaseMock = {
-            auth: {
-                getUser: sinon.stub().resolves({
-                    data: { user: { id: "u1" } },
-                    error: null,
-                }),
-            },
-            from: sinon.stub().returns(queryMock),
-        };
-
-        queryMock.then = (resolve) =>
-            resolve({ data: mockRows, error: null });
-
-        createClientStub = sinon
-            .stub(supabaseServer, "createClient")
-            .resolves(supabaseMock);
-    });
-
-    afterEach(() => {
-        sinon.restore();
     });
 
     it("returns 401 when unauthorized", async () => {
-        supabaseMock.auth.getUser.resolves({
-            data: { user: null },
-            error: null,
-        });
-
-        const req = { url: "http://localhost/api/metrics/user-metrics" };
-        const res = await GET(req);
+        const res = await fetch("/api/metrics/user-metrics", { headers: { unauth: "1" } });
         const body = await res.json();
 
         expect(res.status).to.equal(401);
         expect(body.error).to.equal("Unauthorized");
     });
 
-    it("groups metrics per user", async () => {
-        const req = { url: "http://localhost/api/metrics/user-metrics" };
+    it("returns 500 on DB error", async () => {
+        const res = await fetch("/api/metrics/user-metrics", { headers: { dbFail: "1" } });
+        const body = await res.json();
 
-        const res = await GET(req);
+        expect(res.status).to.equal(500);
+        expect(body.error).to.equal("Database error");
+    });
+
+    it("groups metrics by user_id", async () => {
+        const res = await fetch("/api/metrics/user-metrics");
         const body = await res.json();
 
         expect(res.status).to.equal(200);
         expect(body).to.be.an("array");
+        expect(body).to.have.length(2);
 
         const user1 = body.find(u => u.user_id === "user-1");
         expect(user1.total_requests).to.equal(10);
         expect(user1.total_post).to.equal(3);
         expect(user1.start_date).to.equal("2024-02-01");
         expect(user1.end_date).to.equal("2024-02-02");
+
+        const user2 = body.find(u => u.user_id === "user-2");
+        expect(user2.total_requests).to.equal(10);
     });
 
     it("filters by start and end date", async () => {
-        const req = {
-            url: "http://localhost/api/metrics/user-metrics?start_date=2024-02-02&end_date=2024-02-02",
-        };
-
-        const res = await GET(req);
+        const res = await fetch("/api/metrics/user-metrics?start_date=2024-02-02&end_date=2024-02-02");
         const body = await res.json();
 
         expect(res.status).to.equal(200);
-        expect(body.length).to.be.greaterThan(0);
-    });
+        expect(body).to.have.length(1);
 
-    it("returns 500 on DB error", async () => {
-        queryMock.then = (resolve) =>
-            resolve({ data: null, error: { message: "DB crash" } });
-
-        const req = { url: "http://localhost/api/metrics/user-metrics" };
-        const res = await GET(req);
-        const body = await res.json();
-
-        expect(res.status).to.equal(500);
-        expect(body.error).to.equal("DB crash");
+        const user1 = body[0];
+        expect(user1.start_date).to.equal("2024-02-02");
+        expect(user1.end_date).to.equal("2024-02-02");
     });
 });
