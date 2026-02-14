@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient as createAnonClient } from "@supabase/supabase-js";
+import { createClient } from "@/utils/Supabase/server.js";
 import { fileTypeFromBuffer } from "file-type";
 import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
 import PERMISSIONS from "@/config/permissions";
@@ -7,15 +8,9 @@ import { isValidRole } from "@/config/rolePermissions";
 import { createServiceRoleClient } from "@/utils/Supabase/server";
 import { createClient as createClientServer } from "@/utils/Supabase/server";
 
-// Public client (used for auth + DB with RLS)
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
-
 // Service role client (used for storage + signed URLs, bypasses RLS)
-const supabaseServiceRole = createClient(
-    process.env.SUPABASE_URL,
+const supabaseServiceRole = createAnonClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
@@ -26,20 +21,20 @@ const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp
 // -------------------- GET PROFILE --------------------
 export async function GET(req, context) {
 
-            const supabase = await createClientServer();
-    
-            const {
-                data: { user },
-                error: userError,
-            } = await supabase.auth.getUser();
-    
-            if (userError || !user) {
-                return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-            }
+    const supabase = await createClientServer();
+
+    const {
+        data: { user },
+        error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const { id } = await context.params;
 
     const { data, error } = await supabase
-        .from("profiles")
+        .from("public_profiles")
         .select("id, username, full_name, avatar_url")
         .eq("id", id)
         .maybeSingle();
@@ -77,18 +72,12 @@ export async function GET(req, context) {
 export async function PUT(req, context) {
     const { id } = await context.params;
 
-    const accessToken = req.headers
-        .get("authorization")
-        ?.replace("Bearer ", "");
-
-    if (!accessToken) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const supabase = await createClient(); // cookie-based session client
 
     const {
         data: { user },
         error: userError,
-    } = await supabase.auth.getUser(accessToken);
+    } = await supabase.auth.getUser();
 
     if (userError || !user) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -262,7 +251,7 @@ export async function PATCH(request, { params }) {
     // -------------------------
     const serviceSupabase = await createServiceRoleClient();
     if (email) {
-        
+
 
         const { data: users, error: listError } =
             await serviceSupabase.auth.admin.listUsers({
