@@ -6,68 +6,53 @@ import { hasPermission } from "@/utils/hasPermission";
 import { sanitizeHtmlServer } from "@/lib/featureRequests/requests/sanitizeHtmlServer.js";
 
 
-const ALLOWED_MIME_TYPES = [
-    "image/jpeg",
-    "image/png",
-    "image/gif",
-    "image/webp",
-    "application/pdf",
-    "video/mp4",
-    "video/webm",
-    "video/ogg",
-];
+const TITLE_MAX_LENGTH = 100;
 
 export async function PUT(req, { params }) {
-  const { id } = await params;
-  const supabase = await createClient();
+    const { id } = params;
+    const supabase = await createClient();
 
-  // Authenticate (must at least be able to publish)
-  const { error: authError, profile } =
-    await requireAuthWithPermission(
-      PERMISSIONS.PUBLISH_FEATURE_REQUESTS
+    const { error: authError, profile } =
+        await requireAuthWithPermission(PERMISSIONS.PUBLISH_FEATURE_REQUESTS);
+    if (authError) return authError;
+
+    const body = await req.json();
+    const { title, content, status } = body;
+
+    const normalizedTitle = title?.toString().trim() || "";
+
+    if (!normalizedTitle) {
+        return NextResponse.json({ error: "Title is required" }, { status: 400 });
+    }
+
+    if (normalizedTitle.length > TITLE_MAX_LENGTH) {
+        return NextResponse.json(
+            { error: `Title cannot exceed ${TITLE_MAX_LENGTH} characters` },
+            { status: 400 }
+        );
+    }
+
+    const canManageAll = hasPermission(
+        profile.role,
+        PERMISSIONS.MANAGE_ALL_FEATURE_REQUESTS
     );
 
-  if (authError) return authError;
+    let query = supabase
+        .from("feature_requests")
+        .update({
+            title: normalizedTitle,
+            content: sanitizeHtmlServer(content),
+            status,
+            updated_at: new Date().toISOString(),
+        })
+        .eq("id", id);
 
-  const body = await req.json();
-  const { title, content, status } = body;
+    if (!canManageAll) {
+        query = query.eq("user_id", profile.id);
+    }
 
-  if (!title || title.trim() === "") {
-    return NextResponse.json(
-      { error: "Title is required" },
-      { status: 400 }
-    );
-  }
-
-  const canManageAll = hasPermission(
-    profile.role,
-    PERMISSIONS.MANAGE_ALL_FEATURE_REQUESTS
-  );
-
-  // Base query
-  let query = supabase
-    .from("feature_requests")
-    .update({
-      title,
-      content : sanitizeHtmlServer(content),
-      status,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", id);
-
-  if (!canManageAll) {
-    query = query.eq("user_id", profile.id);
-  }
-
-  console.log("ROLE:", profile.role);
-console.log(
-  "HAS MANAGE ALL:",
-  hasPermission(profile.role, PERMISSIONS.MANAGE_ALL_FEATURE_REQUESTS)
-);
-
-
-  const { data, error } = await query
-    .select(`
+    const { data, error } = await query
+        .select(`
       *,
       profiles!fk_feature_requests_author (
         id,
@@ -75,22 +60,19 @@ console.log(
         avatar_url
       )
     `)
-    .single();
+        .single();
 
-  if (error) {
-  console.error("SUPABASE ERROR:", error);
+    if (error || !data) {
+        console.error("SUPABASE ERROR:", error);
+        return NextResponse.json(
+            { error: error?.message || "Forbidden" },
+            { status: 403 }
+        );
+    }
+
+    return NextResponse.json(data, { status: 200 });
 }
 
-if (error || !data) {
-  return NextResponse.json(
-    { error: error?.message || "Forbidden" },
-    { status: 403 }
-  );
-}
-
-
-  return NextResponse.json(data, { status: 200 });
-}
 
 export async function DELETE(req, { params }) {
   const { id } = await params;
