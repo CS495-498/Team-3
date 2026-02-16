@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@contentstack/live-preview-utils": "^4.0.1",
-    "@floating-ui/react": "^0.27.16",
+    "@floating-ui/react": "^0.27.17",
     "@headlessui/react": "^2.2.9",
     "@lexkit/editor": "^0.0.37",
     "@radix-ui/react-avatar": "^1.1.11",
