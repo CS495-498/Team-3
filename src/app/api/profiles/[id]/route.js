@@ -9,12 +9,6 @@ import { createServiceRoleClient } from "@/utils/Supabase/server";
 import { createClient as createClientServer } from "@/utils/Supabase/server";
 import { withLogging } from '@/utils/withLogging';
 
-// Public client (used for auth + DB with RLS)
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
-
 // Service role client (used for storage + signed URLs, bypasses RLS)
 const supabaseServiceRole = createAnonClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -29,6 +23,8 @@ const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp
 async function handleGet(req, context) {
     const {id} = await context.params;
 
+    const supabase = await createClientServer();
+    
     const { data, error } = await supabase
         .from("public_profiles")
         .select("id, username, full_name, avatar_url")
