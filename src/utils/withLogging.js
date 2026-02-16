@@ -4,11 +4,13 @@ import { sanitizeUserAgent, sanitizeReferer } from '@/utils/sanitize.js'
 export function withLogging(handler) {
     return async function loggedHandler(req, context) {
         const startTime = Date.now()
-        const endpoint = req.nextUrl.pathname
-        const method = req.method
-        const sanitizedUserAgent = sanitizeUserAgent(req.headers.get('user-agent'))
-        const sanitizedReferer = sanitizeReferer(req.headers.get('referer'))
-        const userId = req.headers.get('x-user-id') || null
+        const endpoint = req.nextUrl?.pathname || req.url || 'unknown'
+        const method = req.method || 'UNKNOWN'
+        const headers = req.headers || {}
+        const getHeader = typeof headers.get === 'function' ? (k) => headers.get(k) : (k) => headers[k]
+        const sanitizedUserAgent = sanitizeUserAgent(getHeader('user-agent'))
+        const sanitizedReferer = sanitizeReferer(getHeader('referer'))
+        const userId = getHeader('x-user-id') || null
 
         try {
             const response = await handler(req, context)

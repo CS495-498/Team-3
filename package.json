@@ -13,7 +13,8 @@
     "test:coverage": "c8 mocha \"test/**/*.test.js\""
   },
   "mocha": {
-    "spec": "test/**/*.test.js"
+    "spec": "test/**/*.test.js",
+    "node-option": ["import=./loader.js"]
   },
   "dependencies": {
     "@contentstack/live-preview-utils": "^4.0.1",
