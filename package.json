@@ -29,7 +29,7 @@
     "@radix-ui/react-popover": "^1.1.15",
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-separator": "^1.1.7",
-    "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-switch": "^1.2.6",
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-toggle": "^1.1.10",
@@ -69,6 +69,7 @@
     "react-dom": "^19.1.1",
     "react-hotkeys-hook": "^5.2.1",
     "react-intersection-observer": "^10.0.0",
+    "recharts": "^3.7.0",
     "src": "^1.0.0",
     "tailwind-merge": "^3.3.1"
   },

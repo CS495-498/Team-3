@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/Supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
+import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission.js";
+import PERMISSIONS from "@/config/permissions";
 import { withLogging } from '@/utils/withLogging';
+
 
 async function handleGet() {
     try {
@@ -18,7 +21,7 @@ async function handleGet() {
 
         const { data: profile, error: profileError } = await supabase
             .from("profiles")
-            .select("full_name, username, avatar_url, active_persona_id")
+            .select("full_name, username, avatar_url, active_persona_id, role")
             .eq("id", user.id)
             .single();
 
@@ -48,6 +51,7 @@ async function handleGet() {
 
         return NextResponse.json({
             id: user.id,
+            role: profile.role ?? "",
             full_name: profile.full_name ?? "",
             username: profile.username ?? "",
             avatar_url: profile.avatar_url ?? "",

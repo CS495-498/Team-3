@@ -1,19 +1,21 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/Supabase/server";
+import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
+import PERMISSIONS from "@/config/permissions";
 import { withLogging } from '@/utils/withLogging';
 
 async function handleGet(req, { params }) {
   const { id } = await params;
   const supabase = await createClient();
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
 
-  if (userError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+    // Get logged-in user
+     const { error2, profile } = await requireAuthWithPermission(
+
+    PERMISSIONS.VIEW_CONTENT
+  );
+
+  if (error2) return error2
 
   const { data, error } = await supabase
       .from("feature_request_comments")
@@ -32,7 +34,15 @@ async function handleGet(req, { params }) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(data, { status: 200 });
+    const normalized = (data || []).map((c) => ({
+        id: c.id,
+        content: c.content,
+        created_at: c.created_at,
+        user_id: c.user_id,
+        username: c.user?.username || null,
+    }));
+
+    return NextResponse.json(normalized, { status: 200 });
 }
 
 async function handlePost(req, { params }) {
@@ -40,14 +50,13 @@ async function handlePost(req, { params }) {
   const supabase = await createClient();
 
   // Authenticate user
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+    // Get logged-in user
+     const { error2, profile } = await requireAuthWithPermission(
 
-  if (userError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+    PERMISSIONS.COMMENT_VOTE_FEATURE_REQUESTS
+  );
+
+  if (error2) return error2
 
   // Parse request body
   const body = await req.json();
@@ -66,18 +75,26 @@ async function handlePost(req, { params }) {
       .insert([
         {
           feature_request_id: id,
-          user_id: user.id,
+          user_id: profile.id,
           content,
         },
       ])
       .select("*")
       .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json(data, { status: 201 });
+    return NextResponse.json(
+        {
+            id: data.id,
+            content: data.content,
+            created_at: data.created_at,
+            user_id: data.user_id,
+            username: data.user?.username || null,
+        },
+        { status: 201 }
+    );
+
 }
 
 export const GET = withLogging(handleGet);

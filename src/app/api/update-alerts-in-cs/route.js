@@ -1,22 +1,17 @@
 import { NextResponse } from "next/server";
 import { updateAndPublishAlert } from "./updateAndPublishAlert.js";
 import { createClient } from "@/utils/Supabase/server";
+import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission.js";
+import PERMISSIONS from "@/config/permissions";
 import { withLogging } from '@/utils/withLogging';
 
 async function handlePut(req) {
 
-  const supabase = await createClient();
+const { error, supabase } = await requireAuthWithPermission(
+    PERMISSIONS.UPLOAD_NOTIFICATIONS
+  );
+  if (error) return error;
 
-  // Authenticate user
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    // or redirect("/login") if desired
-  }
 
   try {
     const { entryUid, alerts } = await req.json();

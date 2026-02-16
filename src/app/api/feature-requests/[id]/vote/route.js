@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/Supabase/server";
+import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
+import PERMISSIONS from "@/config/permissions";
 import { withLogging } from '@/utils/withLogging';
 
 async function handlePost(req, { params }) {
@@ -8,12 +10,12 @@ async function handlePost(req, { params }) {
     const supabase = await createClient();
 
     // Get logged-in user
-    const {
-        data: { user },
-        error: userError,
-    } = await supabase.auth.getUser();
+     const { error, profile } = await requireAuthWithPermission(
+  
+    PERMISSIONS.COMMENT_VOTE_FEATURE_REQUESTS
+  );
 
-    if (userError || !user) redirect("/login");
+  if (error) return error;
 
     const { vote } = await req.json();
 
@@ -29,7 +31,7 @@ async function handlePost(req, { params }) {
             const { error: delErr } = await supabase
                 .from("votes")
                 .delete()
-                .eq("user_id", user.id)
+                .eq("user_id", profile.id)
                 .eq("req_id", id);
 
             if (delErr) throw delErr;
@@ -39,7 +41,7 @@ async function handlePost(req, { params }) {
                 .from("votes")
                 .upsert(
                     {
-                        user_id: user.id,
+                        user_id: profile.id,
                         req_id: id,
                         Upvoted: vote === "up" ? true : false,
                     },
@@ -60,14 +62,6 @@ async function handlePost(req, { params }) {
         const downCount = votes.filter(v => v.Upvoted === false).length;
 
         const total = upCount - downCount;
-
-        // Update feature_requests table
-        const { error: updateErr } = await supabase
-            .from("feature_requests")
-            .update({ number_of_votes: total })
-            .eq("id", id);
-
-        if (updateErr) throw updateErr;
 
         return NextResponse.json({ number_of_votes: total }, { status: 200 });
 

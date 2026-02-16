@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient as createAnonClient } from "@supabase/supabase-js";
+import { createClient } from "@/utils/Supabase/server.js";
 import { fileTypeFromBuffer } from "file-type";
+import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
+import PERMISSIONS from "@/config/permissions";
+import { isValidRole } from "@/config/rolePermissions";
+import { createServiceRoleClient } from "@/utils/Supabase/server";
+import { createClient as createClientServer } from "@/utils/Supabase/server";
 import { withLogging } from '@/utils/withLogging';
 
 // Public client (used for auth + DB with RLS)
@@ -10,8 +16,8 @@ const supabase = createClient(
 );
 
 // Service role client (used for storage + signed URLs, bypasses RLS)
-const supabaseServiceRole = createClient(
-    process.env.SUPABASE_URL,
+const supabaseServiceRole = createAnonClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
@@ -20,29 +26,29 @@ const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp
 
 
 // -------------------- GET PROFILE --------------------
-async function handleGet(req, context) {
+export async function handleGet(req, context) {
     const {id} = await context.params;
 
-    const {data, error} = await supabase
-        .from("profiles")
+    const { data, error } = await supabase
+        .from("public_profiles")
         .select("id, username, full_name, avatar_url")
         .eq("id", id)
         .maybeSingle();
 
     if (error) {
         console.error("PROFILE API ERROR:", error);
-        return NextResponse.json({error: error.message}, {status: 500});
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     if (!data) {
-        return NextResponse.json({error: "Profile not found"}, {status: 404});
+        return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 
-// Add signed avatar URL if avatar exists
-    let enriched = {...data};
+    // Add signed avatar URL if avatar exists
+    let enriched = { ...data };
 
     if (data.avatar_url) {
-        const {data: urlData, error: urlError} =
+        const { data: urlData, error: urlError } =
             await supabaseServiceRole.storage
                 .from("avatars")
                 .createSignedUrl(data.avatar_url, 60 * 60); // 1 hour
@@ -54,7 +60,7 @@ async function handleGet(req, context) {
         }
     }
 
-    return NextResponse.json(enriched, {status: 200});
+    return NextResponse.json(enriched, { status: 200 });
 }
 
 
@@ -62,18 +68,12 @@ async function handleGet(req, context) {
 async function handlePut(req, context) {
     const { id } = await context.params;
 
-    const accessToken = req.headers
-        .get("authorization")
-        ?.replace("Bearer ", "");
-
-    if (!accessToken) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const supabase = await createClient(); // cookie-based session client
 
     const {
         data: { user },
         error: userError,
-    } = await supabase.auth.getUser(accessToken);
+    } = await supabase.auth.getUser();
 
     if (userError || !user) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -196,7 +196,245 @@ async function handlePut(req, context) {
     }
 
     return NextResponse.json(enriched, { status: 200 });
+
+}
+
+export async function handlePatch(request, { params }) {
+    const { id: profileId } = await params;
+
+    // -------------------------
+    // 1. AUTHORIZATION, ADMIN Only
+    // -------------------------
+    const { error, supabase } = await requireAuthWithPermission(
+        PERMISSIONS.MANAGE_USERS
+    );
+
+    if (error) return error;
+
+    // -------------------------
+    // 2. PARSE BODY
+    // -------------------------
+    let body;
+    try {
+        body = await request.json();
+    } catch {
+        return NextResponse.json(
+            { error: "Invalid JSON body" },
+            { status: 400 }
+        );
+    }
+
+    const {
+        email,
+        role,
+        full_name,
+        username,
+        active_persona_id,
+    } = body;
+
+    // -------------------------
+    // 3. VALIDATION
+    // -------------------------
+    if (role && !isValidRole(role)) {
+        return NextResponse.json(
+            { error: "Invalid role" },
+            { status: 400 }
+        );
+    }
+
+    // -------------------------
+    // 4. UPDATE AUTH EMAIL (ADMIN)
+    // -------------------------
+    const serviceSupabase = await createServiceRoleClient();
+    if (email) {
+
+
+        const { data: users, error: listError } =
+            await serviceSupabase.auth.admin.listUsers({
+                page: 1,
+                perPage: 1000,
+            });
+
+        if (listError) {
+            return NextResponse.json(
+                { error: "Failed to validate email" },
+                { status: 500 }
+            );
+        }
+
+        const emailTaken = users.users.find(
+            (u) => u.email === email && u.id !== profileId
+        );
+
+        if (emailTaken) {
+            return NextResponse.json(
+                { error: "Email already in use by another account" },
+                { status: 409 }
+            );
+        }
+
+        // -------------------------
+        // 5. UPDATE AUTH EMAIL
+        // -------------------------
+        const { error: emailError } =
+            await serviceSupabase.auth.admin.updateUserById(profileId, {
+                email,
+            });
+
+        if (emailError) {
+            return NextResponse.json(
+                { error: emailError.message },
+                { status: 400 }
+            );
+        }
+    }
+
+    // -------------------------
+    // 5. UPDATE PROFILE TABLE
+    // -------------------------
+    const updates = {
+        ...(role !== undefined && { role }),
+        ...(full_name !== undefined && { full_name }),
+        ...(username !== undefined && { username }),
+        ...(active_persona_id !== undefined && { active_persona_id }),
+        updated_at: new Date().toISOString(),
+    };
+
+    let updatedProfile = null;
+
+    if (Object.keys(updates).length > 1) {
+        const { data, error: updateError } = await supabase
+            .from("profiles")
+            .update(updates)
+            .eq("id", profileId)
+            .select()
+            .single();
+
+        if (updateError) {
+            console.error("Profile update error:", updateError);
+            return NextResponse.json(
+                { error: updateError.message },
+                { status: 500 }
+            );
+        }
+
+        updatedProfile = data;
+    }
+
+    // -------------------------
+    // 6. SUCCESS
+    // -------------------------
+
+    // Fetch the updated Auth user email
+    const { data: authUser, error: authError } = await serviceSupabase.auth.admin.getUserById(profileId);
+
+    if (authError || !authUser?.user) {
+        console.error("Failed to fetch updated auth user:", authError);
+    }
+
+    // Combine profile and auth email
+    const fullUpdatedUser = {
+        ...updatedProfile,
+        email: authUser?.user?.email || updatedProfile?.email || null,
+    };
+    return NextResponse.json(
+        fullUpdatedUser,
+        { status: 200 }
+    );
+
+}
+
+// -------------------- DELETE PROFILE (ADMIN) --------------------
+export async function handleDelete(request, { params }) {
+    const { id: profileId } = await params;
+
+    // -------------------------
+    // 1. AUTHORIZATION (ADMIN ONLY)
+    // -------------------------
+    const { error, supabase, user } = await requireAuthWithPermission(
+        PERMISSIONS.MANAGE_USERS
+    );
+
+    if (error) return error;
+
+    // Prevent admin from deleting themselves
+    if (user.id === profileId) {
+        return NextResponse.json(
+            { error: "You cannot delete your own account." },
+            { status: 400 }
+        );
+    }
+
+    const serviceSupabase = await createServiceRoleClient();
+
+    // -------------------------
+    // 2. GET PROFILE (for avatar cleanup)
+    // -------------------------
+    const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("avatar_url")
+        .eq("id", profileId)
+        .single();
+
+    if (profileError) {
+        return NextResponse.json(
+            { error: "Profile not found" },
+            { status: 404 }
+        );
+    }
+
+    // -------------------------
+    // 3. DELETE AVATAR FROM STORAGE (if exists)
+    // -------------------------
+    if (profile?.avatar_url) {
+        await serviceSupabase.storage
+            .from("avatars")
+            .remove([profile.avatar_url]);
+        // no need to hard fail if this errors
+    }
+
+    // -------------------------
+    // 4. DELETE PROFILE ROW
+    // -------------------------
+    const { error: deleteProfileError } = await supabase
+        .from("profiles")
+        .delete()
+        .eq("id", profileId);
+
+    if (deleteProfileError) {
+        return NextResponse.json(
+            { error: deleteProfileError.message },
+            { status: 500 }
+        );
+    }
+
+    // -------------------------
+    // 5. DELETE AUTH USER (CRITICAL STEP)
+    // -------------------------
+    const { error: deleteAuthError } =
+        await serviceSupabase.auth.admin.deleteUser(profileId);
+
+    if (deleteAuthError) {
+        return NextResponse.json(
+            { error: deleteAuthError.message },
+            { status: 500 }
+        );
+    }
+
+    // -------------------------
+    // 6. SUCCESS
+    // -------------------------
+    return NextResponse.json(
+        { message: "User deleted successfully" },
+        { status: 200 }
+    );
+}
+
+
 }
 
 export const GET = withLogging(handleGet);
 export const PUT = withLogging(handlePut);
+export const PATCH = withLogging(handlePatch);
+export const DELETE = withLogging(handleDelete)
+

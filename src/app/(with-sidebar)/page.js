@@ -9,14 +9,20 @@ import { motion, AnimatePresence } from "framer-motion";
 import SuccessToast from "@/components/ui/success-toast.jsx";
 import { AlertTimer, AlertCard } from "@/components/ui/alert.jsx";
 import LoadingIndicator from "@/components/ui/loading-indicator.jsx";
+import { useUser } from "@/context/UserContext";
+import { hasPermission } from "@/utils/hasPermission";
+import PERMISSIONS from "@/config/permissions";
 
 export default function Home() {
+    const { user } = useUser();
+    const canUploadNotifications = user && hasPermission(user.role, PERMISSIONS.UPLOAD_NOTIFICATIONS);
+
     const [entry, setEntry] = useState({});
     const [isLoading, setIsLoading] = useState(true);
     const [modalOpen, setModalOpen] = useState(false);
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState("");
-    
+
     const expiredAlertsRef = useRef(new Set());
     const deleteTimeoutRef = useRef(null);
 
@@ -168,13 +174,16 @@ export default function Home() {
             <div className="flex flex-col w-full max-w-6xl mx-auto justify-start items-start relative z-10 p-8">
                 <div className="flex flex-wrap items-start justify-between w-full mb-10">
                     <h1 className="text-4xl font-bold mt-10">Contentstack Portal</h1>
-                    <button
-                        type="button"
-                        onClick={() => setModalOpen(true)}
-                        className="mt-10 text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition"
-                    >
-                        Add Notification
-                    </button>
+                    {canUploadNotifications && (
+                        <button
+                            type="button"
+                            onClick={() => setModalOpen(true)}
+                            className="mt-10 text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition"
+                        >
+                            Add Notification
+                        </button>
+                    )}
+
 
                     <AnimatePresence>
                         {modalOpen && (
@@ -289,9 +298,9 @@ export default function Home() {
                 <div className="w-full mb-24 mt-3">
                     {visibleAlerts.length ? (
                         visibleAlerts.map((note, idx) => (
-                            <AlertCard 
-                                key={note.uid || note._metadata?.uid || idx} 
-                                note={note} 
+                            <AlertCard
+                                key={note.uid || note._metadata?.uid || idx}
+                                note={note}
                                 index={idx}
                                 onExpire={handleExpiredAlert}
                             />
@@ -307,7 +316,7 @@ export default function Home() {
                             <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
                                 <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
                                 <span className="text-sm">
-                                  {isFetchingMore ? "Loading more alerts..." : "Scroll to load more"}
+                                    {isFetchingMore ? "Loading more alerts..." : "Scroll to load more"}
                                 </span>
                             </div>
                             <p className="text-xs text-gray-400 dark:text-gray-500">

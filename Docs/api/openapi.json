@@ -1,51 +1,509 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "Next.js Feature Requests & Profiles API",
-    "description": "API for managing feature requests and user profiles. Uses Supabase SSR cookies for authentication.",
-    "version": "1.0.0"
+    "title": "Next.js API (Feature Requests, Profiles, Personas, Contentstack)",
+    "description": "API for authentication (Supabase), feature requests (with comments/votes and file uploads), user profiles & personas, Contentstack publishing helpers, and internal log ingestion.",
+    "version": "1.1.0"
   },
   "servers": [
     {
-      "url": "http://localhost:3000"
+      "url": "http://localhost:3000",
+      "description": "Local development"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Auth",
+      "description": "Supabase auth helpers"
+    },
+    {
+      "name": "Feature Requests",
+      "description": "Feature request CRUD, comments, and voting"
+    },
+    {
+      "name": "Profiles",
+      "description": "User profile and admin user management"
+    },
+    {
+      "name": "Personas",
+      "description": "Persona management for users"
+    },
+    {
+      "name": "Contentstack",
+      "description": "Helpers that update/publish Contentstack entries/assets"
+    },
+    {
+      "name": "Logs",
+      "description": "Internal log ingestion endpoint"
     }
   ],
   "paths": {
-    "/api/feature-requests": {
-      "get": {
-        "summary": "List all feature requests for the authenticated user",
-        "tags": ["Feature Requests"],
-        "security": [{ "cookieAuth": [] }],
-        "responses": {
-          "200": {
-            "description": "List of feature requests",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": { "$ref": "#/components/schemas/FeatureRequest" }
-                }
-              }
-            }
-          },
-          "401": { "description": "Unauthorized" }
-        }
-      },
+    "/api/auth/login": {
       "post": {
-        "summary": "Create a new feature request",
-        "tags": ["Feature Requests"],
-        "security": [{ "cookieAuth": [] }],
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Log in with email and password (Supabase)",
+        "description": "Authenticates a user via Supabase `signInWithPassword` and returns session + user on success.",
         "requestBody": {
-          "description": "Feature request object",
           "required": true,
           "content": {
             "application/json": {
               "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Email and password are required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "postApiAuthLogin"
+      }
+    },
+    "/api/auth/signup": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Sign up with email and password (Supabase)",
+        "description": "Creates a Supabase Auth user via `signUp`.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignupRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Signup accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignupResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or signup failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "postApiAuthSignup"
+      }
+    },
+    "/api/auth/session": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Get current authenticated user (if any)",
+        "description": "Returns `{ user: <SupabaseUser|null> }`. Always responds with 200; unauthenticated users get `user: null`.",
+        "responses": {
+          "200": {
+            "description": "Session info.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getApiAuthSession"
+      }
+    },
+    "/api/forgot-password": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Request password reset email",
+        "description": "Always returns a generic 200 response to avoid email enumeration. Implements basic rate limiting per IP/email.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Generic success message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "postApiForgotPassword"
+      }
+    },
+    "/api/capture-screenshot": {
+      "post": {
+        "tags": [
+          "Contentstack"
+        ],
+        "summary": "Fetch OG image (thumbnail) for a URL",
+        "description": "Fetches a target page, extracts OpenGraph/Twitter image metadata, downloads the image, and returns it base64-encoded. Falls back to a default placeholder if fetch fails.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaptureScreenshotRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Screenshot (OG image) or default placeholder.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptureScreenshotResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "URL missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to fetch preview image and default image.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "postApiCaptureScreenshot"
+      }
+    },
+    "/api/demo-instructions": {
+      "post": {
+        "tags": [
+          "Contentstack"
+        ],
+        "summary": "Create & publish a Demo Instruction entry",
+        "description": "Creates a `demo_instruction` entry in Contentstack, publishes it, updates a library entry, and republishes the library entry. Requires `PUBLISH_DEMO_INSTRUCTIONS` permission.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemoInstructionCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Instruction created and published.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoInstructionCreateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing title or HTML.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden (missing permission).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Contentstack operation failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "postApiDemoInstructions"
+      }
+    },
+    "/api/demo-instructions/update": {
+      "post": {
+        "tags": [
+          "Contentstack"
+        ],
+        "summary": "Update & publish a Demo Instruction entry",
+        "description": "Updates an existing `demo_instruction` entry in Contentstack and republishes it. Requires `PUBLISH_DEMO_INSTRUCTIONS` permission.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemoInstructionUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Instruction updated and published.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoInstructionUpdateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing UID, title, or HTML (or invalid input).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden (missing permission).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Contentstack operation failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "postApiDemoInstructionsUpdate"
+      }
+    },
+    "/api/feature-requests": {
+      "get": {
+        "tags": [
+          "Feature Requests"
+        ],
+        "summary": "List feature requests",
+        "description": "Returns all feature requests ordered by most recent first, enriched with signed URLs for any uploaded files. Requires `VIEW_CONTENT` permission.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of feature requests.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FeatureRequest"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden (missing permission).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database or storage error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getApiFeatureRequests"
+      },
+      "post": {
+        "tags": [
+          "Feature Requests"
+        ],
+        "summary": "Create a feature request (with optional attachment)",
+        "description": "Creates a feature request. Accepts `multipart/form-data` with `title`, optional `content`, and optional `file`. Requires `PUBLISH_FEATURE_REQUESTS` permission.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
                 "type": "object",
-                "required": ["Title", "Content"],
+                "required": [
+                  "title"
+                ],
                 "properties": {
-                  "Title": { "type": "string", "example": "Dark Mode" },
-                  "Content": { "type": "string", "example": "Add dark mode toggle to dashboard" }
+                  "title": {
+                    "type": "string"
+                  },
+                  "content": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "nullable": true
+                  }
                 }
               }
             }
@@ -53,165 +511,1853 @@
         },
         "responses": {
           "201": {
-            "description": "Feature request created",
+            "description": "Feature request created.",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/FeatureRequest" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeatureRequestCreateResponse"
+                }
+              }
             }
           },
-          "400": { "description": "Bad request" },
-          "401": { "description": "Unauthorized" }
-        }
-      }
-    },
-    "/api/feature-requests/{id}": {
-      "get": {
-        "summary": "Get a single feature request (only if owned by user)",
-        "tags": ["Feature Requests"],
-        "security": [{ "cookieAuth": [] }],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": { "type": "string", "format": "uuid" },
-            "required": true,
-            "description": "Request ID"
-          }
-        ],
-        "responses": {
-          "200": { "description": "Feature request object", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FeatureRequest" } } } },
-          "401": { "description": "Unauthorized" },
-          "404": { "description": "Request not found or not owned by user" }
-        }
-      },
-      "put": {
-        "summary": "Update a feature request (title/content, only if owned by user)",
-        "tags": ["Feature Requests"],
-        "security": [{ "cookieAuth": [] }],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": { "type": "string", "format": "uuid" },
-            "required": true,
-            "description": "Request ID"
-          }
-        ],
-        "requestBody": {
-          "description": "Fields to update",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "Title": { "type": "string", "example": "Dark Mode Updated" },
-                  "Content": { "type": "string", "example": "Add dark mode toggle to dashboard" }
+          "400": {
+            "description": "Validation error (missing title / invalid file type).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden (missing permission).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "File too large.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database or storage error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
           }
         },
-        "responses": {
-          "200": { "description": "Updated feature request", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FeatureRequest" } } } },
-          "400": { "description": "Bad request" },
-          "401": { "description": "Unauthorized" },
-          "404": { "description": "Request not found or not owned by user" }
+        "operationId": "postApiFeatureRequests"
+      }
+    },
+    "/api/feature-requests/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": "Feature request ID"
         }
+      ],
+      "put": {
+        "tags": [
+          "Feature Requests"
+        ],
+        "summary": "Update a feature request",
+        "description": "Updates title/content/status. If the user lacks `MANAGE_ALL_FEATURE_REQUESTS`, they may only update their own requests. Requires `PUBLISH_FEATURE_REQUESTS` permission.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeatureRequestUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated feature request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeatureRequest"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error (missing title / invalid input).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden (not owner or missing permission).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "putApiFeatureRequestsId"
       },
       "delete": {
-        "summary": "Delete a feature request (only if owned by user)",
-        "tags": ["Feature Requests"],
-        "security": [{ "cookieAuth": [] }],
-        "parameters": [
+        "tags": [
+          "Feature Requests"
+        ],
+        "summary": "Delete a feature request",
+        "description": "Deletes a feature request. If the user lacks `MANAGE_ALL_FEATURE_REQUESTS`, they may only delete their own requests. Requires `PUBLISH_FEATURE_REQUESTS` permission.",
+        "security": [
           {
-            "in": "path",
-            "name": "id",
-            "schema": { "type": "string", "format": "uuid" },
-            "required": true,
-            "description": "Request ID"
+            "cookieAuth": []
           }
         ],
         "responses": {
-          "200": { "description": "Deleted successfully", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string", "example": "Deleted successfully" } } } } } },
-          "401": { "description": "Unauthorized" },
-          "404": { "description": "Request not found or not owned by user" }
+          "200": {
+            "description": "Deleted successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden (not owner or missing permission).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "deleteApiFeatureRequestsId"
+      }
+    },
+    "/api/feature-requests/{id}/comments": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": "Feature request ID"
         }
+      ],
+      "get": {
+        "tags": [
+          "Feature Requests"
+        ],
+        "summary": "List comments for a feature request",
+        "description": "Returns comments for the given feature request ordered by oldest first. Requires `VIEW_CONTENT` permission.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of comments.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FeatureRequestComment"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden (missing permission).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getApiFeatureRequestsIdComments"
+      },
+      "post": {
+        "tags": [
+          "Feature Requests"
+        ],
+        "summary": "Create a comment on a feature request",
+        "description": "Creates a comment for the given feature request. Requires `COMMENT_VOTE_FEATURE_REQUESTS` permission.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCommentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Comment created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeatureRequestComment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error (missing content).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden (missing permission).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "postApiFeatureRequestsIdComments"
+      }
+    },
+    "/api/feature-requests/{id}/vote": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": "Feature request ID"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Feature Requests"
+        ],
+        "summary": "Vote on a feature request",
+        "description": "Upserts or removes the current user's vote for a feature request and updates the `number_of_votes` aggregate. Requires `COMMENT_VOTE_FEATURE_REQUESTS` permission.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Vote recorded; updated vote total returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid vote value.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden (missing permission).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "postApiFeatureRequestsIdVote"
+      }
+    },
+    "/api/votes": {
+      "get": {
+        "tags": [
+          "Feature Requests"
+        ],
+        "summary": "List current user's votes",
+        "description": "Returns the authenticated user's votes as `{ req_id, Upvoted }` rows. Requires `VIEW_CONTENT` permission.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of user votes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserVote"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden (missing permission).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error (returns empty array in implementation).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserVote"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getApiVotes"
+      }
+    },
+    "/api/personas": {
+      "post": {
+        "tags": [
+          "Personas"
+        ],
+        "summary": "Create a persona and set it active",
+        "description": "Creates a persona owned by the authenticated user and sets it as the user's active persona. Requires `USE_PERSONAS` permission.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePersonaRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Persona created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Persona"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Persona name required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden (missing permission).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "postApiPersonas"
+      }
+    },
+    "/api/personas/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": "Persona ID"
+        }
+      ],
+      "delete": {
+        "tags": [
+          "Personas"
+        ],
+        "summary": "Delete a persona",
+        "description": "Deletes a persona owned by the authenticated user. Also clears the active persona if it matches the deleted persona. Requires `USE_PERSONAS` permission.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Persona deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden (not owner or missing permission).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Persona not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "deleteApiPersonasId"
+      }
+    },
+    "/api/personas/switch": {
+      "patch": {
+        "tags": [
+          "Personas"
+        ],
+        "summary": "Set or clear active persona",
+        "description": "Sets the authenticated user's `active_persona_id`. If `personaId` is null/omitted, clears the active persona. Requires `USE_PERSONAS` permission.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwitchPersonaRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Active persona updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Persona not found or forbidden, or missing permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "patchApiPersonasSwitch"
       }
     },
     "/api/profiles": {
       "get": {
-        "summary": "List all user profiles (any authenticated user)",
-        "tags": ["Profiles"],
-        "security": [{ "cookieAuth": [] }],
+        "tags": [
+          "Profiles"
+        ],
+        "summary": "List users (admin)",
+        "description": "Returns user/profile records from the `admin_get_users` RPC. Requires `MANAGE_USERS` permission.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
         "responses": {
           "200": {
-            "description": "List of all profiles",
+            "description": "List of users/profiles.",
             "content": {
               "application/json": {
-                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Profile" } }
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdminUser"
+                  }
+                }
               }
             }
           },
-          "401": { "description": "Unauthorized" }
-        }
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden (missing permission).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getApiProfiles"
       }
     },
-    "/api/profiles/{id}": {
+    "/api/profiles/me": {
       "get": {
-        "summary": "Get a single user profile (any authenticated user)",
-        "tags": ["Profiles"],
-        "security": [{ "cookieAuth": [] }],
-        "parameters": [
+        "tags": [
+          "Profiles"
+        ],
+        "summary": "Get current user's profile (and personas)",
+        "description": "Returns the authenticated user's profile fields, their personas, and the currently active persona (if any).",
+        "security": [
           {
-            "in": "path",
-            "name": "id",
-            "schema": { "type": "string", "format": "uuid" },
-            "required": true,
-            "description": "User ID"
+            "cookieAuth": []
           }
         ],
         "responses": {
-          "200": { "description": "Profile object", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Profile" } } } },
-          "401": { "description": "Unauthorized" },
-          "404": { "description": "Profile not found" }
-        }
+          "200": {
+            "description": "Current user profile.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileMeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Profile not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getApiProfilesMe"
       },
       "put": {
-        "summary": "Update own profile (only if authenticated user matches ID)",
-        "tags": ["Profiles"],
-        "security": [{ "cookieAuth": [] }],
-        "parameters": [
+        "tags": [
+          "Profiles"
+        ],
+        "summary": "Update current user's profile (basic fields)",
+        "description": "Updates `full_name` and `username` for the authenticated user. Returns 204 on success.",
+        "security": [
           {
-            "in": "path",
-            "name": "id",
-            "schema": { "type": "string", "format": "uuid" },
-            "required": true,
-            "description": "User ID"
+            "cookieAuth": []
           }
         ],
         "requestBody": {
-          "description": "Fields to update in profile",
           "required": true,
           "content": {
             "application/json": {
               "schema": {
+                "$ref": "#/components/schemas/UpdateMyProfileRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Profile updated successfully (no content)."
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "putApiProfilesMe"
+      },
+      "delete": {
+        "tags": [
+          "Profiles"
+        ],
+        "summary": "Delete current user's account",
+        "description": "Deletes the authenticated user's personas, profile row, and auth user. Returns 204 on success.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "User deleted successfully (no content)."
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "deleteApiProfilesMe"
+      }
+    },
+    "/api/profiles/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": "Profile/User ID"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Profiles"
+        ],
+        "summary": "Get a profile by ID",
+        "description": "Returns a public profile subset (id, username, full_name, avatar_url) and a signed avatar URL if present. Requires authentication via Supabase cookies.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Profile returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Profile not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getApiProfilesId"
+      },
+      "put": {
+        "tags": [
+          "Profiles"
+        ],
+        "summary": "Update own profile and/or avatar (Bearer token)",
+        "description": "Updates the authenticated user's profile. Requires `Authorization: Bearer <token>` and the path `{id}` must match the token's user id. Accepts `multipart/form-data` for avatar file upload and optional `username` / `full_name` fields.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "`Bearer <access_token>`"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
                 "type": "object",
                 "properties": {
-                  "username": { "type": "string", "example": "johndoe" },
-                  "full_name": { "type": "string", "example": "John Doe" },
-                  "avatar_url": { "type": "string", "example": "https://example.com/avatar.jpg" },
-                  "website": { "type": "string", "example": "https://johndoe.com" }
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "nullable": true,
+                    "description": "Avatar image file (jpeg/png/gif/webp)."
+                  },
+                  "username": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "full_name": {
+                    "type": "string",
+                    "nullable": true
+                  }
                 }
               }
             }
           }
         },
         "responses": {
-          "200": { "description": "Updated profile", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Profile" } } } },
-          "400": { "description": "Bad request" },
-          "401": { "description": "Unauthorized" },
-          "404": { "description": "Profile not found" }
-        }
+          "200": {
+            "description": "Updated profile/persona record returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profile"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or invalid file type.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized (missing/invalid token).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden (cannot update another user).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "File too large.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "putApiProfilesId"
+      },
+      "patch": {
+        "tags": [
+          "Profiles"
+        ],
+        "summary": "Admin update user (profile + auth email)",
+        "description": "Admin-only endpoint to update a user's email (Supabase Auth admin) and/or profile fields. Requires `MANAGE_USERS` permission.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminUpdateProfileRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated user returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUser"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON body, invalid role, or email update error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden (missing permission).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (email already in use).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "patchApiProfilesId"
+      },
+      "delete": {
+        "tags": [
+          "Profiles"
+        ],
+        "summary": "Admin delete user",
+        "description": "Admin-only endpoint to delete a user's profile row, avatar (if any), and Supabase Auth user. Prevents deleting self. Requires `MANAGE_USERS` permission.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User deleted successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Cannot delete your own account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden (missing permission).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Profile not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "deleteApiProfilesId"
+      }
+    },
+    "/api/update-alerts-in-cs": {
+      "put": {
+        "tags": [
+          "Contentstack"
+        ],
+        "summary": "Update & publish homepage alerts in Contentstack",
+        "description": "Updates the `alerts` field on a Contentstack `homepage` entry and publishes it. Requires `UPLOAD_NOTIFICATIONS` permission.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContentstackUpdateRequestAlerts"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Alerts updated & published.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentstackUpdateResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentstackUpdateResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden (missing permission).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Entry not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentstackUpdateResult"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentstackUpdateResult"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Upstream Contentstack error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentstackUpdateResult"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "putApiUpdateAlertsInCs"
+      }
+    },
+    "/api/update-alerts-in-cs/delete": {
+      "put": {
+        "tags": [
+          "Contentstack"
+        ],
+        "summary": "Delete an alert (by sending new alerts array) & publish",
+        "description": "Same as update, but used by UI to 'delete' a notification by sending the updated `alerts` array. Requires `UPLOAD_NOTIFICATIONS` permission.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContentstackUpdateRequestAlerts"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Alert deleted & entry published.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentstackUpdateResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentstackUpdateResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden (missing permission).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Entry not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentstackUpdateResult"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentstackUpdateResult"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Upstream Contentstack error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentstackUpdateResult"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "putApiUpdateAlertsInCsDelete"
+      }
+    },
+    "/api/update-demo-web-in-cs": {
+      "put": {
+        "tags": [
+          "Contentstack"
+        ],
+        "summary": "Update & publish custom demos in Contentstack",
+        "description": "Updates the `demos` field on a Contentstack `custom_demos` entry and publishes it. Requires `UPLOAD_DEMO_WEBSITES` permission.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContentstackUpdateRequestDemos"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Demos updated & published.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentstackUpdateResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden (missing permission).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentstackUpdateResult"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Upstream Contentstack error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentstackUpdateResult"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "putApiUpdateDemoWebInCs"
+      },
+      "delete": {
+        "tags": [
+          "Contentstack"
+        ],
+        "summary": "Delete a demo (by sending new demos array) & publish",
+        "description": "Same as update, but used by UI to 'delete' a demo website by sending the updated `demos` array. Requires `UPLOAD_DEMO_WEBSITES` permission.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContentstackUpdateRequestDemos"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Demo deleted & entry published.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentstackUpdateResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden (missing permission).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentstackUpdateResult"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Upstream Contentstack error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentstackUpdateResult"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "deleteApiUpdateDemoWebInCs"
+      }
+    },
+    "/api/update-video-library-in-cs": {
+      "put": {
+        "tags": [
+          "Contentstack"
+        ],
+        "summary": "Update & publish video library in Contentstack",
+        "description": "Updates the `videos` field on a Contentstack `video_library` entry and publishes it. Requires `UPLOAD_VIDEO_LIBRARY` permission.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContentstackUpdateRequestVideos"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Videos updated & published.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentstackUpdateResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden (missing permission).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentstackUpdateResult"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Upstream Contentstack error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentstackUpdateResult"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "putApiUpdateVideoLibraryInCs"
+      }
+    },
+    "/api/upload-asset-to-cs": {
+      "post": {
+        "tags": [
+          "Contentstack"
+        ],
+        "summary": "Upload and publish an asset to Contentstack",
+        "description": "Uploads an asset via Contentstack Management API and then publishes it to the `preview` environment. Requires `UPLOAD_ASSET` permission.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "asset[upload]": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "File to upload."
+                  },
+                  "asset[title]": {
+                    "type": "string"
+                  },
+                  "asset[description]": {
+                    "type": "string"
+                  },
+                  "asset[parent_uid]": {
+                    "type": "string"
+                  },
+                  "asset[tags]": {
+                    "type": "string",
+                    "description": "Comma-separated tags."
+                  }
+                },
+                "required": [
+                  "asset[upload]"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Asset uploaded and published.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadAssetResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden (missing permission).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadAssetResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Upstream Contentstack error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadAssetResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "postApiUploadAssetToCs"
+      }
+    },
+    "/api/logs": {
+      "post": {
+        "tags": [
+          "Logs"
+        ],
+        "summary": "Ingest an internal log event",
+        "description": "Accepts a structured log object and writes it via the server logger. Requires `x-internal-log-secret` header to match `LOG_INGEST_SECRET`.",
+        "security": [
+          {
+            "internalLogSecret": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogIngestRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Log accepted (no content)."
+          },
+          "400": {
+            "description": "Missing required fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized (missing/invalid internal secret)."
+          },
+          "500": {
+            "description": "Internal server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "postApiLogs"
       }
     }
   },
@@ -220,32 +2366,1050 @@
       "cookieAuth": {
         "type": "apiKey",
         "in": "cookie",
-        "name": "sb-ibfgbeocmmbnpziqjdtu-auth-token",
-        "description": "Supabase session cookie. Set this in Postman under Headers → Cookie: sb-ibfgbeocmmbnpziqjdtu-auth-token=<token>"
+        "name": "sb-<project-ref>-auth-token",
+        "description": "Supabase SSR session cookie (project-specific name like `sb-<project-ref>-auth-token`)."
+      },
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Bearer access token (e.g., Supabase access_token)."
+      },
+      "internalLogSecret": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-internal-log-secret",
+        "description": "Shared secret used to authorize internal log ingestion."
       }
     },
     "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "details": {}
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "SuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ]
+      },
+      "MessageResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "format": "password"
+          }
+        }
+      },
+      "SignupRequest": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "format": "password"
+          }
+        }
+      },
+      "SupabaseUser": {
+        "type": "object",
+        "description": "Subset of Supabase Auth user object.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "role": {
+            "type": "string"
+          },
+          "aud": {
+            "type": "string"
+          },
+          "user_metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "app_metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true
+      },
+      "SupabaseSession": {
+        "type": "object",
+        "description": "Subset of Supabase session object.",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "token_type": {
+            "type": "string"
+          },
+          "expires_in": {
+            "type": "integer"
+          },
+          "expires_at": {
+            "type": "integer",
+            "description": "Unix timestamp (seconds)"
+          },
+          "refresh_token": {
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/SupabaseUser"
+          }
+        },
+        "additionalProperties": true
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "session": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SupabaseSession"
+              }
+            ],
+            "nullable": true
+          },
+          "user": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SupabaseUser"
+              }
+            ],
+            "nullable": true
+          },
+          "error": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SignupResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "error": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SessionResponse": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SupabaseUser"
+              }
+            ],
+            "nullable": true
+          }
+        },
+        "required": [
+          "user"
+        ],
+        "additionalProperties": false
+      },
+      "CaptureScreenshotRequest": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Website URL to fetch OG image from."
+          }
+        }
+      },
+      "CaptureScreenshotResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "screenshot": {
+            "type": "string",
+            "description": "Base64-encoded image bytes."
+          },
+          "contentType": {
+            "type": "string",
+            "description": "MIME type of the returned image."
+          },
+          "imageUrl": {
+            "type": "string",
+            "description": "Resolved OG image URL or local default image path."
+          },
+          "isDefault": {
+            "type": "boolean",
+            "description": "True if the default placeholder image was returned."
+          },
+          "error": {
+            "type": "string"
+          },
+          "details": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "DemoInstructionCreateRequest": {
+        "type": "object",
+        "required": [
+          "title",
+          "html"
+        ],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "html": {
+            "type": "string",
+            "description": "HTML content for the instruction."
+          }
+        }
+      },
+      "DemoInstructionCreateResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "instruction_uid": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "instruction_uid",
+          "url"
+        ],
+        "additionalProperties": false
+      },
+      "DemoInstructionUpdateRequest": {
+        "type": "object",
+        "required": [
+          "uid",
+          "title",
+          "html"
+        ],
+        "properties": {
+          "uid": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "html": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          }
+        }
+      },
+      "DemoInstructionUpdateResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "entry": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "entry"
+        ],
+        "additionalProperties": false
+      },
+      "FeatureRequestStatus": {
+        "type": "string",
+        "enum": [
+          "open",
+          "planned",
+          "in_progress",
+          "completed",
+          "rejected",
+          "closed"
+        ],
+        "description": "Feature request lifecycle status."
+      },
+      "ProfilePublic": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "username": {
+            "type": "string",
+            "nullable": true
+          },
+          "avatar_url": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": true
+      },
       "FeatureRequest": {
         "type": "object",
         "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "user_id": { "type": "string", "format": "uuid" },
-          "Title": { "type": "string" },
-          "Content": { "type": "string" },
-          "created_at": { "type": "string", "format": "date-time" },
-          "updated_at": { "type": "string", "format": "date-time" }
-        }
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/FeatureRequestStatus"
+          },
+          "file_url": {
+            "type": "string",
+            "nullable": true,
+            "description": "Path within the `feature-uploads` Supabase storage bucket."
+          },
+          "signed_file_url": {
+            "type": "string",
+            "nullable": true,
+            "description": "Temporary signed URL for `file_url`."
+          },
+          "number_of_votes": {
+            "type": "integer",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "profiles": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "username": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          },
+          "user": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "username": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          }
+        },
+        "additionalProperties": true
+      },
+      "FeatureRequestCreateResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/FeatureRequest"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "username": {
+                "type": "string",
+                "nullable": true
+              },
+              "commentCount": {
+                "type": "integer",
+                "description": "Initial comment count for the request."
+              }
+            }
+          }
+        ]
+      },
+      "FeatureRequestUpdateRequest": {
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/FeatureRequestStatus"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FeatureRequestComment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "content": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "username": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "content",
+          "created_at",
+          "user_id",
+          "username"
+        ],
+        "additionalProperties": false
+      },
+      "CreateCommentRequest": {
+        "type": "object",
+        "required": [
+          "content"
+        ],
+        "properties": {
+          "content": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "VoteRequest": {
+        "type": "object",
+        "required": [
+          "vote"
+        ],
+        "properties": {
+          "vote": {
+            "type": "string",
+            "enum": [
+              "up",
+              "down",
+              "remove"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "VoteResponse": {
+        "type": "object",
+        "properties": {
+          "number_of_votes": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "number_of_votes"
+        ],
+        "additionalProperties": false
+      },
+      "UserVote": {
+        "type": "object",
+        "properties": {
+          "req_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "Upvoted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "req_id",
+          "Upvoted"
+        ],
+        "additionalProperties": false
+      },
+      "ForgotPasswordRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ForgotPasswordResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "LogIngestRequest": {
+        "type": "object",
+        "required": [
+          "level",
+          "endpoint",
+          "message"
+        ],
+        "properties": {
+          "level": {
+            "type": "string",
+            "description": "Log level (e.g., info, warn, error)."
+          },
+          "endpoint": {
+            "type": "string",
+            "description": "API endpoint or page where the log originated."
+          },
+          "status_code": {
+            "type": "integer",
+            "nullable": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "metadata": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "Persona": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "owner_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "full_name": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string",
+            "nullable": true
+          },
+          "avatar_url": {
+            "type": "string",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": true
+      },
+      "CreatePersonaRequest": {
+        "type": "object",
+        "required": [
+          "displayName"
+        ],
+        "properties": {
+          "displayName": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SwitchPersonaRequest": {
+        "type": "object",
+        "properties": {
+          "personaId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
       },
       "Profile": {
         "type": "object",
         "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "username": { "type": "string" },
-          "full_name": { "type": "string" },
-          "avatar_url": { "type": "string" },
-          "website": { "type": "string" },
-          "updated_at": { "type": "string", "format": "date-time" }
-        }
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "username": {
+            "type": "string",
+            "nullable": true
+          },
+          "full_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "avatar_url": {
+            "type": "string",
+            "nullable": true
+          },
+          "signed_avatar_url": {
+            "type": "string",
+            "nullable": true
+          },
+          "active_persona_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "role": {
+            "type": "string",
+            "nullable": true
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "additionalProperties": true
+      },
+      "ProfileMeResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role": {
+            "type": "string"
+          },
+          "full_name": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "avatar_url": {
+            "type": "string"
+          },
+          "personas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Persona"
+            }
+          },
+          "activePersona": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Persona"
+              }
+            ],
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "role",
+          "full_name",
+          "username",
+          "avatar_url",
+          "personas",
+          "activePersona"
+        ],
+        "additionalProperties": false
+      },
+      "UpdateMyProfileRequest": {
+        "type": "object",
+        "properties": {
+          "full_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "username": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "AdminUpdateProfileRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "role": {
+            "type": "string"
+          },
+          "full_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "username": {
+            "type": "string",
+            "nullable": true
+          },
+          "active_persona_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "AdminUser": {
+        "type": "object",
+        "description": "Result row returned by `admin_get_users` RPC (shape depends on database).",
+        "additionalProperties": true
+      },
+      "ContentstackAssetRef": {
+        "description": "Contentstack asset reference. In update payloads this is often just the asset UID string.",
+        "oneOf": [
+          {
+            "type": "string",
+            "description": "Asset UID"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "uid": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "uid"
+            ],
+            "additionalProperties": true
+          }
+        ],
+        "nullable": true
+      },
+      "DemoWebsite": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "se_name": {
+            "type": "string"
+          },
+          "date_posted": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "image": {
+            "$ref": "#/components/schemas/ContentstackAssetRef"
+          },
+          "link": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "href": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "title",
+              "href"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "title",
+          "description",
+          "se_name",
+          "link"
+        ],
+        "additionalProperties": false
+      },
+      "NotificationAlert": {
+        "type": "object",
+        "properties": {
+          "alert_title": {
+            "type": "string"
+          },
+          "alert_description": {
+            "type": "string"
+          },
+          "start_time": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "end_time": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "critical_value": {
+            "type": "boolean",
+            "nullable": true
+          }
+        },
+        "required": [
+          "alert_title",
+          "alert_description"
+        ],
+        "additionalProperties": false
+      },
+      "VideoItem": {
+        "type": "object",
+        "properties": {
+          "video_url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "video_file": {
+            "$ref": "#/components/schemas/ContentstackAssetRef"
+          },
+          "thumbnail": {
+            "$ref": "#/components/schemas/ContentstackAssetRef"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "se_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "description",
+          "se_name"
+        ],
+        "additionalProperties": false
+      },
+      "ContentstackUpdateRequestAlerts": {
+        "type": "object",
+        "required": [
+          "entryUid",
+          "alerts"
+        ],
+        "properties": {
+          "entryUid": {
+            "type": "string"
+          },
+          "alerts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationAlert"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ContentstackUpdateRequestDemos": {
+        "type": "object",
+        "required": [
+          "entryUid",
+          "demos"
+        ],
+        "properties": {
+          "entryUid": {
+            "type": "string"
+          },
+          "demos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DemoWebsite"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ContentstackUpdateRequestVideos": {
+        "type": "object",
+        "required": [
+          "entryUid",
+          "videos"
+        ],
+        "properties": {
+          "entryUid": {
+            "type": "string"
+          },
+          "videos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VideoItem"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ContentstackUpdateResult": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "integer"
+          },
+          "entry": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": true
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "error": {
+            "type": "string",
+            "nullable": true
+          },
+          "details": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "UploadAssetResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "integer"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "asset": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": true
+          },
+          "publish": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": true
+          },
+          "error": {
+            "type": "string",
+            "nullable": true
+          },
+          "details": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
       }
     }
   }

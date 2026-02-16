@@ -1,21 +1,17 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/Supabase/server";
+import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
+import PERMISSIONS from "@/config/permissions";
 import { withLogging } from '@/utils/withLogging';
 
 async function handleDelete(req, { params }) {
     const { id } = await params;
 
-    const supabase = await createClient();
+    // ---- AUTH: MUST HAVE USE_PERSONAS PERMISSION ----
+    const { error, profile, supabase } = await requireAuthWithPermission(
+        PERMISSIONS.USE_PERSONAS
+    );
 
-    // ---- AUTH ----
-    const {
-        data: { user },
-        error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    if (error) return error;
 
     // ---- FETCH PERSONA ----
     const { data: persona, error: personaError } = await supabase
@@ -31,7 +27,7 @@ async function handleDelete(req, { params }) {
         );
     }
 
-    if (persona.owner_id !== user.id) {
+    if (persona.owner_id !== profile.id) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -39,7 +35,7 @@ async function handleDelete(req, { params }) {
     await supabase
         .from("profiles")
         .update({ active_persona_id: null })
-        .eq("id", user.id)
+        .eq("id", profile.id)
         .eq("active_persona_id", id);
 
     // ---- DELETE PERSONA ----
@@ -47,7 +43,7 @@ async function handleDelete(req, { params }) {
         .from("personas")
         .delete()
         .eq("id", id)
-        .eq("owner_id", user.id);
+        .eq("owner_id", profile.id);
 
     if (deleteError) {
         return NextResponse.json(

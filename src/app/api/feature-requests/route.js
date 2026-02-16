@@ -1,7 +1,10 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@/utils/Supabase/server";
-import { fileTypeFromBuffer } from "file-type";
-import { createServiceRoleClient } from "@/utils/Supabase/server";
+import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
+import PERMISSIONS from "@/config/permissions";
+import {NextResponse} from "next/server";
+import {createClient} from "@/utils/Supabase/server";
+import {fileTypeFromBuffer} from "file-type";
+import {createServiceRoleClient} from "@/utils/Supabase/server";
+import { sanitizeHtmlServer } from "@/lib/featureRequests/requests/sanitizeHtmlServer.js";
 import { withLogging } from '@/utils/withLogging';
 
 const ALLOWED_MIME_TYPES = [
@@ -15,20 +18,21 @@ const ALLOWED_MIME_TYPES = [
   "video/ogg"
 ];
 
+const TITLE_MAX_LENGTH = 100;
+
+
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
 
 async function handleGet() {
   
   const supabase = await createClient();
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  const { error2, profile } = await requireAuthWithPermission(
 
-  if (userError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+    PERMISSIONS.VIEW_CONTENT
+  );
+
+  if (error2) return error2;
 
     const { data, error } = await supabase
         .from("feature_requests")
@@ -75,14 +79,12 @@ async function handleGet() {
 async function handlePost(req) {
     const supabase = await createClient();
 
-    const {
-        data: { user },
-        error: userError
-    } = await supabase.auth.getUser();
+    const { error2, profile } = await requireAuthWithPermission(
 
-    if (userError || !user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    PERMISSIONS.PUBLISH_FEATURE_REQUESTS
+  );
+
+    if (error2) return error2;
 
     const contentLength = req.headers.get("content-length");
 
@@ -95,9 +97,20 @@ async function handlePost(req) {
     const content = formData.get("content");
     const file = formData.get("file");
 
-  if (!title || title.trim() === "") {
-    return NextResponse.json({ error: "Title is required" }, { status: 400 });
-  }
+    const normalizedTitle = title?.toString().trim() || "";
+
+    if (!normalizedTitle) {
+        return NextResponse.json({ error: "Title is required" }, { status: 400 });
+    }
+
+    if (normalizedTitle.length > TITLE_MAX_LENGTH) {
+        return NextResponse.json(
+            { error: `Title cannot exceed ${TITLE_MAX_LENGTH} characters` },
+            { status: 400 }
+        );
+    }
+
+    const cleanContent = sanitizeHtmlServer(content)
 
     let filePath = null;
 
@@ -114,7 +127,6 @@ async function handlePost(req) {
       return NextResponse.json({ error: "Invalid file type" }, { status: 400 });
     }
 
-    // Optional: sanitize images
     filePath = `uploads/${crypto.randomUUID()}.${detectedType.ext}`;
 
         const { error: uploadError } = await supabase.storage
@@ -134,10 +146,10 @@ async function handlePost(req) {
         .from("feature_requests")
         .insert([
             {
-                title,
-                content,
+                title: normalizedTitle,
+                content: cleanContent,
                 status: "open",
-                user_id: user.id,
+                user_id: profile.id,
                 file_url: filePath
             }
         ])

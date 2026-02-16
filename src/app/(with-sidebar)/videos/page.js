@@ -35,6 +35,10 @@ import CardDropdown from "@/components/cardDropdown.jsx";
 
 import { X } from "lucide-react";
 
+import { useUser } from "@/context/UserContext";
+import { hasPermission } from "@/utils/hasPermission";
+import PERMISSIONS from "@/config/permissions";
+
 /* ---------------------------------------------------------------------------------------
    MAIN COMPONENT
 --------------------------------------------------------------------------------------- */
@@ -49,7 +53,7 @@ export default function VideoLibrary() {
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
     const [selectedItem, setSelectedItem] = useState(null);
-    
+
     // New state for thumbnail generation
     const [thumbnailPreview, setThumbnailPreview] = useState(null);
     const [generatedThumbnail, setGeneratedThumbnail] = useState(null);
@@ -76,6 +80,14 @@ export default function VideoLibrary() {
         video?.video_file?.uid ||
         video?.se_name ||
         video?.title;
+
+
+
+    const { user, loading: userLoading } = useUser();
+    const canUploadVideo =
+        user?.role && hasPermission(user.role, "upload_video_library");
+
+
 
     /* -----------------------------------------------------------------------------------
         BOOKMARK HANDLER
@@ -156,7 +168,7 @@ export default function VideoLibrary() {
     /* -----------------------------------------------------------------------------------
         THUMBNAIL GENERATION HANDLERS
     ----------------------------------------------------------------------------------- */
-    
+
     /**
      * Handle video file selection and auto-generate thumbnail
      */
@@ -172,7 +184,7 @@ export default function VideoLibrary() {
         try {
             const thumbnailFile = await extractThumbnailFromVideo(file);
             setGeneratedThumbnail(thumbnailFile);
-            
+
             // Create preview URL
             const previewUrl = URL.createObjectURL(thumbnailFile);
             setThumbnailPreview(previewUrl);
@@ -201,7 +213,7 @@ export default function VideoLibrary() {
 
             // Try YouTube
             thumbnailUrl = getYouTubeThumbnail(url);
-            
+
             // Try Vimeo if not YouTube
             if (!thumbnailUrl) {
                 thumbnailUrl = await getVimeoThumbnail(url);
@@ -399,13 +411,15 @@ export default function VideoLibrary() {
                 <h1 className="text-4xl font-bold ml-4">{entry?.title}</h1>
 
                 <div className="flex items-center gap-2 mr-4">
-                    <button
-                        type="button"
-                        onClick={() => setIsOpen(true)}
-                        className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
-                    >
-                        Add Video
-                    </button>
+                    {canUploadVideo && (
+                        <button
+                            type="button"
+                            onClick={() => setIsOpen(true)}
+                            className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
+                        >
+                            Add Video
+                        </button>
+                    )}
 
                     <div className="relative w-full max-w-sm dark:text-black">
                         <input
@@ -569,13 +583,13 @@ export default function VideoLibrary() {
                                                         <label className="block text-sm font-medium dark:text-gray-200 mb-1">
                                                             Thumbnail {isGeneratingThumbnail && <span className="text-xs text-gray-500">(Generating...)</span>}
                                                         </label>
-                                                        
+
                                                         {/* Thumbnail Preview */}
                                                         {thumbnailPreview && (
                                                             <div className="mb-3 relative inline-block">
-                                                                <img 
-                                                                    src={thumbnailPreview} 
-                                                                    alt="Thumbnail preview" 
+                                                                <img
+                                                                    src={thumbnailPreview}
+                                                                    alt="Thumbnail preview"
                                                                     className="h-32 rounded-lg border-2 border-green-500 object-cover"
                                                                 />
                                                                 <div className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
@@ -583,7 +597,7 @@ export default function VideoLibrary() {
                                                                 </div>
                                                             </div>
                                                         )}
-                                                        
+
                                                         <input
                                                             name="thumbnail"
                                                             type="file"
@@ -597,8 +611,8 @@ export default function VideoLibrary() {
                           outline-none transition"
                                                         />
                                                         <small className="text-gray-600">
-                                                            {generatedThumbnail 
-                                                                ? "Thumbnail auto-generated. Upload a file to override." 
+                                                            {generatedThumbnail
+                                                                ? "Thumbnail auto-generated. Upload a file to override."
                                                                 : "Upload manually or leave blank to auto-generate from video."}
                                                         </small>
                                                     </div>
@@ -750,10 +764,13 @@ export default function VideoLibrary() {
                                                     <CardTitle className="text-lg font-semibold leading-tight line-clamp-1">
                                                         {video.title}
                                                     </CardTitle>
-                                                    <CardDropdown
-                                                        onEdit={() => openEditModal(video)}
-                                                        onDelete={() => openDeleteModal(video)}
-                                                    />
+                                                    {canUploadVideo && (
+                                                        <CardDropdown
+                                                            onEdit={() => openEditModal(video)}
+                                                            onDelete={() => openDeleteModal(video)}
+                                                        />
+                                                    )}
+
                                                 </div>
                                                 {video.description && (
                                                     <CardDescription className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mt-1">
