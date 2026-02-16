@@ -75,7 +75,7 @@ async function handlePut(req, { params }) {
 }
 
 
-export async function DELETE(req, { params }) {
+async function handleDelete(req, { params }) {
   const { id } = await params;
   const supabase = await createClient();
 

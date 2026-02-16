@@ -6,7 +6,7 @@ import PERMISSIONS from "@/config/permissions";
 import { withLogging } from '@/utils/withLogging';
 
 // GET all users/profiles
-export async function handleGet() {
+async function handleGet() {
   const { error } = await requireAuthWithPermission(
     PERMISSIONS.MANAGE_USERS
   );

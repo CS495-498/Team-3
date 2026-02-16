@@ -4,7 +4,7 @@ import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission.js
 import PERMISSIONS from "@/config/permissions";
 import { withLogging } from '@/utils/withLogging';
 
-export async function handlePut(request) {
+async function handlePut(request) {
     const { error, supabase } = await requireAuthWithPermission(
     PERMISSIONS.UPLOAD_NOTIFICATIONS
   );

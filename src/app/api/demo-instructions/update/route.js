@@ -1,5 +1,4 @@
 import { NextResponse, redirect } from "next/server";
-import { createClient } from "@/utils/Supabase/server";
 import { withLogging } from '@/utils/withLogging';
 const BASE = "https://api.contentstack.io/v3";
 const API_KEY = process.env.CONTENTSTACK_API_KEY;
@@ -8,7 +7,7 @@ const ENVIRONMENT = process.env.CONTENTSTACK_ENVIRONMENT;
 import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
 import PERMISSIONS from "@/config/permissions";
 
-export async function handlePOST(req) {
+async function handlePOST(req) {
   const { error, profile } = await requireAuthWithPermission(
   
     PERMISSIONS.PUBLISH_DEMO_INSTRUCTIONS

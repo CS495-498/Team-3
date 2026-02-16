@@ -26,7 +26,7 @@ const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp
 
 
 // -------------------- GET PROFILE --------------------
-export async function handleGet(req, context) {
+async function handleGet(req, context) {
     const {id} = await context.params;
 
     const { data, error } = await supabase
@@ -199,7 +199,7 @@ async function handlePut(req, context) {
 
 }
 
-export async function handlePatch(request, { params }) {
+async function handlePatch(request, { params }) {
     const { id: profileId } = await params;
 
     // -------------------------
@@ -345,7 +345,7 @@ export async function handlePatch(request, { params }) {
 }
 
 // -------------------- DELETE PROFILE (ADMIN) --------------------
-export async function handleDelete(request, { params }) {
+async function handleDelete(request, { params }) {
     const { id: profileId } = await params;
 
     // -------------------------
@@ -428,9 +428,6 @@ export async function handleDelete(request, { params }) {
         { message: "User deleted successfully" },
         { status: 200 }
     );
-}
-
-
 }
 
 export const GET = withLogging(handleGet);

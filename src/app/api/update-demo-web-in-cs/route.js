@@ -6,7 +6,7 @@ import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission.js
 import PERMISSIONS from "@/config/permissions";
 import { withLogging } from '@/utils/withLogging';
 
-export async function handlePut(req) {
+async function handlePut(req) {
 
 const { error, profile, supabase } = await requireAuthWithPermission(
     PERMISSIONS.UPLOAD_DEMO_WEBSITES
@@ -26,7 +26,7 @@ const { error, profile, supabase } = await requireAuthWithPermission(
   }
 }
 
-export async function handleDelete(req) {
+async function handleDelete(req) {
   const { error, profile, supabase } = await requireAuthWithPermission(
     PERMISSIONS.UPLOAD_DEMO_WEBSITES
   );
