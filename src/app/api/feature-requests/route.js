@@ -39,7 +39,8 @@ async function handleGet() {
         .select(`
       *,
       profiles!fk_feature_requests_author (
-        username
+        username,
+        full_name
       )
     `)
         .order("created_at", { ascending: false });
@@ -49,26 +50,79 @@ async function handleGet() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+    const requestIds = data.map((req) => req.id).filter(Boolean);
+    let votesByRequest = {};
+    let voterProfileMap = {};
+
+    if (requestIds.length > 0) {
+        const { data: voteRows, error: votesError } = await supabase
+            .from("votes")
+            .select("req_id, user_id")
+            .in("req_id", requestIds);
+
+        if (votesError) {
+            console.error("Votes lookup error:", votesError);
+        } else if (voteRows?.length) {
+            const uniqueVoterIds = [...new Set(voteRows.map((v) => v.user_id).filter(Boolean))];
+
+            if (uniqueVoterIds.length > 0) {
+                const { data: voterProfiles, error: voterProfilesError } = await supabase
+                    .from("profiles")
+                    .select("id, username, full_name")
+                    .in("id", uniqueVoterIds);
+
+                if (voterProfilesError) {
+                    console.error("Voter profiles lookup error:", voterProfilesError);
+                } else {
+                    voterProfileMap = (voterProfiles || []).reduce((acc, p) => {
+                        acc[p.id] = p;
+                        return acc;
+                    }, {});
+                }
+            }
+
+            votesByRequest = voteRows.reduce((acc, vote) => {
+                if (!vote?.req_id) return acc;
+                if (!acc[vote.req_id]) acc[vote.req_id] = [];
+                const voterProfile = voterProfileMap[vote.user_id];
+                if (voterProfile) acc[vote.req_id].push(voterProfile);
+                return acc;
+            }, {});
+        }
+    }
+
     const supabaseServiceRole = await createServiceRoleClient();
 
   // Attach signed URLs
   const enriched = await Promise.all(
     data.map(async (req) => {
-      if (!req.file_url) return req;
+      const requestVoters = votesByRequest[req.id] || [];
+      let signedFileUrl = null;
 
-            const { data: urlData, error: urlError } =
-                await supabaseServiceRole.storage
-                    .from("feature-uploads")
-                    .createSignedUrl(req.file_url, 60 * 60);
+      if (req.file_url) {
+          const { data: urlData, error: urlError } =
+              await supabaseServiceRole.storage
+                  .from("feature-uploads")
+                  .createSignedUrl(req.file_url, 60 * 60);
 
-      if (urlError) {
-        console.error("Signed URL error:", urlError);
-        return req;
+          if (urlError) {
+              console.error("Signed URL error:", urlError);
+          } else {
+              signedFileUrl = urlData.signedUrl;
+          }
       }
 
       return {
         ...req,
-        signed_file_url: urlData.signedUrl,
+        username: req.profiles?.username || null,
+        full_name: req.profiles?.full_name || null,
+        voter_usernames: requestVoters
+            .map((v) => v.username)
+            .filter(Boolean),
+        voter_full_names: requestVoters
+            .map((v) => v.full_name)
+            .filter(Boolean),
+        signed_file_url: signedFileUrl,
       };
     })
   );

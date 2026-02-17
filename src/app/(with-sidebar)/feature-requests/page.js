@@ -53,6 +53,7 @@ export default function Home() {
 
     const [statusFilter, setStatusFilter] = useState("all");
     const [sortOption, setSortOption] = useState("votes_desc");
+    const [userFilter, setUserFilter] = useState("");
 
     // ✅ Show completed toggle (persisted in sessionStorage)
     const [showCompleted, setShowCompleted] = useState(() => {
@@ -154,9 +155,17 @@ export default function Home() {
 
     const sameUser = (feature_request_user_id, user_id) =>
         user_id === feature_request_user_id;
+    const normalizedUserQuery = userFilter.trim().toLowerCase();
+
+    const matchesUserQuery = (values, query) =>
+        (values || [])
+            .filter(Boolean)
+            .map((value) => String(value).toLowerCase().trim())
+            .some((value) => value.includes(query));
 
     const filteredSortedRequests = useMemo(() => {
         let list = [...requests];
+        const normalizedUserFilter = normalizedUserQuery;
 
         // ✅ Hide completed by default unless showCompleted is true
         if (!showCompleted) {
@@ -166,6 +175,16 @@ export default function Home() {
         // FILTER: Apply status filter if not "all"
         if (statusFilter !== "all") {
             list = list.filter((req) => req.status === statusFilter);
+        }
+
+        if (normalizedUserFilter) {
+            list = list.filter((req) => {
+                const authorMatch = matchesUserQuery(
+                    [req.username, req.full_name],
+                    normalizedUserFilter
+                );
+                return authorMatch;
+            });
         }
 
         switch (sortOption) {
@@ -192,7 +211,13 @@ export default function Home() {
         }
 
         return list;
-    }, [requests, statusFilter, sortOption, showCompleted]);
+    }, [
+        requests,
+        statusFilter,
+        sortOption,
+        showCompleted,
+        normalizedUserQuery,
+    ]);
 
     const { items: visibleRequests, hasMore, ref } = useInfiniteScroll(
         filteredSortedRequests,
@@ -598,6 +623,17 @@ export default function Home() {
                         </div>
 
                         {/* ✅ Show Completed Toggle */}
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">User:</span>
+                            <input
+                                type="text"
+                                value={userFilter}
+                                onChange={(e) => setUserFilter(e.target.value)}
+                                placeholder="Name or username"
+                                className="h-10 w-56 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            />
+                        </div>
+
                         <div className="flex items-center gap-2 ml-4 pl-4 border-l border-gray-300 dark:border-gray-700">
                             <label
                                 htmlFor="show-completed"
@@ -626,11 +662,16 @@ export default function Home() {
             </div>
 
             {visibleRequests.length === 0 ? (
-                <p className="text-gray-600 ml-4">No feature requests found.</p>
+                <p className="text-gray-600 ml-4">
+                    No results found for the selected filters.
+                </p>
             ) : (
                 <ul className="divide-y divide-gray-200">
                     {visibleRequests.map((req) => {
                         const voteState = votes[req.id];
+                        const authorMatch = normalizedUserQuery
+                            ? matchesUserQuery([req.username, req.full_name], normalizedUserQuery)
+                            : false;
 
                         const previewText = (req.content || "")
                             .replace(/<[^>]*>/g, " ")
@@ -784,7 +825,7 @@ export default function Home() {
                         <span className="text-sm">Loading more requests...</span>
                     </div>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                        Showing {visibleRequests.length} of {requests.length} requests
+                        Showing {visibleRequests.length} of {filteredSortedRequests.length} requests
                     </p>
                 </div>
             )}
