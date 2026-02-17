@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/Supabase/server";
+import PERMISSIONS from "@/config/permissions.js";
+import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission.js";
 
 export async function GET(request) {
     try {
-        const supabase = await createClient();
+        const { error, supabase } = await requireAuthWithPermission(
 
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+            PERMISSIONS.VIEW_METRICS
+        );
+
+        if (error) return error;
 
         const { searchParams } = new URL(request.url);
         const startDate = searchParams.get("start_date");
@@ -19,7 +21,7 @@ export async function GET(request) {
         if (startDate) query = query.gte("date", startDate);
         if (endDate) query = query.lte("date", endDate);
 
-        const { data, error } = await query;
+        const { data } = await query;
 
         if (error) {
             console.error(error);
