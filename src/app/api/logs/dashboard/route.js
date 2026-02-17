@@ -23,6 +23,7 @@ export async function GET(request) {
         const level = searchParams.get("level") || "";
         const status = searchParams.get("status") || "";
         const method = searchParams.get("method") || "";
+        const timestamp = searchParams.get("timestamp") || "";
 
         // Calculate range for server-side pagination
         const from = (page - 1) * limit;
@@ -60,6 +61,11 @@ export async function GET(request) {
         // Apply HTTP method filter (from JSONB metadata)
         if (method) {
             query = query.eq("metadata->>method", method);
+        }
+
+        // Apply timestamp cutoff filter
+        if (timestamp) {
+            query = query.gte("timestamp", timestamp);
         }
 
         // Apply pagination range
