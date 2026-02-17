@@ -1,19 +1,15 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/Supabase/server";
+import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission.js";
+import PERMISSIONS from "@/config/permissions.js";
 
 export async function GET(request) {
     try {
-        const supabase = await createClient();
+        const { error, supabase } = await requireAuthWithPermission(
 
-        // Auth verification
-        const {
-            data: { user },
-            error: userError,
-        } = await supabase.auth.getUser();
+            PERMISSIONS.VIEW_LOGS
+        );
 
-        if (userError || !user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+        if (error) return error;
 
         // Parse query params
         const { searchParams } = new URL(request.url);
@@ -65,11 +61,11 @@ export async function GET(request) {
         // Apply pagination range
         query = query.range(from, to);
 
-        const { data: logs, count, error } = await query;
+        const { data: logs, count, error: queryError } = await query;
 
-        if (error) {
-            console.error("Error fetching logs:", error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
+        if (queryError) {
+            console.error("Error fetching logs:", queryError);
+            return NextResponse.json({ error: queryError.message }, { status: 500 });
         }
 
         const total = count || 0;
