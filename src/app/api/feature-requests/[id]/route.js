@@ -5,10 +5,11 @@ import PERMISSIONS from "@/config/permissions";
 import { hasPermission } from "@/utils/hasPermission";
 import { sanitizeHtmlServer } from "@/lib/featureRequests/requests/sanitizeHtmlServer.js";
 
+import { withLogging } from '@/utils/withLogging';
 
 const TITLE_MAX_LENGTH = 100;
 
-export async function PUT(req, { params }) {
+async function handlePut(req, { params }) {
     const { id } = params;
     const supabase = await createClient();
 
@@ -74,7 +75,7 @@ export async function PUT(req, { params }) {
 }
 
 
-export async function DELETE(req, { params }) {
+async function handleDelete(req, { params }) {
   const { id } = await params;
   const supabase = await createClient();
 
@@ -110,4 +111,6 @@ export async function DELETE(req, { params }) {
 
   return NextResponse.json({ success: true }, { status: 200 });
 }
+export const PUT = withLogging(handlePut);
+export const DELETE = withLogging(handleDelete);
 

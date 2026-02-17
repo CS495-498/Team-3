@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
 import PERMISSIONS from "@/config/permissions";
+import { withLogging } from '@/utils/withLogging';
 
-export async function PATCH(req) {
+async function handlePatch(req) {
     const { personaId } = await req.json();
 
     const { error, profile, supabase } = await requireAuthWithPermission(
@@ -57,3 +58,5 @@ export async function PATCH(req) {
 
     return NextResponse.json({ success: true });
 }
+
+export const PATCH = withLogging(handlePatch);

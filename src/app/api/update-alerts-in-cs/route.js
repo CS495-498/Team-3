@@ -3,8 +3,9 @@ import { updateAndPublishAlert } from "./updateAndPublishAlert.js";
 import { createClient } from "@/utils/Supabase/server";
 import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission.js";
 import PERMISSIONS from "@/config/permissions";
+import { withLogging } from '@/utils/withLogging';
 
-export async function PUT(req) {
+async function handlePut(req) {
 
 const { error, supabase } = await requireAuthWithPermission(
     PERMISSIONS.UPLOAD_NOTIFICATIONS
@@ -23,3 +24,5 @@ const { error, supabase } = await requireAuthWithPermission(
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+export const PUT = withLogging(handlePut);

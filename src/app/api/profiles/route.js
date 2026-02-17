@@ -3,9 +3,10 @@ import { redirect } from "next/navigation";
 import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
 import { createServiceRoleClient } from "@/utils/Supabase/server";
 import PERMISSIONS from "@/config/permissions";
+import { withLogging } from '@/utils/withLogging';
 
 // GET all users/profiles
-export async function GET() {
+async function handleGet() {
   const { error } = await requireAuthWithPermission(
     PERMISSIONS.MANAGE_USERS
   );
@@ -30,3 +31,4 @@ export async function GET() {
   return NextResponse.json(safeData, { status: 200 });
 }
 
+export const GET = withLogging(handleGet);

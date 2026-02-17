@@ -81,6 +81,9 @@ class Logger {
                 this.flush()
             }
         }, this.flushInterval)
+        if (this.flushTimer.unref) {
+            this.flushTimer.unref()
+        }
     }
 
     stopPeriodicFlush() {

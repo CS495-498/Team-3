@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { deleteNotification } from "../deleteAlert.js";
 import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission.js";
 import PERMISSIONS from "@/config/permissions";
-export async function PUT(request) {
+import { withLogging } from '@/utils/withLogging';
+
+async function handlePut(request) {
     const { error, supabase } = await requireAuthWithPermission(
     PERMISSIONS.UPLOAD_NOTIFICATIONS
   );
@@ -27,3 +29,5 @@ export async function PUT(request) {
         );
     }
 }
+
+export const PUT = withLogging(handlePut);

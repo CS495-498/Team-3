@@ -3,9 +3,10 @@ import { createClient } from "@/utils/Supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission.js";
 import PERMISSIONS from "@/config/permissions";
+import { withLogging } from '@/utils/withLogging';
 
 
-export async function GET() {
+async function handleGet() {
     try {
         const supabase = await createClient();
 
@@ -64,7 +65,7 @@ export async function GET() {
 }
 
 
-export async function DELETE() {
+async function handleDelete() {
     try {
         const supabase = await createClient();
         const {
@@ -128,7 +129,7 @@ export async function DELETE() {
     }
 }
 
-export async function PUT(req) {
+async function handlePut(req) {
     try {
         const supabase = await createClient();
 
@@ -167,4 +168,8 @@ export async function PUT(req) {
         return NextResponse.json({ error: "Server error" }, { status: 500 });
     }
 }
+
+export const GET = withLogging(handleGet);
+export const DELETE = withLogging(handleDelete);
+export const PUT = withLogging(handlePut);
 

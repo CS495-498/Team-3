@@ -161,7 +161,7 @@ export function NavProjects() {
                 <SidebarGroup>
                     <SidebarGroupContent className="mt-4">
                         <SidebarMenu>
-                            {entry?.navigation_menu.map((item, idx) => {
+                            {entry?.navigation_menu?.map((item, idx) => {
                                 const isActive = pathname === item.call_to_action.href;
                                 return (
                                     <SidebarMenuItem key={idx}>

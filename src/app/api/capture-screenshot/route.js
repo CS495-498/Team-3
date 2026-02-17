@@ -1,6 +1,7 @@
 import * as cheerio from 'cheerio';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
+import { withLogging } from '@/utils/withLogging';
 
 function normalizeUrl(url) {
   if (!url || typeof url !== 'string') {
@@ -43,7 +44,7 @@ async function getDefaultImage() {
   }
 }
 
-export async function POST(request) {
+async function handlePOST(request) {
   try {
     const { url } = await request.json();
     
@@ -146,3 +147,5 @@ export async function POST(request) {
     }
   }
 }
+
+export const POST = withLogging(handlePOST);

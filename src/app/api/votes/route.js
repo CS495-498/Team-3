@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/utils/Supabase/server";
 import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission.js";
 import PERMISSIONS from "@/config/permissions";
+import { withLogging } from '@/utils/withLogging';
 
-export async function GET() {
+async function handleGet() {
 const { error2, profile, supabase } = await requireAuthWithPermission(
     PERMISSIONS.VIEW_CONTENT
   );
@@ -20,3 +21,5 @@ const { error2, profile, supabase } = await requireAuthWithPermission(
 
     return NextResponse.json(data, { status: 200 });
 }
+
+export const GET = withLogging(handleGet);

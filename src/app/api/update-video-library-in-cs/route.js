@@ -3,8 +3,9 @@ import { updateAndPublishVideos } from "./updateAndPublishVideos.js";
 import { createClient } from "@/utils/Supabase/server";
 import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission.js";
 import PERMISSIONS from "@/config/permissions";
+import { withLogging } from '@/utils/withLogging';
 
-export async function PUT(req) {
+async function handlePut(req) {
 
 const { error, profile, supabase } = await requireAuthWithPermission(
     PERMISSIONS.UPLOAD_VIDEO_LIBRARY
@@ -26,3 +27,5 @@ const { error, profile, supabase } = await requireAuthWithPermission(
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+export const PUT = withLogging(handlePut);

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
 import PERMISSIONS from "@/config/permissions";
+import { withLogging } from '@/utils/withLogging';
 
-export async function DELETE(req, { params }) {
+async function handleDelete(req, { params }) {
     const { id } = await params;
 
     // ---- AUTH: MUST HAVE USE_PERSONAS PERMISSION ----
@@ -53,3 +54,5 @@ export async function DELETE(req, { params }) {
 
     return NextResponse.json({ success: true });
 }
+
+export const DELETE = withLogging(handleDelete);

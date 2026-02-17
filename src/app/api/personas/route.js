@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
 import PERMISSIONS from "@/config/permissions";
+import { withLogging } from '@/utils/withLogging';
 
-export async function POST(req) {
+async function handlePost(req) {
     const { displayName } = await req.json();
 
     const { error2, profile, supabase } = await requireAuthWithPermission(
@@ -47,3 +48,5 @@ export async function POST(req) {
 
     return NextResponse.json(data, { status: 201 });
 }
+
+export const POST = withLogging(handlePost);

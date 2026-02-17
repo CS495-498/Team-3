@@ -7,6 +7,7 @@ import PERMISSIONS from "@/config/permissions";
 import { isValidRole } from "@/config/rolePermissions";
 import { createServiceRoleClient } from "@/utils/Supabase/server";
 import { createClient as createClientServer } from "@/utils/Supabase/server";
+import { withLogging } from '@/utils/withLogging';
 
 // Service role client (used for storage + signed URLs, bypasses RLS)
 const supabaseServiceRole = createAnonClient(
@@ -19,20 +20,11 @@ const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp
 
 
 // -------------------- GET PROFILE --------------------
-export async function GET(req, context) {
+async function handleGet(req, context) {
+    const {id} = await context.params;
 
     const supabase = await createClientServer();
-
-    const {
-        data: { user },
-        error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    const { id } = await context.params;
-
+    
     const { data, error } = await supabase
         .from("public_profiles")
         .select("id, username, full_name, avatar_url")
@@ -69,7 +61,7 @@ export async function GET(req, context) {
 
 
 // -------------------- UPDATE PROFILE --------------------
-export async function PUT(req, context) {
+async function handlePut(req, context) {
     const { id } = await context.params;
 
     const supabase = await createClient(); // cookie-based session client
@@ -203,7 +195,7 @@ export async function PUT(req, context) {
 
 }
 
-export async function PATCH(request, { params }) {
+async function handlePatch(request, { params }) {
     const { id: profileId } = await params;
 
     // -------------------------
@@ -349,7 +341,7 @@ export async function PATCH(request, { params }) {
 }
 
 // -------------------- DELETE PROFILE (ADMIN) --------------------
-export async function DELETE(request, { params }) {
+async function handleDelete(request, { params }) {
     const { id: profileId } = await params;
 
     // -------------------------
@@ -434,4 +426,8 @@ export async function DELETE(request, { params }) {
     );
 }
 
+export const GET = withLogging(handleGet);
+export const PUT = withLogging(handlePut);
+export const PATCH = withLogging(handlePatch);
+export const DELETE = withLogging(handleDelete)
 

@@ -4,8 +4,9 @@ import { deleteDemoWeb } from "./deleteDemoWeb.js";
 import { createClient } from "@/utils/Supabase/server";
 import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission.js";
 import PERMISSIONS from "@/config/permissions";
+import { withLogging } from '@/utils/withLogging';
 
-export async function PUT(req) {
+async function handlePut(req) {
 
 const { error, profile, supabase } = await requireAuthWithPermission(
     PERMISSIONS.UPLOAD_DEMO_WEBSITES
@@ -25,7 +26,7 @@ const { error, profile, supabase } = await requireAuthWithPermission(
   }
 }
 
-export async function DELETE(req) {
+async function handleDelete(req) {
   const { error, profile, supabase } = await requireAuthWithPermission(
     PERMISSIONS.UPLOAD_DEMO_WEBSITES
   );
@@ -43,3 +44,6 @@ export async function DELETE(req) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+export const PUT = withLogging(handlePut);
+export const DELETE = withLogging(handleDelete);

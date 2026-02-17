@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/Supabase/server.js'
 import { forgotPasswordHandler } from './handler.js'
+import { withLogging } from '@/utils/withLogging'
 
 const store = new Map()
 
@@ -13,7 +14,7 @@ const handler = forgotPasswordHandler({
     },
 })
 
-export async function POST(req) {
+async function handlePost(req) {
     let email = ''
     try {
         const body = await req.json()
@@ -25,3 +26,5 @@ export async function POST(req) {
     const result = await handler({ email, ip })
     return NextResponse.json(result.body, { status: result.status })
 }
+
+export const POST = withLogging(handlePost)
