@@ -155,10 +155,17 @@ export default function Home() {
 
     const sameUser = (feature_request_user_id, user_id) =>
         user_id === feature_request_user_id;
+    const normalizedUserQuery = userFilter.trim().toLowerCase();
+
+    const matchesUserQuery = (values, query) =>
+        (values || [])
+            .filter(Boolean)
+            .map((value) => String(value).toLowerCase().trim())
+            .some((value) => value.includes(query));
 
     const filteredSortedRequests = useMemo(() => {
         let list = [...requests];
-        const normalizedUserFilter = userFilter.trim().toLowerCase();
+        const normalizedUserFilter = normalizedUserQuery;
 
         // ✅ Hide completed by default unless showCompleted is true
         if (!showCompleted) {
@@ -172,18 +179,11 @@ export default function Home() {
 
         if (normalizedUserFilter) {
             list = list.filter((req) => {
-                const candidates = [
-                    req.username,
-                    req.full_name,
-                    ...(Array.isArray(req.voter_usernames) ? req.voter_usernames : []),
-                    ...(Array.isArray(req.voter_full_names) ? req.voter_full_names : []),
-                ]
-                    .filter(Boolean)
-                    .map((value) => String(value).toLowerCase().trim());
-
-                return candidates.some((value) =>
-                    value.includes(normalizedUserFilter)
+                const authorMatch = matchesUserQuery(
+                    [req.username, req.full_name],
+                    normalizedUserFilter
                 );
+                return authorMatch;
             });
         }
 
@@ -211,7 +211,13 @@ export default function Home() {
         }
 
         return list;
-    }, [requests, statusFilter, sortOption, showCompleted, userFilter]);
+    }, [
+        requests,
+        statusFilter,
+        sortOption,
+        showCompleted,
+        normalizedUserQuery,
+    ]);
 
     const { items: visibleRequests, hasMore, ref } = useInfiniteScroll(
         filteredSortedRequests,
@@ -663,6 +669,9 @@ export default function Home() {
                 <ul className="divide-y divide-gray-200">
                     {visibleRequests.map((req) => {
                         const voteState = votes[req.id];
+                        const authorMatch = normalizedUserQuery
+                            ? matchesUserQuery([req.username, req.full_name], normalizedUserQuery)
+                            : false;
 
                         const previewText = (req.content || "")
                             .replace(/<[^>]*>/g, " ")
