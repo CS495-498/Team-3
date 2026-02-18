@@ -645,7 +645,12 @@ export default function Home() {
             </div>
 
             {isInitialLoad ? (
-                <LoadingIndicator label="Loading feature requests..." />
+                <div className="flex justify-center items-center py-16">
+                    <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                        <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                        <span className="text-sm">Loading feature requests...</span>
+                    </div>
+                </div>
             ) : error ? (
                 <div className="p-6 text-center text-red-500">
                     Error: {error}
