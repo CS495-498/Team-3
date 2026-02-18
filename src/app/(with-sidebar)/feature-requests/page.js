@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import DOMPurify from "isomorphic-dompurify";
 import {
     ChevronsUp,
@@ -22,10 +22,8 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 
-import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
+import { useServerInfiniteScroll } from "@/hooks/use-server-infinite-scroll";
 
-import { getFeatureRequests } from "@/lib/featureRequests/requests/getFeatureRequests";
-import { getUserVotes } from "@/lib/featureRequests/requests/getUserVotes";
 import { castVote } from "@/lib/featureRequests/votes/castVote";
 
 import { addComment } from "@/lib/featureRequests/comments/addComments";
@@ -44,9 +42,6 @@ import PERMISSIONS from "@/config/permissions";
 
 export default function Home() {
     const [currentUser, setCurrentUser] = useState(null);
-    const [requests, setRequests] = useState([]);
-    const [votes, setVotes] = useState({});
-    const [isLoading, setIsLoading] = useState(true);
 
     const [deleteToast, setDeleteToast] = useState(false);
     const [showToast, setShowToast] = useState(false);
@@ -54,8 +49,9 @@ export default function Home() {
     const [statusFilter, setStatusFilter] = useState("all");
     const [sortOption, setSortOption] = useState("votes_desc");
     const [userFilter, setUserFilter] = useState("");
+    const [debouncedUserFilter, setDebouncedUserFilter] = useState("");
 
-    // ✅ Show completed toggle (persisted in sessionStorage)
+    // Show completed toggle (persisted in sessionStorage)
     const [showCompleted, setShowCompleted] = useState(() => {
         if (typeof window !== "undefined") {
             const saved = sessionStorage.getItem("featureRequests_showCompleted");
@@ -70,6 +66,9 @@ export default function Home() {
     const [videoModalOpen, setVideoModalOpen] = useState(false);
     const [activeVideoSrc, setActiveVideoSrc] = useState(null);
 
+    // Optimistic vote overrides
+    const [voteOverrides, setVoteOverrides] = useState({});
+
     // Full request viewer
     const { user, loading: userLoading } = useUser();
 
@@ -81,11 +80,11 @@ export default function Home() {
 
     const canEditRequest = (request) => {
         if (!user) return false;
-        if (canManageAll) return true; // Admins
-        return canPublish && request.user_id === user.id; // Normal users → only their own
+        if (canManageAll) return true;
+        return canPublish && request.user_id === user.id;
     };
 
-    // “open feature request to see whole thing”
+    // "open feature request to see whole thing"
     const [isRequestOpen, setIsRequestOpen] = useState(false);
     const [activeRequest, setActiveRequest] = useState(null);
 
@@ -102,19 +101,19 @@ export default function Home() {
     const [rteError, setRteError] = useState("");
     const [dialogEditorContent, setDialogEditorContent] = useState("");
     const editorRef = useRef(null);
+    const hasLoadedOnce = useRef(false);
 
     // File attachment when adding/editing
     const [rteFile, setRteFile] = useState(null);
     const [rteFilePreviewUrl, setRteFilePreviewUrl] = useState(null);
 
+    // Debounce user filter (300ms)
     useEffect(() => {
-        Promise.all([getFeatureRequests(), getUserVotes()])
-            .then(([reqs, userVotes]) => {
-                setRequests(reqs);
-                setVotes(userVotes);
-            })
-            .finally(() => setIsLoading(false));
-    }, []);
+        const timer = setTimeout(() => {
+            setDebouncedUserFilter(userFilter);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [userFilter]);
 
     useEffect(() => {
         let mounted = true;
@@ -123,7 +122,7 @@ export default function Home() {
             .then((data) => {
                 if (!mounted) return;
                 if (!data || data?.error) setCurrentUser(null);
-                else setCurrentUser(data); // { id, username }
+                else setCurrentUser(data);
             })
             .catch((err) => {
                 console.error("Failed to load current user:", err);
@@ -135,7 +134,7 @@ export default function Home() {
         };
     }, []);
 
-    // ✅ Persist showCompleted preference to sessionStorage
+    // Persist showCompleted preference to sessionStorage
     useEffect(() => {
         if (typeof window !== "undefined") {
             sessionStorage.setItem(
@@ -153,76 +152,78 @@ export default function Home() {
         }
     }, [rteModalOpen, rteFilePreviewUrl]);
 
+    // Clear vote overrides when filters/sort change
+    useEffect(() => {
+        setVoteOverrides({});
+    }, [statusFilter, showCompleted, sortOption, debouncedUserFilter]);
+
+    // Server-side paginated fetch
+    const fetchFeatureRequests = useCallback(
+        async (page, limit) => {
+            const params = new URLSearchParams({
+                page: page.toString(),
+                limit: limit.toString(),
+            });
+
+            if (statusFilter !== "all") params.set("status", statusFilter);
+            params.set("showCompleted", showCompleted.toString());
+            params.set("sort", sortOption);
+            if (debouncedUserFilter) params.set("user", debouncedUserFilter);
+
+            const response = await fetch(`/api/feature-requests?${params.toString()}`);
+            if (!response.ok) {
+                throw new Error("Failed to fetch feature requests");
+            }
+            return response.json();
+        },
+        [statusFilter, showCompleted, sortOption, debouncedUserFilter]
+    );
+
+    const {
+        items: visibleRequests,
+        isLoading,
+        isInitialLoad,
+        hasMore,
+        total,
+        error,
+        ref: sentinelRef,
+        refresh,
+        updateItem,
+        removeItem,
+    } = useServerInfiniteScroll({
+        fetchFn: fetchFeatureRequests,
+        limit: 6,
+        dependencies: [statusFilter, showCompleted, sortOption, debouncedUserFilter],
+        itemsKey: "featureRequests",
+    });
+
+    // Track whether the very first load has completed
+    useEffect(() => {
+        if (!isInitialLoad && !userLoading) {
+            hasLoadedOnce.current = true;
+        }
+    }, [isInitialLoad, userLoading]);
+
+    // Derive votes from items + overrides
+    const votes = useMemo(() => {
+        const map = {};
+        visibleRequests.forEach((req) => {
+            const override = voteOverrides[req.id];
+            if (override !== undefined) {
+                map[req.id] = override.vote;
+            } else if (req.currentUserVote) {
+                map[req.id] = req.currentUserVote;
+            }
+        });
+        return map;
+    }, [visibleRequests, voteOverrides]);
+
+    const getEffectiveVoteCount = (req) => {
+        return req.number_of_votes + (voteOverrides[req.id]?.voteDelta || 0);
+    };
+
     const sameUser = (feature_request_user_id, user_id) =>
         user_id === feature_request_user_id;
-    const normalizedUserQuery = userFilter.trim().toLowerCase();
-
-    const matchesUserQuery = (values, query) =>
-        (values || [])
-            .filter(Boolean)
-            .map((value) => String(value).toLowerCase().trim())
-            .some((value) => value.includes(query));
-
-    const filteredSortedRequests = useMemo(() => {
-        let list = [...requests];
-        const normalizedUserFilter = normalizedUserQuery;
-
-        // ✅ Hide completed by default unless showCompleted is true
-        if (!showCompleted) {
-            list = list.filter((req) => req.status !== "completed");
-        }
-
-        // FILTER: Apply status filter if not "all"
-        if (statusFilter !== "all") {
-            list = list.filter((req) => req.status === statusFilter);
-        }
-
-        if (normalizedUserFilter) {
-            list = list.filter((req) => {
-                const authorMatch = matchesUserQuery(
-                    [req.username, req.full_name],
-                    normalizedUserFilter
-                );
-                return authorMatch;
-            });
-        }
-
-        switch (sortOption) {
-            case "votes_desc":
-                list.sort((a, b) => b.number_of_votes - a.number_of_votes);
-                break;
-            case "votes_asc":
-                list.sort((a, b) => a.number_of_votes - b.number_of_votes);
-                break;
-            case "newest":
-                list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-                break;
-            case "oldest":
-                list.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-                break;
-            case "title_asc":
-                list.sort((a, b) => a.title.localeCompare(b.title));
-                break;
-            case "title_desc":
-                list.sort((a, b) => b.title.localeCompare(a.title));
-                break;
-            default:
-                break;
-        }
-
-        return list;
-    }, [
-        requests,
-        statusFilter,
-        sortOption,
-        showCompleted,
-        normalizedUserQuery,
-    ]);
-
-    const { items: visibleRequests, hasMore, ref } = useInfiniteScroll(
-        filteredSortedRequests,
-        6
-    );
 
     const isImage = (url) => {
         if (!url) return false;
@@ -256,7 +257,7 @@ export default function Home() {
         const frameClass =
             "rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-center overflow-hidden";
 
-        // Local blob URLs won't have extensions; use the chosen file’s mime/name for nicer preview if available
+        // Local blob URLs won't have extensions; use the chosen file's mime/name for nicer preview if available
         const mime = rteFile?.type || "";
         const name = fileName || rteFile?.name || "";
 
@@ -339,7 +340,7 @@ export default function Home() {
                 return;
             }
 
-            setRequests((prev) => prev.filter((r) => r.id !== selectedItem.id));
+            removeItem(selectedItem.id);
 
             if (activeRequest?.id === selectedItem.id) {
                 setIsRequestOpen(false);
@@ -356,32 +357,35 @@ export default function Home() {
     };
 
     const handleVote = async (id, type) => {
-        const previousVote = votes[id];
+        const currentVote = voteOverrides[id]?.vote ??
+            visibleRequests.find((r) => r.id === id)?.currentUserVote ?? null;
 
-        setVotes((prev) => ({
+        const newVote = currentVote === type ? null : type;
+
+        let delta;
+        if (currentVote === type) delta = type === "up" ? -1 : +1;
+        else if (currentVote) delta = type === "up" ? +2 : -2;
+        else delta = type === "up" ? +1 : -1;
+
+        const existingDelta = voteOverrides[id]?.voteDelta || 0;
+
+        setVoteOverrides((prev) => ({
             ...prev,
-            [id]: previousVote === type ? null : type,
+            [id]: { vote: newVote, voteDelta: existingDelta + delta },
         }));
 
-        setRequests((prev) =>
-            prev.map((r) => {
-                if (r.id !== id) return r;
-
-                let change;
-                if (previousVote === type) change = type === "up" ? -1 : +1;
-                else if (previousVote) change = type === "up" ? +2 : -2;
-                else change = type === "up" ? +1 : -1;
-
-                return { ...r, number_of_votes: r.number_of_votes + change };
-            })
-        );
-
-        const apiVote = previousVote === type ? "remove" : type === "up" ? "up" : "down";
+        const apiVote = currentVote === type ? "remove" : type;
 
         try {
             await castVote(id, apiVote);
         } catch (err) {
             console.error("Vote failed:", err);
+            // Revert on failure
+            setVoteOverrides((prev) => {
+                const copy = { ...prev };
+                delete copy[id];
+                return copy;
+            });
         }
     };
 
@@ -459,19 +463,8 @@ export default function Home() {
                     throw new Error(data.error || "Failed to add feature request");
                 }
 
-                const usernameFromServer = data.username || data.user?.username;
-                const username = usernameFromServer || currentUser?.username || "Unknown";
-
-                const requestWithExtras = {
-                    ...data,
-                    username,
-                    user: undefined,
-                    commentCount: 0,
-                    number_of_votes: data.number_of_votes ?? 0,
-                };
-
-                setRequests((prev) => [requestWithExtras, ...prev]);
                 setRteModalOpen(false);
+                refresh();
 
                 setShowToast(true);
                 setTimeout(() => setShowToast(false), 2000);
@@ -481,13 +474,12 @@ export default function Home() {
             // edit
             if (rteMode === "edit") {
                 if (!selectedItem || !currentUser) return;
-                if (!sameUser(selectedItem.user_id, currentUser.id)) return;
+                if (!sameUser(selectedItem.user_id, currentUser.id) && !canManageAll) return;
 
                 const html = editorRef.current?.getHTML?.() ?? "";
                 const payload = {
                     title: (rteTitle || "").trim(),
                     content: html,
-                    // status: selectedItem.status, // include if you allow status updates
                 };
 
                 const res = await fetch(`/api/feature-requests/${selectedItem.id}`, {
@@ -502,18 +494,15 @@ export default function Home() {
                     throw new Error(data.error || "Failed to update feature request");
                 }
 
-                setRequests((prev) =>
-                    prev.map((req) =>
-                        req.id === data.id
-                            ? {
-                                ...req,
-                                ...data,
-                                username: data.username ?? req.username,
-                                commentCount: data.commentCount ?? req.commentCount,
-                            }
-                            : req
-                    )
-                );
+                updateItem(data.id, (prev) => ({
+                    ...prev,
+                    ...data,
+                    username: data.username ?? prev.username,
+                    commentCount: data.commentCount ?? prev.commentCount,
+                    number_of_votes: prev.number_of_votes,
+                    currentUserVote: prev.currentUserVote,
+                    signed_file_url: prev.signed_file_url,
+                }));
 
                 setActiveRequest((prev) =>
                     prev?.id === data.id
@@ -550,13 +539,11 @@ export default function Home() {
 
             setComments((prev) => [...prev, newComment]);
 
-            setRequests((prev) =>
-                prev.map((r) =>
-                    r.id === activeRequest.id
-                        ? { ...r, commentCount: (r.commentCount || 0) + 1 }
-                        : r
-                )
-            );
+            updateItem(activeRequest.id, (prev) => ({
+                ...prev,
+                commentCount: (prev.commentCount || 0) + 1,
+            }));
+
             setActiveRequest((prev) =>
                 prev ? { ...prev, commentCount: (prev.commentCount || 0) + 1 } : prev
             );
@@ -568,12 +555,12 @@ export default function Home() {
         }
     };
 
-    if (isLoading || userLoading) {
+    if (!hasLoadedOnce.current && (isInitialLoad || userLoading)) {
         return <LoadingIndicator label="Loading feature requests..." />;
     }
 
     return (
-        <main className="pt-6 px-10 min-h-screen w-full">
+        <main className="pt-4 px-10 min-h-screen w-full">
             <SuccessToast
                 message="Feature request added!"
                 isOpen={showToast}
@@ -585,56 +572,51 @@ export default function Home() {
                 onClose={() => setDeleteToast(false)}
             />
 
-            <div className="flex justify-between items-center mb-6 pt-6">
-                <div className="flex items-center justify-between mb-4 bg-secondary/40 p-4 rounded-lg">
-                    <div className="flex items-center gap-8">
-                        <h1 className="text-4xl font-bold ml-4">Feature Requests</h1>
+            {/* Filter Bar */}
+            <div className="flex flex-wrap gap-4 mb-6 mt-6 items-center">
+                <h1 className="text-3xl font-bold mr-2">Feature Requests</h1>
+                <div className="mb-6 mt-6 bg-secondary/40 p-4 rounded-lg">
+                    <div className="flex flex-wrap items-center gap-6.5">
 
+                        {/* Status Filter */}
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                            <SelectTrigger className="w-40">
+                                <SelectValue placeholder="Status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Status</SelectItem>
+                                <SelectItem value="open">Open</SelectItem>
+                                <SelectItem value="in_progress">In Progress</SelectItem>
+                                <SelectItem value="completed">Completed</SelectItem>
+                            </SelectContent>
+                        </Select>
+
+                        {/* Sort */}
+                        <Select value={sortOption} onValueChange={setSortOption}>
+                            <SelectTrigger className="w-40">
+                                <SelectValue placeholder="Sort" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="votes_desc">Most Votes</SelectItem>
+                                <SelectItem value="votes_asc">Fewest Votes</SelectItem>
+                                <SelectItem value="newest">Newest</SelectItem>
+                                <SelectItem value="oldest">Oldest</SelectItem>
+                                <SelectItem value="title_asc">Title A → Z</SelectItem>
+                                <SelectItem value="title_desc">Title Z → A</SelectItem>
+                            </SelectContent>
+                        </Select>
+
+                        {/* User Search */}
+                        <input
+                            type="text"
+                            value={userFilter}
+                            onChange={(e) => setUserFilter(e.target.value)}
+                            placeholder="Search by user..."
+                            className="h-10 w-48 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        />
+
+                        {/* Show Completed Toggle */}
                         <div className="flex items-center gap-2">
-                            <span className="text-sm text-muted-foreground">Filter by:</span>
-                            <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-40">
-                                    <SelectValue placeholder="Status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All</SelectItem>
-                                    <SelectItem value="open">Open</SelectItem>
-                                    <SelectItem value="in_progress">In Progress</SelectItem>
-                                    <SelectItem value="completed">Completed</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm text-muted-foreground">Sort by:</span>
-                            <Select value={sortOption} onValueChange={setSortOption}>
-                                <SelectTrigger className="w-40">
-                                    <SelectValue placeholder="Sort" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="votes_desc">Most Votes</SelectItem>
-                                    <SelectItem value="votes_asc">Fewest Votes</SelectItem>
-                                    <SelectItem value="newest">Newest</SelectItem>
-                                    <SelectItem value="oldest">Oldest</SelectItem>
-                                    <SelectItem value="title_asc">Title A → Z</SelectItem>
-                                    <SelectItem value="title_desc">Title Z → A</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        {/* ✅ Show Completed Toggle */}
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm text-muted-foreground">User:</span>
-                            <input
-                                type="text"
-                                value={userFilter}
-                                onChange={(e) => setUserFilter(e.target.value)}
-                                placeholder="Name or username"
-                                className="h-10 w-56 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                            />
-                        </div>
-
-                        <div className="flex items-center gap-2 ml-4 pl-4 border-l border-gray-300 dark:border-gray-700">
                             <label
                                 htmlFor="show-completed"
                                 className="text-sm text-muted-foreground cursor-pointer"
@@ -647,21 +629,28 @@ export default function Home() {
                                 onCheckedChange={setShowCompleted}
                             />
                         </div>
+
+                        {/* Add Button - pushed to the right */}
+                        {canPublish && (
+                            <button
+                                onClick={openAddRte}
+                                type="button"
+                                className="ml-auto text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
+                            >
+                                Add Feature Request
+                            </button>
+                        )}
                     </div>
                 </div>
-
-                {canPublish && (
-                    <button
-                        onClick={openAddRte}
-                        type="button"
-                        className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
-                    >
-                        Add Feature Request
-                    </button>
-                )}
             </div>
 
-            {visibleRequests.length === 0 ? (
+            {isInitialLoad ? (
+                <LoadingIndicator label="Loading feature requests..." />
+            ) : error ? (
+                <div className="p-6 text-center text-red-500">
+                    Error: {error}
+                </div>
+            ) : visibleRequests.length === 0 ? (
                 <p className="text-gray-600 ml-4">
                     No results found for the selected filters.
                 </p>
@@ -669,9 +658,6 @@ export default function Home() {
                 <ul className="divide-y divide-gray-200">
                     {visibleRequests.map((req) => {
                         const voteState = votes[req.id];
-                        const authorMatch = normalizedUserQuery
-                            ? matchesUserQuery([req.username, req.full_name], normalizedUserQuery)
-                            : false;
 
                         const previewText = (req.content || "")
                             .replace(/<[^>]*>/g, " ")
@@ -701,7 +687,7 @@ export default function Home() {
                                     </button>
 
                                     <span className="text-sm font-medium text-gray-800 dark:text-gray-50">
-                    {req.number_of_votes}
+                    {getEffectiveVoteCount(req)}
                   </span>
 
                                     <button
@@ -815,17 +801,19 @@ export default function Home() {
                 </ul>
             )}
 
-            {hasMore && (
+            {hasMore && !isInitialLoad && (
                 <div
-                    ref={ref}
+                    ref={sentinelRef}
                     className="flex flex-col justify-center items-center py-8 mt-6"
                 >
-                    <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                        <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
-                        <span className="text-sm">Loading more requests...</span>
-                    </div>
+                    {isLoading && (
+                        <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                            <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                            <span className="text-sm">Loading more requests...</span>
+                        </div>
+                    )}
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                        Showing {visibleRequests.length} of {filteredSortedRequests.length} requests
+                        Showing {visibleRequests.length} of {total} requests
                     </p>
                 </div>
             )}

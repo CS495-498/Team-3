@@ -5,6 +5,7 @@ export function useServerInfiniteScroll({
     fetchFn,
     limit = 30,
     dependencies = [],
+    itemsKey = "logs",
 }) {
     const [items, setItems] = useState([]);
     const [page, setPage] = useState(1);
@@ -45,16 +46,18 @@ export function useServerInfiniteScroll({
 
                 if (!isMounted.current) return;
 
+                const newData = result[itemsKey];
+
                 if (pageNum === 1) {
-                    setItems(result.logs);
+                    setItems(newData);
                 } else {
-                    // Deduplicate logs to prevent duplicate key errors
+                    // Deduplicate items to prevent duplicate key errors
                     setItems((prev) => {
                         const existingIds = new Set(prev.map((item) => item.id));
-                        const newItems = result.logs.filter(
+                        const uniqueItems = newData.filter(
                             (item) => !existingIds.has(item.id)
                         );
-                        return [...prev, ...newItems];
+                        return [...prev, ...uniqueItems];
                     });
                 }
 
@@ -73,7 +76,7 @@ export function useServerInfiniteScroll({
                 isLoadingRef.current = false;
             }
         },
-        [fetchFn, limit]
+        [fetchFn, limit, itemsKey]
     );
 
     // Initial load and reload on dependency change
@@ -104,6 +107,21 @@ export function useServerInfiniteScroll({
         fetchData(1);
     }, [fetchData]);
 
+    // Mutation helpers for optimistic updates
+    const updateItem = useCallback((id, updater) => {
+        setItems((prev) => prev.map((item) => (item.id === id ? updater(item) : item)));
+    }, []);
+
+    const removeItem = useCallback((id) => {
+        setItems((prev) => prev.filter((item) => item.id !== id));
+        setTotal((prev) => Math.max(0, prev - 1));
+    }, []);
+
+    const prependItem = useCallback((item) => {
+        setItems((prev) => [item, ...prev]);
+        setTotal((prev) => prev + 1);
+    }, []);
+
     return {
         items,
         isLoading,
@@ -113,5 +131,8 @@ export function useServerInfiniteScroll({
         error,
         ref,
         refresh,
+        updateItem,
+        removeItem,
+        prependItem,
     };
 }

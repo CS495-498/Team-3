@@ -23,111 +23,231 @@ const TITLE_MAX_LENGTH = 100;
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
 
-async function handleGet() {
-  
+async function handleGet(request) {
   const supabase = await createClient();
 
   const { error2, profile } = await requireAuthWithPermission(
-
     PERMISSIONS.VIEW_CONTENT
   );
 
   if (error2) return error2;
 
-    const { data, error } = await supabase
-        .from("feature_requests")
-        .select(`
-      *,
-      profiles!fk_feature_requests_author (
-        username,
-        full_name
-      )
-    `)
-        .order("created_at", { ascending: false });
+  const { searchParams } = new URL(request.url);
 
-  if (error) {
-    console.error("FEATURE REQUEST API ERROR:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  const page = parseInt(searchParams.get("page") || "1", 10);
+  const limit = parseInt(searchParams.get("limit") || "6", 10);
+  const statusFilter = searchParams.get("status") || "";
+  const showCompleted = searchParams.get("showCompleted") === "true";
+  const sort = searchParams.get("sort") || "votes_desc";
+  const userSearch = searchParams.get("user") || "";
 
-    const requestIds = data.map((req) => req.id).filter(Boolean);
-    let votesByRequest = {};
-    let voterProfileMap = {};
+  try {
+    // Build base query
+    let query = supabase
+      .from("feature_requests")
+      .select(`
+        *,
+        profiles!fk_feature_requests_author (
+          username,
+          full_name
+        )
+      `, { count: "exact" });
 
-    if (requestIds.length > 0) {
-        const { data: voteRows, error: votesError } = await supabase
-            .from("votes")
-            .select("req_id, user_id")
-            .in("req_id", requestIds);
-
-        if (votesError) {
-            console.error("Votes lookup error:", votesError);
-        } else if (voteRows?.length) {
-            const uniqueVoterIds = [...new Set(voteRows.map((v) => v.user_id).filter(Boolean))];
-
-            if (uniqueVoterIds.length > 0) {
-                const { data: voterProfiles, error: voterProfilesError } = await supabase
-                    .from("profiles")
-                    .select("id, username, full_name")
-                    .in("id", uniqueVoterIds);
-
-                if (voterProfilesError) {
-                    console.error("Voter profiles lookup error:", voterProfilesError);
-                } else {
-                    voterProfileMap = (voterProfiles || []).reduce((acc, p) => {
-                        acc[p.id] = p;
-                        return acc;
-                    }, {});
-                }
-            }
-
-            votesByRequest = voteRows.reduce((acc, vote) => {
-                if (!vote?.req_id) return acc;
-                if (!acc[vote.req_id]) acc[vote.req_id] = [];
-                const voterProfile = voterProfileMap[vote.user_id];
-                if (voterProfile) acc[vote.req_id].push(voterProfile);
-                return acc;
-            }, {});
-        }
+    // Apply status filter
+    if (statusFilter) {
+      query = query.eq("status", statusFilter);
+    } else if (!showCompleted) {
+      query = query.neq("status", "completed");
     }
 
+    // Apply user search via profile ID lookup
+    if (userSearch) {
+      const { data: matchingProfiles } = await supabase
+        .from("profiles")
+        .select("id")
+        .or(`username.ilike.%${userSearch}%,full_name.ilike.%${userSearch}%`);
+
+      const profileIds = (matchingProfiles || []).map((p) => p.id);
+      if (profileIds.length === 0) {
+        return NextResponse.json({
+          featureRequests: [],
+          total: 0,
+          page,
+          limit,
+          hasMore: false,
+        });
+      }
+      query = query.in("user_id", profileIds);
+    }
+
+    // For vote-based sorts, we need all filtered IDs to compute vote counts
+    const isVoteSort = sort === "votes_desc" || sort === "votes_asc";
+
+    let pageData;
+    let totalCount;
+
+    if (isVoteSort) {
+      // Fetch all filtered requests (only IDs + minimal data)
+      const { data: allFiltered, count, error } = await query;
+      if (error) {
+        console.error("FEATURE REQUEST API ERROR:", error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      totalCount = count || 0;
+      const allIds = (allFiltered || []).map((r) => r.id);
+
+      // Compute vote counts in a single query
+      let voteCounts = {};
+      if (allIds.length > 0) {
+        const { data: voteRows } = await supabase
+          .from("votes")
+          .select("req_id, Upvoted")
+          .in("req_id", allIds);
+
+        (voteRows || []).forEach((v) => {
+          if (!voteCounts[v.req_id]) voteCounts[v.req_id] = 0;
+          voteCounts[v.req_id] += v.Upvoted ? 1 : -1;
+        });
+      }
+
+      // Attach vote counts and sort
+      const withVotes = (allFiltered || []).map((r) => ({
+        ...r,
+        number_of_votes: voteCounts[r.id] || 0,
+      }));
+
+      withVotes.sort((a, b) =>
+        sort === "votes_desc"
+          ? b.number_of_votes - a.number_of_votes
+          : a.number_of_votes - b.number_of_votes
+      );
+
+      // Paginate the sorted result
+      const from = (page - 1) * limit;
+      pageData = withVotes.slice(from, from + limit);
+    } else {
+      // For non-vote sorts, use Supabase ordering + range directly
+      switch (sort) {
+        case "newest":
+          query = query.order("created_at", { ascending: false });
+          break;
+        case "oldest":
+          query = query.order("created_at", { ascending: true });
+          break;
+        case "title_asc":
+          query = query.order("title", { ascending: true });
+          break;
+        case "title_desc":
+          query = query.order("title", { ascending: false });
+          break;
+        default:
+          query = query.order("created_at", { ascending: false });
+      }
+
+      const from = (page - 1) * limit;
+      const to = from + limit - 1;
+      query = query.range(from, to);
+
+      const { data, count, error } = await query;
+      if (error) {
+        console.error("FEATURE REQUEST API ERROR:", error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      totalCount = count || 0;
+      pageData = data || [];
+    }
+
+    // Enrich the page slice with vote counts, comment counts, user vote state, signed URLs
+    const pageIds = pageData.map((r) => r.id);
+
+    if (pageIds.length === 0) {
+      return NextResponse.json({
+        featureRequests: [],
+        total: totalCount,
+        page,
+        limit,
+        hasMore: false,
+      });
+    }
+
+    // Run all enrichment queries in parallel for speed
     const supabaseServiceRole = await createServiceRoleClient();
 
-  // Attach signed URLs
-  const enriched = await Promise.all(
-    data.map(async (req) => {
-      const requestVoters = votesByRequest[req.id] || [];
-      let signedFileUrl = null;
+    const [voteCountResult, commentResult, userVoteResult, ...signedUrlResults] = await Promise.all([
+      // Vote counts (skip if already computed for vote sort)
+      isVoteSort
+        ? Promise.resolve({ data: null })
+        : supabase.from("votes").select("req_id, Upvoted").in("req_id", pageIds),
+      // Comment counts
+      supabase.from("feature_request_comments").select("feature_request_id").in("feature_request_id", pageIds),
+      // Current user's vote state
+      profile?.id
+        ? supabase.from("votes").select("req_id, Upvoted").eq("user_id", profile.id).in("req_id", pageIds)
+        : Promise.resolve({ data: null }),
+      // Signed file URLs (one per page item)
+      ...pageData.map((req) =>
+        req.file_url
+          ? supabaseServiceRole.storage.from("feature-uploads").createSignedUrl(req.file_url, 60 * 60)
+          : Promise.resolve({ data: null })
+      ),
+    ]);
 
-      if (req.file_url) {
-          const { data: urlData, error: urlError } =
-              await supabaseServiceRole.storage
-                  .from("feature-uploads")
-                  .createSignedUrl(req.file_url, 60 * 60);
+    // Process vote counts
+    let voteCounts = {};
+    if (!isVoteSort) {
+      (voteCountResult.data || []).forEach((v) => {
+        if (!voteCounts[v.req_id]) voteCounts[v.req_id] = 0;
+        voteCounts[v.req_id] += v.Upvoted ? 1 : -1;
+      });
+    }
 
-          if (urlError) {
-              console.error("Signed URL error:", urlError);
-          } else {
-              signedFileUrl = urlData.signedUrl;
-          }
+    // Process comment counts
+    const commentCounts = {};
+    (commentResult.data || []).forEach((c) => {
+      commentCounts[c.feature_request_id] = (commentCounts[c.feature_request_id] || 0) + 1;
+    });
+
+    // Process user vote state
+    const userVoteMap = {};
+    (userVoteResult.data || []).forEach((v) => {
+      userVoteMap[v.req_id] = v.Upvoted ? "up" : "down";
+    });
+
+    // Build enriched response
+    const enriched = pageData.map((req, i) => {
+      const urlResult = signedUrlResults[i];
+      const signedFileUrl = urlResult?.data?.signedUrl || null;
+      if (req.file_url && urlResult?.error) {
+        console.error("Signed URL error:", urlResult.error);
       }
 
       return {
         ...req,
         username: req.profiles?.username || null,
         full_name: req.profiles?.full_name || null,
-        voter_usernames: requestVoters
-            .map((v) => v.username)
-            .filter(Boolean),
-        voter_full_names: requestVoters
-            .map((v) => v.full_name)
-            .filter(Boolean),
         signed_file_url: signedFileUrl,
+        number_of_votes: isVoteSort ? req.number_of_votes : (voteCounts[req.id] || 0),
+        commentCount: commentCounts[req.id] || 0,
+        currentUserVote: userVoteMap[req.id] || null,
       };
-    })
-  );
+    });
 
-    return NextResponse.json(enriched, { status: 200 });
+    const from = (page - 1) * limit;
+    const hasMore = from + enriched.length < totalCount;
+
+    return NextResponse.json({
+      featureRequests: enriched,
+      total: totalCount,
+      page,
+      limit,
+      hasMore,
+    });
+  } catch (err) {
+    console.error("GET /api/feature-requests paginated error:", err);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
 }
 
 async function handlePost(req) {
