@@ -11,31 +11,22 @@ const getSetCookie = (headers) => {
 describe("Integration: login -> redirect -> home", function () {
     this.timeout(30000);
 
-    it("POST /api/login redirects to / and sets HttpOnly cookies (middleware-supported)", async () => {
+    it("POST /api/auth/login returns 200 and sets HttpOnly cookie", async () => {
         const client = createCookieClient();
 
-        const loginResp = await client.request(`${config.baseUrl}/api/login`, {
+        const loginResp = await client.request(`${config.baseUrl}/api/auth/login`, {
             method: "POST",
             body: { email: config.users.partner, password: config.password },
         });
 
-        console.log("LOGIN status:", loginResp.status);
-        console.log("LOGIN location:", loginResp.headers.get("location"));
-        console.log("LOGIN set-cookie:", loginResp.headers.get("set-cookie"));
+        expect(loginResp.status).to.equal(200);
 
-        expect([302, 303, 307, 308]).to.include(loginResp.status);
+        const setCookie =
+            (typeof loginResp.headers.getSetCookie === "function"
+                ? loginResp.headers.getSetCookie()?.join("\n")
+                : loginResp.headers.get("set-cookie"));
 
-        const location = loginResp.headers.get("location");
-        expect(location).to.exist;
-
-        // cookies may be set on redirect response OR on GET /
-        const homeResp = await client.request(`${config.baseUrl}/`, { method: "GET" });
-
-        console.log("HOME status:", homeResp.status);
-        console.log("HOME set-cookie:", homeResp.headers.get("set-cookie"));
-
-        const cookies = [...getSetCookie(loginResp.headers), ...getSetCookie(homeResp.headers)];
-        expect(cookies.length).to.be.greaterThan(0);
-        expect(cookies.join("\n").toLowerCase()).to.include("httponly");
+        expect(setCookie, "Expected Set-Cookie header").to.exist;
+        expect(setCookie.toLowerCase()).to.include("httponly");
     });
 });
