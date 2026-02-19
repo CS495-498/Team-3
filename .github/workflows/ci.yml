@@ -8,6 +8,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    environment: .env.test
     steps:
       - uses: actions/checkout@v4
 
@@ -37,9 +38,9 @@ jobs:
         run: |
           node -e "console.log('URL present?', !!process.env.NEXT_PUBLIC_SUPABASE_URL)"
           node -e "console.log('KEY present?', !!process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)"
-          node -e "console.log('TEST_PARTNER_EMAIL present?', !!process.env.TEST_PARTNER_EMAIL))"
-          node -e "console.log('TEST_CONTENTSTACK_EMAIL present?', !!process.env.TEST_CONTENTSTACK_EMAIL))"
-          node -e "console.log('TEST_ADMIN_EMAIL present?', !!process.env.TEST_ADMIN_EMAIL))"
+          node -e "console.log('TEST_PARTNER_EMAIL present?', !!process.env.TEST_PARTNER_EMAIL)"
+          node -e "console.log('TEST_CONTENTSTACK_EMAIL present?', !!process.env.TEST_CONTENTSTACK_EMAIL)"
+          node -e "console.log('TEST_ADMIN_EMAIL present?', !!process.env.TEST_ADMIN_EMAIL)"
           node -e "console.log('TEST_USER_PASSWORD present?', !!process.env.TEST_USER_PASSWORD)"
 
       # - name: Run integration tests
