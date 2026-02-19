@@ -43,19 +43,19 @@ jobs:
           node -e "console.log('TEST_ADMIN_EMAIL present?', !!process.env.TEST_ADMIN_EMAIL)"
           node -e "console.log('TEST_USER_PASSWORD present?', !!process.env.TEST_USER_PASSWORD)"
 
-      # - name: Run integration tests
-      #   env:
-      #     # Supabase keys REQUIRED for middleware / server
-      #     NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      #     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+      - name: Run integration tests
+        env:
+          # Supabase keys REQUIRED for middleware / server
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
 
-      #     # your integration test harness vars
-      #     TEST_BASE_URL: http://localhost:3005
-      #     TEST_PARTNER_EMAIL: ${{ secrets.TEST_PARTNER_EMAIL }}
-      #     TEST_CONTENTSTACK_EMAIL: ${{ secrets.TEST_CONTENTSTACK_EMAIL }}
-      #     TEST_ADMIN_EMAIL: ${{ secrets.TEST_ADMIN_EMAIL }}
-      #     TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+          # your integration test harness vars
+          TEST_BASE_URL: http://localhost:3005
+          TEST_PARTNER_EMAIL: ${{ secrets.TEST_PARTNER_EMAIL }}
+          TEST_CONTENTSTACK_EMAIL: ${{ secrets.TEST_CONTENTSTACK_EMAIL }}
+          TEST_ADMIN_EMAIL: ${{ secrets.TEST_ADMIN_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
 
-      #     # if anything server-side needs it
-      #     # SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      #   run: npm run test:integration
+          # if anything server-side needs it
+          # SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npm run test:integration
