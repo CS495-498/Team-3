@@ -8,9 +8,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "mocha",
-    "test:unit": "mocha \"test/**/*.test.js\" --ignore \"test/integration/**/*\"",
-    "test:coverage": "c8 mocha \"test/**/*.test.js\" --ignore \"test/integration/**/*\"",
+    "test": "npm run test:unit",
+    "test:unit": "mocha \"test/**/*.test.js\" --ignore \"test/integration/**\"",
+    "test:coverage": "c8 mocha \"test/**/*.test.js\" --ignore \"test/integration/**\"",
     "test:integration": "start-server-and-test \"next dev -p 3005\" http://localhost:3005 \"cross-env NODE_ENV=test mocha 'test/integration/**/*.int.test.js' --timeout 30000\""
   },
   "mocha": {
