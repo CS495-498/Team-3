@@ -1,9 +1,9 @@
 import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
 import PERMISSIONS from "@/config/permissions";
-import {NextResponse} from "next/server";
-import {createClient} from "@/utils/Supabase/server";
-import {fileTypeFromBuffer} from "file-type";
-import {createServiceRoleClient} from "@/utils/Supabase/server";
+import { NextResponse } from "next/server";
+import { createClient } from "@/utils/Supabase/server";
+import { fileTypeFromBuffer } from "file-type";
+import { createServiceRoleClient } from "@/utils/Supabase/server";
 import { sanitizeHtmlServer } from "@/lib/featureRequests/requests/sanitizeHtmlServer.js";
 import { withLogging } from '@/utils/withLogging';
 
@@ -251,49 +251,49 @@ async function handleGet(request) {
 }
 
 async function handlePost(req) {
-    const supabase = await createClient();
+  const supabase = await createClient();
 
-    const { error2, profile } = await requireAuthWithPermission(
+  const { error2, profile } = await requireAuthWithPermission(
 
     PERMISSIONS.PUBLISH_FEATURE_REQUESTS
   );
 
-    if (error2) return error2;
+  if (error2) return error2;
 
-    const contentLength = req.headers.get("content-length");
+  const contentLength = req.headers.get("content-length");
 
   if (contentLength && Number(contentLength) > MAX_FILE_SIZE) {
     return NextResponse.json({ error: "File too large" }, { status: 413 });
   }
 
-    const formData = await req.formData();
-    const title = formData.get("title");
-    const content = formData.get("content");
-    const file = formData.get("file");
+  const formData = await req.formData();
+  const title = formData.get("title");
+  const content = formData.get("content");
+  const file = formData.get("file");
 
-    const normalizedTitle = title?.toString().trim() || "";
+  const normalizedTitle = title?.toString().trim() || "";
 
-    if (!normalizedTitle) {
-        return NextResponse.json({ error: "Title is required" }, { status: 400 });
-    }
+  if (!normalizedTitle) {
+    return NextResponse.json({ error: "Title is required" }, { status: 400 });
+  }
 
-    if (normalizedTitle.length > TITLE_MAX_LENGTH) {
-        return NextResponse.json(
-            { error: `Title cannot exceed ${TITLE_MAX_LENGTH} characters` },
-            { status: 400 }
-        );
-    }
+  if (normalizedTitle.length > TITLE_MAX_LENGTH) {
+    return NextResponse.json(
+      { error: `Title cannot exceed ${TITLE_MAX_LENGTH} characters` },
+      { status: 400 }
+    );
+  }
 
-    const cleanContent = sanitizeHtmlServer(content)
+  const cleanContent = sanitizeHtmlServer(content)
 
-    let filePath = null;
+  let filePath = null;
 
   if (file) {
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json({ error: "File too large" }, { status: 413 });
     }
 
-        const buffer = Buffer.from(await file.arrayBuffer());
+    const buffer = Buffer.from(await file.arrayBuffer());
 
     // Detect actual file type
     const detectedType = await fileTypeFromBuffer(buffer);
@@ -303,12 +303,12 @@ async function handlePost(req) {
 
     filePath = `uploads/${crypto.randomUUID()}.${detectedType.ext}`;
 
-        const { error: uploadError } = await supabase.storage
-            .from("feature-uploads")
-            .upload(filePath, buffer, {
-                contentType: detectedType.mime,
-                upsert: false
-            });
+    const { error: uploadError } = await supabase.storage
+      .from("feature-uploads")
+      .upload(filePath, buffer, {
+        contentType: detectedType.mime,
+        upsert: false
+      });
 
     if (uploadError) {
       console.error("File upload error:", uploadError);
@@ -316,24 +316,24 @@ async function handlePost(req) {
     }
   }
 
-    const { data, error } = await supabase
-        .from("feature_requests")
-        .insert([
-            {
-                title: normalizedTitle,
-                content: cleanContent,
-                status: "open",
-                user_id: profile.id,
-                file_url: filePath
-            }
-        ])
-        .select(`
+  const { data, error } = await supabase
+    .from("feature_requests")
+    .insert([
+      {
+        title: normalizedTitle,
+        content: cleanContent,
+        status: "open",
+        user_id: profile.id,
+        file_url: filePath
+      }
+    ])
+    .select(`
       *,
       user:profiles!fk_feature_requests_author (
         username
       )
     `)
-        .single();
+    .single();
 
   if (error) {
     console.error("Feature request insert error:", error);
@@ -346,7 +346,7 @@ async function handlePost(req) {
     commentCount: 0
   };
 
-    return NextResponse.json(response, { status: 201 });
+  return NextResponse.json(response, { status: 201 });
 }
 
 export const GET = withLogging(handleGet);

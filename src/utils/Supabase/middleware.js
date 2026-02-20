@@ -58,15 +58,15 @@ export async function updateSession(request) {
     const user = data?.user;
 
     if (!user || authError) {
-    if (!pathname.startsWith('/login') && error) {
+        if (!pathname.startsWith('/login') && authError) {
             return NextResponse.redirect(new URL("/login", request.url));
+        }
+        return NextResponse.next();
     }
-    return NextResponse.next();
-  }
     // 👇 Stop here if not logged in
     if (!user) return supabaseResponse;
 
-   if (user) {
+    if (user) {
         supabaseResponse.headers.set('x-user-id', user.id)
     }
 
