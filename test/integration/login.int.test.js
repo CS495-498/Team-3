@@ -29,4 +29,22 @@ describe("Integration: login -> redirect -> home", function () {
         expect(setCookie, "Expected Set-Cookie header").to.exist;
         expect(setCookie.toLowerCase()).to.include("httponly");
     });
+
+    it("POST /api/auth/login returns 401 for invalid credentials", async () => {
+        const client = createCookieClient();
+
+        const loginResp = await client.request(`${config.baseUrl}/api/auth/login`, {
+            method: "POST",
+            body: { email: config.users.partner, password: "wrong-password" },
+        });
+
+        expect(loginResp.status).to.equal(401);
+
+        const raw = (typeof loginResp.headers.getSetCookie === "function"
+            ? loginResp.headers.getSetCookie()?.join("\n")
+            : loginResp.headers.get("set-cookie")) ?? "";
+
+        // Allow header to exist, but it must be empty/whitespace (no cookie actually set)
+        expect(raw.trim(), "Did not expect Set-Cookie value on failed auth").to.equal("");
+    });
 });
