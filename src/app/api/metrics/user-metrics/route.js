@@ -1,36 +1,44 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/Supabase/server";
 import PERMISSIONS from "@/config/permissions.js";
 import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission.js";
 
 export async function GET(request) {
     try {
-        const { error, supabase } = await requireAuthWithPermission(
 
-            PERMISSIONS.VIEW_METRICS
-        );
+        const { error: authError, supabase } =
+            await requireAuthWithPermission(PERMISSIONS.VIEW_METRICS);
 
-        if (error) return error;
+        if (authError) return authError;
 
         const { searchParams } = new URL(request.url);
+
         const startDate = searchParams.get("start_date");
         const endDate = searchParams.get("end_date");
 
-        let query = supabase.from("daily_user_metrics").select("*");
+        let query = supabase
+            .from("daily_user_metrics")
+            .select(`
+                user_id,
+                date,
+                post_count,
+                get_count,
+                put_count,
+                delete_count
+            `);
 
         if (startDate) query = query.gte("date", startDate);
         if (endDate) query = query.lte("date", endDate);
 
-        const { data } = await query;
+        const { data, error } = await query;
 
-        if (error) {
-            console.error(error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
-        }
+        if (error) throw error;
+
+        // -------- Aggregate by User --------
 
         const grouped = {};
 
         (data || []).forEach(row => {
+
             if (!grouped[row.user_id]) {
                 grouped[row.user_id] = {
                     user_id: row.user_id,
@@ -39,24 +47,46 @@ export async function GET(request) {
                     total_post: 0,
                     total_get: 0,
                     total_put: 0,
-                    total_delete: 0,
-                    total_requests: 0,
+                    total_delete: 0
                 };
             }
 
-            grouped[row.user_id].start_date = row.date < grouped[row.user_id].start_date ? row.date : grouped[row.user_id].start_date;
-            grouped[row.user_id].end_date = row.date > grouped[row.user_id].end_date ? row.date : grouped[row.user_id].end_date;
+            const bucket = grouped[row.user_id];
 
-            grouped[row.user_id].total_post += Number(row.post_count);
-            grouped[row.user_id].total_get += Number(row.get_count);
-            grouped[row.user_id].total_put += Number(row.put_count);
-            grouped[row.user_id].total_delete += Number(row.delete_count);
-            grouped[row.user_id].total_requests += Number(row.request_count);
+            bucket.start_date =
+                row.date < bucket.start_date
+                    ? row.date
+                    : bucket.start_date;
+
+            bucket.end_date =
+                row.date > bucket.end_date
+                    ? row.date
+                    : bucket.end_date;
+
+            bucket.total_post += Number(row.post_count || 0);
+            bucket.total_get += Number(row.get_count || 0);
+            bucket.total_put += Number(row.put_count || 0);
+            bucket.total_delete += Number(row.delete_count || 0);
         });
 
-        return NextResponse.json(Object.values(grouped));
+        const result = Object.values(grouped).map(row => ({
+            ...row,
+            total_requests:
+                row.total_post +
+                row.total_get +
+                row.total_put +
+                row.total_delete
+        }));
+
+        return NextResponse.json(result);
+
     } catch (err) {
+
         console.error(err);
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
+
+        return NextResponse.json(
+            { error: "Server error" },
+            { status: 500 }
+        );
     }
 }
