@@ -30,6 +30,15 @@ import {
     Activity,
 } from "lucide-react";
 
+// Time range filter presets (in milliseconds)
+const TIME_RANGE_MS = {
+    "15m": 15 * 60 * 1000,
+    "1h": 60 * 60 * 1000,
+    "6h": 6 * 60 * 60 * 1000,
+    "24h": 24 * 60 * 60 * 1000,
+    "7d": 7 * 24 * 60 * 60 * 1000,
+};
+
 // HTTP method badge colors
 const getMethodBadgeClass = (method) => {
     const colors = {
@@ -215,6 +224,7 @@ export default function LogsPage() {
     const [levelFilter, setLevelFilter] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
     const [methodFilter, setMethodFilter] = useState("");
+    const [timeFilter, setTimeFilter] = useState("");
 
     // Expandable row state
     const [expandedRows, setExpandedRows] = useState(new Set());
@@ -240,6 +250,10 @@ export default function LogsPage() {
             if (levelFilter) params.set("level", levelFilter);
             if (statusFilter) params.set("status", statusFilter);
             if (methodFilter) params.set("method", methodFilter);
+            if (timeFilter && TIME_RANGE_MS[timeFilter]) {
+                const cutoff = new Date(Date.now() - TIME_RANGE_MS[timeFilter]);
+                params.set("timestamp", cutoff.toISOString());
+            }
 
             const response = await fetch(`/api/logs/dashboard?${params.toString()}`);
             if (!response.ok) {
@@ -247,7 +261,7 @@ export default function LogsPage() {
             }
             return response.json();
         },
-        [debouncedSearch, levelFilter, statusFilter, methodFilter]
+        [debouncedSearch, levelFilter, statusFilter, methodFilter, timeFilter]
     );
 
     const {
@@ -262,7 +276,7 @@ export default function LogsPage() {
     } = useServerInfiniteScroll({
         fetchFn: fetchLogs,
         limit: 30,
-        dependencies: [debouncedSearch, levelFilter, statusFilter, methodFilter],
+        dependencies: [debouncedSearch, levelFilter, statusFilter, methodFilter, timeFilter],
     });
 
     // Toggle row expansion
@@ -285,10 +299,11 @@ export default function LogsPage() {
         setLevelFilter("");
         setStatusFilter("");
         setMethodFilter("");
+        setTimeFilter("");
     };
 
     const hasActiveFilters =
-        searchInput || levelFilter || statusFilter || methodFilter;
+        searchInput || levelFilter || statusFilter || methodFilter || timeFilter;
 
     return (
         <div className="p-6 min-h-screen">
@@ -367,7 +382,23 @@ export default function LogsPage() {
                                 <SelectItem value="GET">GET</SelectItem>
                                 <SelectItem value="POST">POST</SelectItem>
                                 <SelectItem value="PUT">PUT</SelectItem>
+                                <SelectItem value="PATCH">PATCH</SelectItem>
                                 <SelectItem value="DELETE">DELETE</SelectItem>
+                            </SelectContent>
+                        </Select>
+
+                        {/* Time Range Filter */}
+                        <Select value={timeFilter || "all"} onValueChange={(v) => setTimeFilter(v === "all" ? "" : v)}>
+                            <SelectTrigger className="w-40">
+                                <SelectValue placeholder="Time Range" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Time</SelectItem>
+                                <SelectItem value="15m">Last 15 minutes</SelectItem>
+                                <SelectItem value="1h">Last 1 hour</SelectItem>
+                                <SelectItem value="6h">Last 6 hours</SelectItem>
+                                <SelectItem value="24h">Last 24 hours</SelectItem>
+                                <SelectItem value="7d">Last 7 days</SelectItem>
                             </SelectContent>
                         </Select>
 
