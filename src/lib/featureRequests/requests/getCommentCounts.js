@@ -1,13 +1,12 @@
 export async function getCommentCounts(requests) {
-    const counts = {};
+    const ids = requests.map((r) => r.id);
 
-    await Promise.all(
-        requests.map(async (req) => {
-            const res = await fetch(`/api/feature-requests/${req.id}/comments`);
-            const data = await res.json();
-            counts[req.id] = data.length || 0;
-        })
-    );
+    const res = await fetch("/api/feature-requests/comment-counts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+    });
 
-    return counts;
+    if (!res.ok) return {};
+    return await res.json(); // { [id]: number }
 }

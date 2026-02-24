@@ -79,7 +79,7 @@ async function handlePost(req, { params }) {
           content,
         },
       ])
-      .select("*")
+      .select("*, user:profiles(username)")
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
