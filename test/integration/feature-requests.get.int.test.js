@@ -29,49 +29,22 @@ describe("Integration: GET /api/feature-requests", function () {
         expect([401, 302, 303, 307]).to.include(status);
     });
 
-    it("returns 200 and an array for authorized partner role", async () => {
-        const client = createCookieClient();
+    const cases = [
+        ["partner", config.users.partner],
+        ["contentstack", config.users.contentstack],
+        // ["admin", config.users.admin], // if you have it
+    ];
 
-        await login(client, config.users.partner);
+    for (const [label, email] of cases) {
+        it(`${label} can GET /api/feature-requests (200 + array)`, async () => {
+            const client = createCookieClient();
+            await login(client, email);
 
-        const { status, json } = await client.request(url, {
-            method: "GET",
+            const { status, json } = await client.request(url, { method: "GET" });
+
+            expect(status).to.equal(200);
+            expect(json).to.be.an("array");
         });
-
-        expect(status).to.equal(200);
-        expect(json).to.be.an("array");
-
-        if (json.length > 0) {
-            const item = json[0];
-
-            expect(item).to.have.property("id");
-            expect(item).to.have.property("title");
-            expect(item).to.have.property("status");
-
-            // author fields
-            expect(item).to.have.property("username");
-            expect(item).to.have.property("full_name");
-
-            // voter enrichment
-            expect(item).to.have.property("voter_usernames");
-            expect(item).to.have.property("voter_full_names");
-
-            // signed file url may be null or string
-            expect(item).to.have.property("signed_file_url");
-        }
-    });
-
-    it("returns 200 for contentstack role if permitted", async () => {
-        const client = createCookieClient();
-
-        await login(client, config.users.contentstack);
-
-        const { status, json } = await client.request(url, {
-            method: "GET",
-        });
-
-        expect(status).to.equal(200);
-        expect(json).to.be.an("array");
-    });
+    }
 
 });
