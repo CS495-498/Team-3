@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
     LineChart,
     Line,
@@ -9,11 +9,11 @@ import {
     CartesianGrid,
     Tooltip,
     ResponsiveContainer,
-    BarChart,
-    Bar,
     PieChart,
     Pie,
     Cell,
+    BarChart,
+    Bar
 } from "recharts";
 
 import {
@@ -28,177 +28,221 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 
 export default function MetricsPage() {
-    const [startDate, setStartDate] = useState(null);
-    const [endDate, setEndDate] = useState(null);
+
+    const [startDate, setStartDate] = useState(undefined);
+    const [endDate, setEndDate] = useState(undefined);
 
     const [lineData, setLineData] = useState([]);
-    const [endpointData, setEndpointData] = useState([]);
-    const [methodData, setMethodData] = useState([]);
     const [crudOps, setCrudOps] = useState([]);
+    const [endpointLatencyData, setEndpointLatencyData] = useState([]);
 
     const [loading, setLoading] = useState(false);
 
     // ---------- FETCH LAYER ----------
+
     const fetchMetrics = async ({ endpoint, groupBy }) => {
+
         const params = new URLSearchParams();
 
-        if (startDate) params.set("start_date", startDate.toISOString());
-        if (endDate) params.set("end_date", endDate.toISOString());
-        if (groupBy) params.set("groupBy", groupBy);
+        if (startDate instanceof Date && !isNaN(startDate))
+            params.set("start_date", startDate.toISOString());
+
+        if (endDate instanceof Date && !isNaN(endDate))
+            params.set("end_date", endDate.toISOString());
+
+        if (groupBy)
+            params.set("groupBy", groupBy);
 
         const res = await fetch(`${endpoint}?${params.toString()}`);
         return res.json();
     };
 
-    // ---------- LOAD ALL VISUALS ----------
+    // ---------- DATA LOADER ----------
+
     useEffect(() => {
+
+        let mounted = true;
+
         const loadAll = async () => {
+
             setLoading(true);
 
             const [
                 userTable,
                 requestsOverTime,
-                endpointUsage,
-                methodDist,
+                endpointLatency
             ] = await Promise.all([
-                fetchMetrics({ endpoint: "/api/metrics/user-metrics", groupBy: "user_week" }),
-                fetchMetrics({ endpoint: "/api/metrics/api-metrics", groupBy: "date" }),
-                fetchMetrics({ endpoint: "/api/metrics/api-metrics", groupBy: "endpoint" }),
-                fetchMetrics({ endpoint: "/api/metrics/api-metrics", groupBy: "methods" }),
+                fetchMetrics({
+                    endpoint: "/api/metrics/user-metrics"
+                }),
+
+                fetchMetrics({
+                    endpoint: "/api/metrics/api-metrics",
+                    groupBy: "date"
+                }),
+
+                fetchMetrics({
+                    endpoint: "/api/metrics/api-metrics",
+                    groupBy: "latency_endpoint"
+                })
             ]);
 
-            // After fetching lineData
-            const sortedLineData = requestsOverTime.map(row => ({ ...row, date: row.date })).sort((a, b) => new Date(a.date) - new Date(b.date));
+            if (!mounted) return;
+
+            const sortedLineData = (requestsOverTime || [])
+                .map(row => ({
+                    date: row.date,
+                    avg_hourly_rpm: Number(row.avg_hourly_rpm || 0),
+                    error_percentage: Number(row.error_percentage || 0)
+                }))
+                .sort((a, b) => new Date(a.date) - new Date(b.date));
 
             if (sortedLineData.length > 0 && !startDate && !endDate) {
-                // parse earliest date (first element)
-                const [y1, m1, d1] = sortedLineData[0].date.split("-").map(Number);
-                const localStartDate = new Date(y1, m1 - 1, d1);
 
-                // parse latest date (last element)
-                const [y2, m2, d2] = sortedLineData[sortedLineData.length - 1].date.split("-").map(Number);
-                const localEndDate = new Date(y2, m2 - 1, d2);
-
-                setStartDate(localStartDate);
-                setEndDate(localEndDate);
+                setStartDate(new Date(sortedLineData[0].date));
+                setEndDate(new Date(sortedLineData[sortedLineData.length - 1].date));
             }
 
-            setCrudOps(userTable);
+            setCrudOps(userTable || []);
             setLineData(sortedLineData);
-            setEndpointData(endpointUsage);
-            setMethodData(methodDist);
+            setEndpointLatencyData(endpointLatency || []);
 
             setLoading(false);
         };
 
         loadAll();
+
+        return () => {
+            mounted = false;
+        };
+
     }, [startDate, endDate]);
 
-    // ---------- PIE TRANSFORM ----------
+    // ---------- PIE DATA ----------
+
+    const latest = useMemo(() =>
+            lineData.length > 0 ? lineData[lineData.length - 1] : {},
+        [lineData]
+    );
+
+    const errorPercentage = Number(latest.error_percentage || 0);
+
     const pieData = [
+        { name: "Errors", value: errorPercentage },
         {
-            name: "POST",
-            value: methodData.reduce((sum, d) => sum + (d.total_post || 0), 0),
-        },
-        {
-            name: "GET",
-            value: methodData.reduce((sum, d) => sum + (d.total_get || 0), 0),
-        },
-        {
-            name: "PUT",
-            value: methodData.reduce((sum, d) => sum + (d.total_put || 0), 0),
-        },
-        {
-            name: "DELETE",
-            value: methodData.reduce((sum, d) => sum + (d.total_delete || 0), 0),
-        },
+            name: "Healthy Requests",
+            value: Math.max(100 - errorPercentage, 0)
+        }
     ];
 
-    const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff8042"];
+    const COLORS = ["#ff4d4f", "#82ca9d"];
 
     return (
         <div className="p-6 space-y-8">
 
-            {/* ---------- CHARTS SECTION ---------- */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* RPM LINE CHART */}
 
-                {/* LINE CHART */}
-                <Card>
-                    <CardContent className="pt-6">
-                        <h2 className="text-lg font-semibold mb-4">
-                            Requests Over Time
-                        </h2>
-
-                        <ResponsiveContainer width="100%" height={300}>
-                            <LineChart data={lineData}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="date" />
-                                <YAxis />
-                                <Tooltip />
-                                <Line type="monotone" dataKey="total_requests" />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
-
-                {/* ENDPOINT BAR */}
-                <Card>
-                    <CardContent className="pt-6">
-                        <h2 className="text-lg font-semibold mb-4">
-                            Most Used Endpoints
-                            {startDate && endDate && (
-                                <> from {startDate.toLocaleDateString()} to {endDate.toLocaleDateString()}</>
-                            )}
-                        </h2>
-
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart layout="vertical" data={endpointData}>
-                                <CartesianGrid strokeDasharray="3 3"/>
-                                <XAxis type="number"/>
-                                <YAxis type="category" dataKey="endpoint" width={200} interval={0}/>
-                                <Tooltip/>
-                                <Bar dataKey="total_requests"/>
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
-
-                {/* PIE */}
-                <Card>
-                    <CardContent className="pt-6">
-                        <h2 className="text-lg font-semibold mb-4">
-                            HTTP Method Distribution
-                        </h2>
-
-                        <ResponsiveContainer width="100%" height={300}>
-                            <PieChart>
-                                <Pie
-                                    data={pieData}
-                                    dataKey="value"
-                                    nameKey="name"
-                                    outerRadius={110}
-                                    label
-                                >
-                                    {pieData.map((entry, index) => (
-                                        <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* ---------- SCROLL TABLE ---------- */}
             <Card>
                 <CardContent className="pt-6">
+
+                    <h2 className="text-lg font-semibold mb-4">
+                        Overall Average Hourly RPM
+                    </h2>
+
+                    <ResponsiveContainer width="100%" height={300}>
+                        <LineChart data={lineData}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="date" />
+                            <YAxis />
+                            <Tooltip />
+                            <Line
+                                type="monotone"
+                                dataKey="avg_hourly_rpm"
+                            />
+                        </LineChart>
+                    </ResponsiveContainer>
+
+                </CardContent>
+            </Card>
+
+            {/* ERROR HEALTH PIE */}
+
+            <Card>
+                <CardContent className="pt-6">
+
+                    <h2 className="text-lg font-semibold mb-4">
+                        Application Health — Error Rate %
+                    </h2>
+
+                    <ResponsiveContainer width="100%" height={300}>
+                        <PieChart>
+                            <Pie
+                                data={pieData}
+                                dataKey="value"
+                                nameKey="name"
+                                outerRadius={110}
+                                label
+                            >
+                                {pieData.map((entry, index) => (
+                                    <Cell
+                                        key={index}
+                                        fill={COLORS[index % COLORS.length]}
+                                    />
+                                ))}
+                            </Pie>
+
+                            <Tooltip />
+                        </PieChart>
+                    </ResponsiveContainer>
+
+                </CardContent>
+            </Card>
+
+            {/* LATENCY PER ENDPOINT BAR CHART */}
+
+            <Card>
+                <CardContent className="pt-6">
+
+                    <h2 className="text-lg font-semibold mb-4">
+                        Average Latency Per Endpoint (MS)
+                    </h2>
+
+                    <ResponsiveContainer width="100%" height={300}>
+                        <BarChart
+                            layout="vertical"
+                            data={endpointLatencyData}
+                        >
+                            <CartesianGrid strokeDasharray="3 3" />
+
+                            <XAxis type="number" />
+                            <YAxis
+                                type="category"
+                                dataKey="endpoint"
+                                width={220}
+                            />
+
+                            <Tooltip />
+
+                            <Bar dataKey="avg_latency" />
+                        </BarChart>
+                    </ResponsiveContainer>
+
+                </CardContent>
+            </Card>
+
+            {/* USER CRUD TABLE */}
+
+            <Card>
+                <CardContent className="pt-6">
+
                     <h2 className="text-lg font-semibold mb-4">
                         Weekly User CRUD Activity
                     </h2>
 
                     <div className="max-h-[450px] overflow-y-auto border rounded">
+
                         <Table>
+
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>User</TableHead>
@@ -212,28 +256,41 @@ export default function MetricsPage() {
                             </TableHeader>
 
                             <TableBody>
-                                {crudOps.map((row) => (
-                                    <TableRow key={row.user_id}>
-                                        <TableCell>{row.user_id}</TableCell>
-                                        <TableCell>{row.start_date} → {row.end_date}</TableCell>
-                                        <TableCell>{row.total_post}</TableCell>
-                                        <TableCell>{row.total_get}</TableCell>
-                                        <TableCell>{row.total_put}</TableCell>
-                                        <TableCell>{row.total_delete}</TableCell>
-                                        <TableCell className="font-bold">{row.total_requests}</TableCell>
-                                    </TableRow>
-                                ))}
+
+                                {crudOps.map((row) => {
+
+                                    const total =
+                                        Number(row.total_post || 0) +
+                                        Number(row.total_get || 0) +
+                                        Number(row.total_put || 0) +
+                                        Number(row.total_delete || 0);
+
+                                    return (
+                                        <TableRow key={`${row.user_id}-${row.start_date}`}>
+                                            <TableCell>{row.user_id}</TableCell>
+                                            <TableCell>
+                                                {row.start_date} → {row.end_date}
+                                            </TableCell>
+                                            <TableCell>{row.total_post}</TableCell>
+                                            <TableCell>{row.total_get}</TableCell>
+                                            <TableCell>{row.total_put}</TableCell>
+                                            <TableCell>{row.total_delete}</TableCell>
+                                            <TableCell className="font-bold">
+                                                {total}
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+
                             </TableBody>
+
                         </Table>
+
                     </div>
 
-                    {crudOps.length === 0 && !loading && (
-                        <div className="text-center text-muted-foreground mt-4">
-                            No data available
-                        </div>
-                    )}
                 </CardContent>
             </Card>
+
         </div>
     );
 }
