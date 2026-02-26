@@ -60,6 +60,23 @@ export default function VideoLibrary() {
     const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const isLoomUrl = (url) => {
+        if (!url) return false;
+        try {
+            const u = new URL(url);
+            const host = u.hostname.replace(/^www\./, "");
+            return host === "loom.com";
+        } catch {
+            return false;
+        }
+    };
+
+    const redirectTo = (url) => {
+        if (!url) return;
+        // If you want SAME TAB redirect instead, use: window.location.href = url;
+        window.open(url, "_blank", "noopener,noreferrer");
+    };
+
     const openEditModal = (demo) => {
         setSelectedItem(demo);
         setIsEditOpen(true);
@@ -731,12 +748,26 @@ export default function VideoLibrary() {
                                                                 src={video?.thumbnail?.url}
                                                                 alt={video?.title || "Video thumbnail"}
                                                                 className="w-full h-full object-cover cursor-pointer hover:opacity-80"
-                                                                onClick={() => setPlayingIndex(index)}
+                                                                onClick={() => {
+                                                                    const url = video?.video_url?.trim();
+                                                                    if (isLoomUrl(url)) {
+                                                                        redirectTo(url);
+                                                                        return;
+                                                                    }
+                                                                    setPlayingIndex(index);
+                                                                }}
                                                             />
 
                                                             <div
                                                                 className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 hover:opacity-100 cursor-pointer"
-                                                                onClick={() => setPlayingIndex(index)}
+                                                                onClick={() => {
+                                                                    const url = video?.video_url?.trim();
+                                                                    if (isLoomUrl(url)) {
+                                                                        redirectTo(url);
+                                                                        return;
+                                                                    }
+                                                                    setPlayingIndex(index);
+                                                                }}
                                                             >
                                                                 <svg
                                                                     xmlns="http://www.w3.org/2000/svg"
