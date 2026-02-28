@@ -12,6 +12,8 @@ import LoadingIndicator from "@/components/ui/loading-indicator.jsx";
 import { useUser } from "@/context/UserContext";
 import { hasPermission } from "@/utils/hasPermission";
 import PERMISSIONS from "@/config/permissions";
+import DOMPurify from "isomorphic-dompurify";
+import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor";
 
 export default function Home() {
     const { user } = useUser();
@@ -25,6 +27,7 @@ export default function Home() {
 
     const expiredAlertsRef = useRef(new Set());
     const deleteTimeoutRef = useRef(null);
+    const editorRef = useRef(null);
 
     const getContent = async () => {
         console.log("Fetching homepage content...");
@@ -121,9 +124,12 @@ export default function Home() {
                 json_data[key] = value instanceof File && value.size > 0 ? value.name : value;
             }
 
+            const rawHtml = editorRef.current?.getHTML() ?? "";
+            const alert_description = DOMPurify.sanitize(rawHtml);
+
             const newNotification = {
                 alert_title: json_data.alert_title,
-                alert_description: json_data.alert_description,
+                alert_description,
                 start_time: json_data.start_time,
                 end_time: json_data.end_time,
                 critical_value: parseInt(json_data.critical_value),
@@ -203,13 +209,13 @@ export default function Home() {
 
                                 <div className="fixed inset-0 flex items-center justify-center p-6">
                                     <motion.div
-                                        className="w-full max-w-xl mx-auto"
+                                        className="w-full max-w-2xl mx-auto"
                                         initial={{ opacity: 0, scale: 0.96, y: -8 }}
                                         animate={{ opacity: 1, scale: 1, y: 0 }}
                                         exit={{ opacity: 0, scale: 0.96, y: -8 }}
                                         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
                                     >
-                                        <Dialog.Panel className="w-full rounded-xl bg-white dark:bg-gray-700 p-8 shadow-2xl">
+                                        <Dialog.Panel className="w-full rounded-xl bg-white dark:bg-gray-700 p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
                                             <Dialog.Title className="font-bold text-2xl mb-4">Add An Alert</Dialog.Title>
 
                                             <form onSubmit={handleSubmit} className="space-y-5 w-full">
@@ -223,18 +229,6 @@ export default function Home() {
                                                         placeholder="Enter alert title"
                                                         className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition"
                                                     />
-                                                </div>
-
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                                                        Alert Description
-                                                    </label>
-                                                    <textarea
-                                                        rows="3"
-                                                        name="alert_description"
-                                                        placeholder="Describe the alert..."
-                                                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition resize-none"
-                                                    ></textarea>
                                                 </div>
 
                                                 <div>
@@ -270,6 +264,15 @@ export default function Home() {
                                                         placeholder="Enter critical value"
                                                         className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition"
                                                     />
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                                        Alert Description
+                                                    </label>
+                                                    <div className="w-full min-h-[300px] rounded-md border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-1">
+                                                        <SimpleEditor html="" editorRef={editorRef} />
+                                                    </div>
                                                 </div>
 
                                                 <div className="flex justify-end gap-3 pt-4">
