@@ -37,9 +37,7 @@ import { ListDropdownMenu } from "@/components/tiptap-ui/list-dropdown-menu"
 import { BlockquoteButton } from "@/components/tiptap-ui/blockquote-button"
 import { CodeBlockButton } from "@/components/tiptap-ui/code-block-button"
 import {
-  ColorHighlightPopover,
   ColorHighlightPopoverContent,
-  ColorHighlightPopoverButton,
 } from "@/components/tiptap-ui/color-highlight-popover"
 import {
   LinkPopover,
@@ -70,7 +68,6 @@ import postAsset from "@/app/api/helper/postAsset.js"
 // --- Styles ---
 import "@/components/tiptap-templates/simple/simple-editor.scss"
 
-import content from "@/components/tiptap-templates/simple/data/content.json"
 
 
 
@@ -202,7 +199,6 @@ function ImageInsertButton({ editor, parentUid }) {
 }
 
 const MainToolbarContent = ({
-  onHighlighterClick,
   onLinkClick,
   isMobile,
   editor,
@@ -338,7 +334,7 @@ export function SimpleEditor({ html = "<p></p>", editorRef, assetParentUid }) {
   }, [editor, editorRef]);
 
   return (
-    <div className="simple-editor-wrapper w-full max-w-full h-full min-h-[300px] border border-gray-300 rounded-md p-1">
+    <div className="simple-editor-wrapper w-full max-w-full h-full min-h-75 border border-gray-300 rounded-md p-1">
   <EditorContext.Provider value={{ editor }}>
     <Toolbar
       ref={toolbarRef}
@@ -367,7 +363,7 @@ export function SimpleEditor({ html = "<p></p>", editorRef, assetParentUid }) {
     <EditorContent
       editor={editor}
       role="presentation"
-      className="simple-editor-content w-full h-full min-h-[250px] overflow-auto"
+      className="simple-editor-content w-full h-full min-h-62.5 overflow-auto"
     />
   </EditorContext.Provider>
 </div>
