@@ -1,6 +1,6 @@
 "use client"
 
-import {useEffect, useMemo, useRef, useState} from "react"
+import { useEffect, useRef, useState } from "react"
 import { EditorContent, EditorContext, useEditor } from "@tiptap/react"
 
 // --- Tiptap Core Extensions ---
@@ -37,7 +37,9 @@ import { ListDropdownMenu } from "@/components/tiptap-ui/list-dropdown-menu"
 import { BlockquoteButton } from "@/components/tiptap-ui/blockquote-button"
 import { CodeBlockButton } from "@/components/tiptap-ui/code-block-button"
 import {
+  ColorHighlightPopover,
   ColorHighlightPopoverContent,
+  ColorHighlightPopoverButton,
 } from "@/components/tiptap-ui/color-highlight-popover"
 import {
   LinkPopover,
@@ -68,6 +70,7 @@ import postAsset from "@/app/api/helper/postAsset.js"
 // --- Styles ---
 import "@/components/tiptap-templates/simple/simple-editor.scss"
 
+import content from "@/components/tiptap-templates/simple/data/content.json"
 
 
 
@@ -199,11 +202,11 @@ function ImageInsertButton({ editor, parentUid }) {
 }
 
 const MainToolbarContent = ({
-    onLinkClick,
-    isMobile,
-    editor,
-    assetParentUid,
-    enableImages
+  onHighlighterClick,
+  onLinkClick,
+  isMobile,
+  editor,
+  assetParentUid,
 }) => {
   return (
     <>
@@ -244,12 +247,9 @@ const MainToolbarContent = ({
       <ToolbarSeparator />
       <Spacer />
       {isMobile && <ToolbarSeparator />}
-
-        {enableImages && (
-            <ToolbarGroup>
-                <ImageInsertButton editor={editor} parentUid={assetParentUid} />
-            </ToolbarGroup>
-        )}
+      <ToolbarGroup>
+        <ImageInsertButton editor={editor} parentUid={assetParentUid} />
+      </ToolbarGroup>
     </>
   );
 }
@@ -280,107 +280,96 @@ const MobileToolbarContent = ({
   </>
 )
 
-export function SimpleEditor({html = "<p></p>", editorRef, assetParentUid, enableImages = true,}) {
-    const isMobile = useIsMobile()
-    const { height } = useWindowSize()
-    const [mobileView, setMobileView] = useState("main")
-    const toolbarRef = useRef(null)
+export function SimpleEditor({ html = "<p></p>", editorRef, assetParentUid }) {
+  const isMobile = useIsMobile()
+  const { height } = useWindowSize()
+  const [mobileView, setMobileView] = useState("main")
+  const toolbarRef = useRef(null)
 
-    const extensions = useMemo(() => {
-        const base = [
-            StarterKit.configure({
-                horizontalRule: false,
-                link: {
-                    openOnClick: false,
-                    enableClickSelection: true,
-                },
-            }),
-            HorizontalRule,
-            TextAlign.configure({ types: ["heading", "paragraph"] }),
-            TaskList,
-            TaskItem.configure({ nested: true }),
-            Highlight.configure({ multicolor: true }),
-            Typography,
-            Superscript,
-            Subscript,
-            Selection,
-        ]
-
-        if (enableImages) {
-            base.splice(
-                1,
-                0,
-                ImageWithUpload.configure({
-                    inline: true,
-                    uploadImage: (file) => uploadImageToContentstack(file, assetParentUid),
-                })
-            )
-        }
-
-        return base
-    }, [enableImages, assetParentUid])
-
-    const editor = useEditor({
-        immediatelyRender: false,
-        shouldRerenderOnTransaction: false,
-        editorProps: {
-            attributes: {
-                autocomplete: "off",
-                autocorrect: "off",
-                autocapitalize: "off",
-                "aria-label": "Main content area, start typing to enter text.",
-                class: "simple-editor",
-            },
+  const editor = useEditor({
+    immediatelyRender: false,
+    shouldRerenderOnTransaction: false,
+    editorProps: {
+      attributes: {
+        autocomplete: "off",
+        autocorrect: "off",
+        autocapitalize: "off",
+        "aria-label": "Main content area, start typing to enter text.",
+        class: "simple-editor",
+      },
+    },
+    extensions: [
+      StarterKit.configure({
+        horizontalRule: false,
+        link: {
+          openOnClick: false,
+          enableClickSelection: true,
         },
-        extensions,
-        content: html,
-    })
+      }),
+      ImageWithUpload.configure({
+        inline: true,
+        uploadImage: (file) => uploadImageToContentstack(file, assetParentUid),
+      }),
+      HorizontalRule,
+      TextAlign.configure({ types: ["heading", "paragraph"] }),
+      TaskList,
+      TaskItem.configure({ nested: true }),
+      Highlight.configure({ multicolor: true }),
+      Typography,
+      Superscript,
+      Subscript,
+      Selection,
+    ],
+    content: html,
+  })
 
-    const rect = useCursorVisibility({
-        editor,
-        overlayHeight: toolbarRef.current?.getBoundingClientRect().height ?? 0,
-    })
+  const rect = useCursorVisibility({
+    editor,
+    overlayHeight: toolbarRef.current?.getBoundingClientRect().height ?? 0,
+  })
 
-    useEffect(() => {
-        if (!isMobile && mobileView !== "main") setMobileView("main")
-    }, [isMobile, mobileView])
+  useEffect(() => {
+    if (!isMobile && mobileView !== "main") {
+      setMobileView("main")
+    }
+  }, [isMobile, mobileView])
+  useEffect(() => {
+    if (editor && editorRef) editorRef.current = editor;
+  }, [editor, editorRef]);
 
-    useEffect(() => {
-        if (editor && editorRef) editorRef.current = editor
-    }, [editor, editorRef])
+  return (
+    <div className="simple-editor-wrapper w-full max-w-full h-full min-h-[300px] border border-gray-300 rounded-md p-1">
+  <EditorContext.Provider value={{ editor }}>
+    <Toolbar
+      ref={toolbarRef}
+      style={{
+        ...(isMobile
+          ? { bottom: `calc(100% - ${height - rect.y}px)` }
+          : {}),
+      }}
+    >
+      {mobileView === "main" ? (
+        <MainToolbarContent
+          onHighlighterClick={() => setMobileView("highlighter")}
+          onLinkClick={() => setMobileView("link")}
+          isMobile={isMobile}
+          editor={editor}
+          assetParentUid={assetParentUid}
+        />
+      ) : (
+        <MobileToolbarContent
+          type={mobileView === "highlighter" ? "highlighter" : "link"}
+          onBack={() => setMobileView("main")}
+        />
+      )}
+    </Toolbar>
 
-    return (
-        <div className="simple-editor-wrapper w-full max-w-full h-full min-h-75 border border-gray-300 rounded-md p-1">
-            <EditorContext.Provider value={{ editor }}>
-                <Toolbar
-                    ref={toolbarRef}
-                    style={{
-                        ...(isMobile ? { bottom: `calc(100% - ${height - rect.y}px)` } : {}),
-                    }}
-                >
-                    {mobileView === "main" ? (
-                        <MainToolbarContent
-                            onHighlighterClick={() => setMobileView("highlighter")}
-                            onLinkClick={() => setMobileView("link")}
-                            isMobile={isMobile}
-                            editor={editor}
-                            assetParentUid={assetParentUid}
-                            enableImages={enableImages}
-                        />
-                    ) : (
-                        <MobileToolbarContent
-                            type={mobileView === "highlighter" ? "highlighter" : "link"}
-                            onBack={() => setMobileView("main")}
-                        />
-                    )}
-                </Toolbar>
-
-                <EditorContent
-                    editor={editor}
-                    role="presentation"
-                    className="simple-editor-content w-full h-full min-h-62.5 overflow-auto"
-                />
-            </EditorContext.Provider>
-        </div>
-    )
+    <EditorContent
+      editor={editor}
+      role="presentation"
+      className="simple-editor-content w-full h-full min-h-[250px] overflow-auto"
+    />
+  </EditorContext.Provider>
+</div>
+  );
 }
