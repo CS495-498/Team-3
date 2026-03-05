@@ -980,6 +980,7 @@ export default function Home() {
                                                 <SimpleEditor
                                                     html={dialogEditorContent}
                                                     editorRef={editorRef}
+                                                    enableImages={false}
                                                 />
                                             </div>
                                         </div>
