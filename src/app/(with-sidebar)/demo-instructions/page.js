@@ -10,11 +10,9 @@ import { useRef } from "react";
 import SuccessToast from "@/components/ui/success-toast.jsx";
 import LoadingIndicator from "@/components/ui/loading-indicator.jsx";
 
-import { Card } from "@/components/ui/card";
 import BookmarkButton from "@/components/bookmark-button";
 import { BOOKMARK_TYPES, useBookmarks } from "@/hooks/use-bookmarks";
 import CardDropdown from "@/components/cardDropdown.jsx";
-import EditDemoWebsiteModal from "@/components/editDemoWebsiteModal.jsx";
 import DeleteModal from "@/components/deleteModal.jsx";
 import EditDemoInstructionModal from "@/components/editDemoInstructions.jsx";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
@@ -31,7 +29,7 @@ export default function DemoInstructions() {
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [isOpen, setIsOpen] = useState(false);
-    const [dialogEditorContent, setDialogEditorContent] = useState("");
+    const [dialogEditorContent] = useState("");
     const editorRef = useRef(null);
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState("");
@@ -39,7 +37,7 @@ export default function DemoInstructions() {
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
 
-    const { user, loading } = useUser();
+    const { user } = useUser();
 
     const canPublishDemoInstructions =
         !!user && hasPermission(user.role, PERMISSIONS.PUBLISH_DEMO_INSTRUCTIONS);
@@ -69,15 +67,21 @@ export default function DemoInstructions() {
     const getInstructionId = (demo) =>
         demo?.uid || demo?.url || demo?.title;
 
-    const handleSubmit = async (e) => { };
+    const handleSubmit = async (e) => { e?.preventDefault?.(); };
 
-    const filteredDemos = entry?.demo_instructions?.filter((demo) => {
-        const query = searchQuery.toLowerCase();
-        return (
-            demo.title?.toLowerCase().includes(query) ||
-            demo.author_name?.toLowerCase().includes(query)
-        );
-    }) || [];
+    const filteredDemos = useMemo(() => {
+        const demos = entry?.demo_instructions ?? []
+        const query = searchQuery.trim().toLowerCase()
+
+        if (!query) return demos
+
+        return demos.filter((demo) => {
+            return (
+                demo.title?.toLowerCase().includes(query) ||
+                demo.author_name?.toLowerCase().includes(query)
+            )
+        })
+    }, [entry?.demo_instructions, searchQuery])
 
     const sortedInstructions = useMemo(() => {
         if (!filteredDemos.length) return [];
@@ -268,7 +272,7 @@ export default function DemoInstructions() {
                                                             }
                                                         }
                                                     }}
-                                                    className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
+                                                    className="text-white bg-linear-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
                                                 >
                                                     Upload
                                                 </button>
@@ -292,8 +296,8 @@ export default function DemoInstructions() {
                                                         Demo Content
                                                     </label>
 
-                                                    <div className="w-full min-h-[300px] rounded-md p-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700">
-                                                        <SimpleEditor html={dialogEditorContent} editorRef={editorRef} />
+                                                    <div className="w-full min-h-75 rounded-md p-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700">
+                                                        <SimpleEditor html={dialogEditorContent} editorRef={editorRef} assetParentUid={"blt4dd5900b16484a9e"} />
                                                     </div>
                                                 </div>
                                             </form>
@@ -309,7 +313,7 @@ export default function DemoInstructions() {
                         <button
                             onClick={() => setIsOpen(true)}
                             type="button"
-                            className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
+                            className="text-white bg-linear-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
                         >
                             Add Instructions
                         </button>
@@ -354,7 +358,10 @@ export default function DemoInstructions() {
                             {sortedInstructions.map((demo, idx) => {
                                 const instructionId = getInstructionId(demo);
                                 const key = instructionId ? `${instructionId}-${idx}` : `instruction-${idx}`;
-                                const previewHTML = DOMPurify.sanitize(demo?.blog_content || "<p>No preview available.</p>");
+                                const previewHTML = DOMPurify.sanitize(
+                                    demo?.blog_content || "<p>No preview available.</p>",
+                                    { ADD_TAGS: ["img"], ADD_ATTR: ["src", "alt", "title"] }
+                                );
 
                                 return (
                                     <div
@@ -375,7 +382,7 @@ export default function DemoInstructions() {
                                                 </article>
                                                 <div
                                                     className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none
-                       bg-gradient-to-b from-transparent to-white dark:to-gray-800"
+                       bg-linear-to-b from-transparent to-white dark:to-gray-800"
                                                 />
                                             </div>
                                         </Link>
