@@ -96,6 +96,9 @@ export default function Home() {
     const [commentsLoading, setCommentsLoading] = useState(false);
     const [commentText, setCommentText] = useState("");
     const [commentPostError, setCommentPostError] = useState("");
+    const [editingCommentId, setEditingCommentId] = useState(null);
+    const [editingCommentText, setEditingCommentText] = useState("");
+    const [deleteCommentId, setDeleteCommentId] = useState(null);
 
     // Add/Edit RTE modal
     const [rteModalOpen, setRteModalOpen] = useState(false);
@@ -335,11 +338,66 @@ export default function Home() {
     };
 
     const handleEditComment = (comment) => {
-        console.log("Edit comment", comment);
+        setEditingCommentId(comment.id);
+        setEditingCommentText(comment.content);
     };
 
-    const openDeleteCommentModal = (comment) => {
-        console.log("Delete comment", comment);
+    const cancelEditComment = () => {
+        setEditingCommentId(null);
+        setEditingCommentText("");
+    };
+
+    const saveEditComment = async (commentId) => {
+        const text = editingCommentText.trim();
+        if (!text) return;
+
+        try {
+            const res = await fetch(`/api/feature-requests/comments/${commentId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ content: text }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) throw new Error(data.error);
+
+            setComments((prev) =>
+                prev.map((c) =>
+                    c.id === commentId ? { ...c, content: text } : c
+                )
+            );
+
+            setEditingCommentId(null);
+            setEditingCommentText("");
+        } catch (err) {
+            console.error("Failed to edit comment:", err);
+        }
+    };
+
+    const openDeleteCommentModal = async (comment) => {
+        if (!confirm("Delete this comment?")) return;
+
+        try {
+            const res = await fetch(`/api/feature-requests/comments/${comment.id}`, {
+                method: "DELETE",
+            });
+
+            if (!res.ok) throw new Error("Delete failed");
+
+            setComments((prev) => prev.filter((c) => c.id !== comment.id));
+
+            updateItem(activeRequest.id, (prev) => ({
+                ...prev,
+                commentCount: (prev.commentCount || 1) - 1,
+            }));
+
+            setActiveRequest((prev) =>
+                prev ? { ...prev, commentCount: (prev.commentCount || 1) - 1 } : prev
+            );
+        } catch (err) {
+            console.error("Delete comment failed:", err);
+        }
     };
 
     const handleConfirmDelete = async () => {
@@ -1169,6 +1227,9 @@ export default function Home() {
                                                                         {c.created_at
                                                                             ? new Date(c.created_at).toLocaleString()
                                                                             : ""}
+                                                                        {c.updated_at && c.updated_at !== c.created_at && (
+                                                                            <span className="ml-1 text-[10px] text-gray-400">(edited)</span>
+                                                                        )}
                                                                     </div>
 
                                                                     {canModifyComment && (
@@ -1179,9 +1240,36 @@ export default function Home() {
                                                                     )}
                                                                 </div>
 
-                                                                <p className="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-wrap">
-                                                                    {c.content || ""}
-                                                                </p>
+                                                                {editingCommentId === c.id ? (
+                                                                    <div className="mt-2 space-y-2">
+                                                                        <textarea
+                                                                            value={editingCommentText}
+                                                                            onChange={(e) => setEditingCommentText(e.target.value)}
+                                                                            rows={3}
+                                                                            className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm"
+                                                                        />
+
+                                                                        <div className="flex gap-2">
+                                                                            <button
+                                                                                onClick={() => saveEditComment(c.id)}
+                                                                                className="text-xs px-3 py-1 rounded bg-purple-600 text-white hover:bg-purple-700"
+                                                                            >
+                                                                                Save
+                                                                            </button>
+
+                                                                            <button
+                                                                                onClick={cancelEditComment}
+                                                                                className="text-xs px-3 py-1 rounded border border-gray-300 dark:border-gray-600"
+                                                                            >
+                                                                                Cancel
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                ) : (
+                                                                    <p className="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-wrap">
+                                                                        {c.content || ""}
+                                                                    </p>
+                                                                )}
                                                             </div>
                                                         );
                                                     })}
