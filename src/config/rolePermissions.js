@@ -1,4 +1,4 @@
-import PERMISSIONS from "./permissions";
+import PERMISSIONS from "./permissions.js";
 
 // Base role permissions
 const PARTNER_PERMISSIONS = [
