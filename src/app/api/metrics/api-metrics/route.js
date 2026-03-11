@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import PERMISSIONS from "@/config/permissions.js";
 import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission.js";
+import {format} from "date-fns";
 
 export async function GET(request) {
 
@@ -15,8 +16,10 @@ export async function GET(request) {
 
         const { searchParams } = new URL(request.url);
 
-        const startDate = searchParams.get("start_date");
-        const endDate = searchParams.get("end_date");
+        // const startDate = searchParams.get("start_date");
+        // const endDate = searchParams.get("end_date");
+        const dateFilter = searchParams.get("dateFilter");
+
         const groupBy = searchParams.get("groupBy");
 
         let query = supabase
@@ -33,8 +36,26 @@ export async function GET(request) {
                 error_rate
             `);
 
-        if (startDate) query = query.gte("date", startDate);
-        if (endDate) query = query.lte("date", endDate);
+        // if (startDate) query = query.gte("date", startDate);
+        // if (endDate) query = query.lte("date", endDate);
+
+        const currentTime = new Date();
+
+        if (dateFilter === "Within Last 12 Hours"){
+            query = query.gte("date", currentTime.getHours() - 12);
+        }
+        if (dateFilter === "Within Last Day"){
+            query = query.gte("date", currentTime.getHours() - 24);
+        }
+        if (dateFilter === "Within Last 3 Days"){
+            query = query.gte("date", currentTime.getDay() - 3);
+        }
+        if (dateFilter === "Within Last 5 Days"){
+            query = query.gte("date", currentTime.getDay() - 5);
+        }
+        if (dateFilter === "Within Last Week"){
+            query = query.gte("date", currentTime.getDay() - 7);
+        }
 
         const { data, error } = await query;
 
@@ -52,10 +73,7 @@ export async function GET(request) {
 
                 if (!row.date) return;
 
-                const bucket =
-                    new Date(row.date)
-                        .toISOString()
-                        .slice(0, 13) + ":00:00.000Z";
+                const bucket = new Date(row.date).toISOString().slice(0, 13) + ":00:00.000Z";
 
                 const requestCount =
                     Number(row.post_count || 0) +
@@ -74,11 +92,9 @@ export async function GET(request) {
 
                 grouped[bucket].total_requests += requestCount;
 
-                grouped[bucket].weighted_rpm +=
-                    Number(row.avg_request_rate || 0) * requestCount;
+                grouped[bucket].weighted_rpm += Number(row.avg_request_rate || 0) * requestCount;
 
-                grouped[bucket].weighted_error +=
-                    Number(row.error_rate || 0) * requestCount;
+                grouped[bucket].weighted_error += Number(row.error_rate || 0) * requestCount;
             });
 
             const result = Object.values(grouped)
@@ -129,8 +145,7 @@ export async function GET(request) {
                 };
             }
 
-            grouped[row.endpoint].total_latency_weighted +=
-                Number(row.avg_latency || 0) * requestCount;
+            grouped[row.endpoint].total_latency_weighted += Number(row.avg_latency || 0) * requestCount;
 
             grouped[row.endpoint].total_requests += requestCount;
         });

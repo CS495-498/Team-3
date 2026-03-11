@@ -59,6 +59,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "contentstack": "^3.26.2",
+    "date-fns": "^4.1.0",
     "dompurify": "^3.3.0",
     "file-type": "^21.3.0",
     "framer-motion": "^12.23.24",
