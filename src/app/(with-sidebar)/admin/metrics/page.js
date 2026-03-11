@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
     LineChart,
     Line,
@@ -26,16 +26,12 @@ import {
 } from "@/components/ui/table";
 
 import { Card, CardContent } from "@/components/ui/card";
-import {Activity} from "lucide-react";
 import {format} from "date-fns";
-import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.jsx";
-import {Switch} from "@/components/ui/switch.jsx";
 
 export default function MetricsPage() {
 
     const [startDate, setStartDate] = useState(undefined);
     const [endDate, setEndDate] = useState(undefined);
-    const [dateFilter, setDateFilter] = useState("");
 
     const [lineData, setLineData] = useState([]);
     const [crudOps, setCrudOps] = useState([]);
@@ -49,15 +45,14 @@ export default function MetricsPage() {
 
         const params = new URLSearchParams();
 
-        // if (startDate instanceof Date && !isNaN(startDate))
-        //     params.set("start_date", startDate.toISOString());
-        //
-        // if (endDate instanceof Date && !isNaN(endDate))
-        //     params.set("end_date", endDate.toISOString());
+        if (startDate instanceof Date && !isNaN(startDate))
+            params.set("start_date", startDate.toISOString());
+
+        if (endDate instanceof Date && !isNaN(endDate))
+            params.set("end_date", endDate.toISOString());
+
         if (groupBy)
             params.set("groupBy", groupBy);
-
-        params.set("dateFilter", dateFilter);
 
         const res = await fetch(`${endpoint}?${params.toString()}`);
         return res.json();
@@ -148,23 +143,6 @@ export default function MetricsPage() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <div className="flex items-center gap-4">
                     <h1 className="text-3xl font-bold">System Metrics</h1>
-                    <div className="mb-6 mt-6 bg-secondary/40 p-4 rounded-lg">
-                        <div className="flex flex-wrap items-center gap-6.5">
-
-                            {/* DATE FILTER */}
-
-                            <Select value={dateFilter || "Within Last 12 Hours"} onValueChange={(v) => setDateFilter(v === "Within Last 12 Hours" ? "" : v)}>
-                                <SelectTrigger className="w-40"></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Within Last 12 Hours">Within Last 12 Hours</SelectItem>
-                                    <SelectItem value="Within Last Day">Within Last Day</SelectItem>
-                                    <SelectItem value="Within Last 3 Days">Within Last 3 Days</SelectItem>
-                                    <SelectItem value="Within Last 5 Days">Within Last 5 Days</SelectItem>
-                                    <SelectItem value="Within Last Week">Within Last Week</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
                 </div>
             </div>
 
