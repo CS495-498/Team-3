@@ -57,43 +57,39 @@ export async function updateSession(request) {
     const { data, error: authError } = await supabase.auth.getUser();
     const user = data?.user;
 
-    if (!user || authError) {
-        if (!pathname.startsWith('/login') && authError) {
-            return NextResponse.redirect(new URL("/login", request.url));
-        }
-        return NextResponse.next();
-    }
-    // 👇 Stop here if not logged in
-    if (!user) return supabaseResponse;
+    if (!user || authError) return NextResponse.redirect(new URL("/login", request.url));
 
-    if (user) {
-        supabaseResponse.headers.set('x-user-id', user.id)
-    }
+    // Optional: add user id header
+    const response = NextResponse.next();
+    response.headers.set("x-user-id", user.id);
 
     // -------------------------
-    // 2. AUTHORIZATION (new)
+    // Dynamic Authorization
     // -------------------------
+    const ROUTE_PERMISSIONS = [
+        { path: "/admin/usermanagement", permission: PERMISSIONS.MANAGE_USERS },
+        { path: "/admin/partnermanagement", permission: PERMISSIONS.MANAGE_PARTNERS },
+        { path: "/admin/logs", permission: PERMISSIONS.VIEW_LOGS },
+        { path: "/admin/metrics", permission: PERMISSIONS.VIEW_METRICS },
+    ];
 
-    // Only guard protected sections
-    if (pathname.startsWith("/admin")) {
+    const matchedRoute = ROUTE_PERMISSIONS.find(route => pathname.startsWith(route.path));
+    if (matchedRoute) {
+        const { permission } = matchedRoute;
+
         const { data: profile, error: profileError } = await supabase
             .from("profiles")
             .select("role")
-            .eq("id", user.id)   // <- now user.id is defined
+            .eq("id", user.id)
             .single();
 
-        if (profileError || !profile) {
-            console.log("Profile error:", profileError);
-            return NextResponse.redirect(new URL("/unauthorized", request.url));
-        }
+        if (profileError || !profile) return NextResponse.redirect(new URL("/unauthorized", request.url));
 
-        const permissions = ROLE_PERMISSIONS[profile.role] || [];
-        if (!permissions.includes(PERMISSIONS.MANAGE_USERS)) {
+        const userPermissions = ROLE_PERMISSIONS[profile.role] || [];
+        if (!userPermissions.includes(permission)) {
             return NextResponse.redirect(new URL("/unauthorized", request.url));
         }
     }
 
-
-
-    return supabaseResponse
+    return response;
 }
