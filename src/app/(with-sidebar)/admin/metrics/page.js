@@ -126,7 +126,7 @@ export default function MetricsPage() {
         [lineData]
     );
 
-    const errorPercentage = Math.round(Number(latest.error_percentage || 0));
+    const errorPercentage = Number(latest.error_percentage || 0).toFixed(2);
 
     const pieData = [
         { name: "Errors", value: errorPercentage },
@@ -193,7 +193,7 @@ export default function MetricsPage() {
                                 dataKey="value"
                                 nameKey="name"
                                 outerRadius={110}
-                                label={({ name, value }) => `${name}: ${value.toFixed(2)}%`}
+                                label={({ name, value }) => `${name}: ${value}%`}
                             >
                                 {pieData.map((entry, index) => (
                                     <Cell
@@ -204,7 +204,7 @@ export default function MetricsPage() {
                             </Pie>
 
                             <Tooltip
-                                formatter={(value) => [`${value.toFixed(2)}%`, "Error Rate"]}
+                                formatter={(value) => [`${value}%`, "Error Rate"]}
                             />
                         </PieChart>
                     </ResponsiveContainer>
