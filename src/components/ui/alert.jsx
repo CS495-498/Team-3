@@ -1,5 +1,7 @@
+"use client";
 import React, { useState, useEffect } from 'react';
 import { Clock, AlertCircle, AlertTriangle, Info, Bell } from 'lucide-react';
+import DOMPurify from 'isomorphic-dompurify';
 
 const AlertTimer = ({ endTime, colorClass, onExpire, noteId }) => {
   const [timeLeft, setTimeLeft] = useState('');
@@ -118,28 +120,30 @@ const AlertCard = ({ note, index, onExpire }) => {
     <div
       className={`group relative w-full rounded-xl border ${config.border} ${config.bg} p-5 mb-4 shadow-sm hover:shadow-md transition-all duration-200 ease-out hover:-translate-y-0.5`}
     >
-      <div className="relative flex items-center gap-4">
-        <div className={`p-2.5 rounded-lg ${config.iconBg} shrink-0`}>
+      <div className="relative flex items-start gap-4">
+        <div className={`p-2.5 rounded-lg ${config.iconBg} shrink-0 mt-0.5`}>
           <Icon className={`w-5 h-5 ${config.iconColor}`} strokeWidth={2} />
         </div>
-        
+
         <div className="flex-1 min-w-0">
-          <div className="font-semibold text-base mb-1 text-gray-900 dark:text-gray-100">
-            {note?.alert_title || "Untitled Notification"}
+          <div className="flex items-start justify-between gap-3 mb-1">
+            <div className="font-semibold text-base text-gray-900 dark:text-gray-100">
+              {note?.alert_title || "Untitled Notification"}
+            </div>
+            <AlertTimer
+              endTime={note?.end_time}
+              colorClass={config.timerBg}
+              onExpire={onExpire}
+              noteId={note?.uid || note?._metadata?.uid}
+            />
           </div>
           {note?.alert_description && (
-            <div className="text-sm leading-relaxed text-gray-700 dark:text-gray-300">
-              {note.alert_description}
-            </div>
+            <div
+              className="text-sm leading-relaxed text-gray-900 dark:text-gray-100 prose prose-sm max-w-none [&_a]:underline max-h-32 overflow-y-auto"
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(note.alert_description) }}
+            />
           )}
         </div>
-
-        <AlertTimer 
-          endTime={note?.end_time} 
-          colorClass={config.timerBg}
-          onExpire={onExpire}
-          noteId={note?.uid || note?._metadata?.uid}
-        />
       </div>
     </div>
   );
