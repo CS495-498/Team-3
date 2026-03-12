@@ -75,6 +75,9 @@ export default function Home() {
     const canManageAll =
         !!user && hasPermission(user.role, PERMISSIONS.MANAGE_ALL_FEATURE_REQUESTS);
 
+    const canManageAllComments =
+        !!user && hasPermission(user.role, PERMISSIONS.MANAGE_ALL_COMMENTS);
+
     const canPublish =
         !!user && hasPermission(user.role, PERMISSIONS.PUBLISH_FEATURE_REQUESTS);
 
@@ -93,6 +96,9 @@ export default function Home() {
     const [commentsLoading, setCommentsLoading] = useState(false);
     const [commentText, setCommentText] = useState("");
     const [commentPostError, setCommentPostError] = useState("");
+    const [editingCommentId, setEditingCommentId] = useState(null);
+    const [editingCommentText, setEditingCommentText] = useState("");
+    const [deleteCommentId, setDeleteCommentId] = useState(null);
 
     // Add/Edit RTE modal
     const [rteModalOpen, setRteModalOpen] = useState(false);
@@ -225,6 +231,11 @@ export default function Home() {
     const sameUser = (feature_request_user_id, user_id) =>
         user_id === feature_request_user_id;
 
+    const isCommentOwner = (commentUserId) => {
+        if (!user) return false;
+        return user.id === commentUserId;
+    };
+
     const isImage = (url) => {
         if (!url) return false;
         const path = url.split("?")[0];
@@ -324,6 +335,69 @@ export default function Home() {
     const openDeleteModal = (req) => {
         setSelectedItem(req);
         setIsDeleteOpen(true);
+    };
+
+    const handleEditComment = (comment) => {
+        setEditingCommentId(comment.id);
+        setEditingCommentText(comment.content);
+    };
+
+    const cancelEditComment = () => {
+        setEditingCommentId(null);
+        setEditingCommentText("");
+    };
+
+    const saveEditComment = async (commentId) => {
+        const text = editingCommentText.trim();
+        if (!text) return;
+
+        try {
+            const res = await fetch(`/api/feature-requests/comments/${commentId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ content: text }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) throw new Error(data.error);
+
+            setComments((prev) =>
+                prev.map((c) =>
+                    c.id === commentId ? { ...c, content: text } : c
+                )
+            );
+
+            setEditingCommentId(null);
+            setEditingCommentText("");
+        } catch (err) {
+            console.error("Failed to edit comment:", err);
+        }
+    };
+
+    const openDeleteCommentModal = async (comment) => {
+        if (!confirm("Delete this comment?")) return;
+
+        try {
+            const res = await fetch(`/api/feature-requests/comments/${comment.id}`, {
+                method: "DELETE",
+            });
+
+            if (!res.ok) throw new Error("Delete failed");
+
+            setComments((prev) => prev.filter((c) => c.id !== comment.id));
+
+            updateItem(activeRequest.id, (prev) => ({
+                ...prev,
+                commentCount: (prev.commentCount || 1) - 1,
+            }));
+
+            setActiveRequest((prev) =>
+                prev ? { ...prev, commentCount: (prev.commentCount || 1) - 1 } : prev
+            );
+        } catch (err) {
+            console.error("Delete comment failed:", err);
+        }
     };
 
     const handleConfirmDelete = async () => {
@@ -674,34 +748,31 @@ export default function Home() {
                         return (
                             <li
                                 key={req.id}
-                                className={`flex items-center py-4 px-4 hover:bg-gray-100 dark:hover:bg-gray-800 ${
-                                    isCompleted ? "opacity-60 dark:opacity-50" : ""
-                                }`}
+                                className={`flex items-center py-4 px-4 hover:bg-gray-100 dark:hover:bg-gray-800 ${isCompleted ? "opacity-60 dark:opacity-50" : ""
+                                    }`}
                             >
                                 <div className="flex flex-col items-center space-y-2 mr-4">
                                     <button
                                         type="button"
-                                        className={`p-1 rounded-md transition ${
-                                            voteState === "up"
-                                                ? "text-green-600"
-                                                : "text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
-                                        }`}
+                                        className={`p-1 rounded-md transition ${voteState === "up"
+                                            ? "text-green-600"
+                                            : "text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
+                                            }`}
                                         onClick={() => handleVote(req.id, "up")}
                                     >
                                         <ChevronsUp className="w-5 h-5" />
                                     </button>
 
                                     <span className="text-sm font-medium text-gray-800 dark:text-gray-50">
-                    {getEffectiveVoteCount(req)}
-                  </span>
+                                        {getEffectiveVoteCount(req)}
+                                    </span>
 
                                     <button
                                         type="button"
-                                        className={`p-1 rounded-md transition ${
-                                            voteState === "down"
-                                                ? "text-red-600"
-                                                : "text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
-                                        }`}
+                                        className={`p-1 rounded-md transition ${voteState === "down"
+                                            ? "text-red-600"
+                                            : "text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
+                                            }`}
                                         onClick={() => handleVote(req.id, "down")}
                                     >
                                         <ChevronsDown className="w-5 h-5" />
@@ -743,18 +814,17 @@ export default function Home() {
 
                                         {req.status && (
                                             <span
-                                                className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                                                    req.status === "open"
-                                                        ? "bg-blue-100 text-blue-700"
-                                                        : req.status === "in_progress"
-                                                            ? "bg-yellow-100 text-yellow-700"
-                                                            : req.status === "completed"
-                                                                ? "bg-green-100 text-green-700"
-                                                                : "bg-gray-200 text-gray-700"
-                                                }`}
+                                                className={`px-2 py-0.5 text-xs font-medium rounded-full ${req.status === "open"
+                                                    ? "bg-blue-100 text-blue-700"
+                                                    : req.status === "in_progress"
+                                                        ? "bg-yellow-100 text-yellow-700"
+                                                        : req.status === "completed"
+                                                            ? "bg-green-100 text-green-700"
+                                                            : "bg-gray-200 text-gray-700"
+                                                    }`}
                                             >
-                        {String(req.status).replace("_", " ")}
-                      </span>
+                                                {String(req.status).replace("_", " ")}
+                                            </span>
                                         )}
 
                                         <span className="text-sm text-gray-500">— {req.username}</span>
@@ -936,8 +1006,8 @@ export default function Home() {
 
                                                         {displayName ? (
                                                             <span className="text-xs text-gray-500 dark:text-gray-300 truncate max-w-[40ch]">
-                                {displayName}
-                              </span>
+                                                                {displayName}
+                                                            </span>
                                                         ) : null}
                                                     </div>
                                                 ) : (
@@ -1024,18 +1094,17 @@ export default function Home() {
                                             <div className="mt-1 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                                                 {activeRequest.status && (
                                                     <span
-                                                        className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                                                            activeRequest.status === "open"
-                                                                ? "bg-blue-100 text-blue-700"
-                                                                : activeRequest.status === "in_progress"
-                                                                    ? "bg-yellow-100 text-yellow-700"
-                                                                    : activeRequest.status === "completed"
-                                                                        ? "bg-green-100 text-green-700"
-                                                                        : "bg-gray-200 text-gray-700"
-                                                        }`}
+                                                        className={`px-2 py-0.5 text-xs font-medium rounded-full ${activeRequest.status === "open"
+                                                            ? "bg-blue-100 text-blue-700"
+                                                            : activeRequest.status === "in_progress"
+                                                                ? "bg-yellow-100 text-yellow-700"
+                                                                : activeRequest.status === "completed"
+                                                                    ? "bg-green-100 text-green-700"
+                                                                    : "bg-gray-200 text-gray-700"
+                                                            }`}
                                                     >
-                            {String(activeRequest.status).replace("_", " ")}
-                          </span>
+                                                        {String(activeRequest.status).replace("_", " ")}
+                                                    </span>
                                                 )}
                                                 <span>— {activeRequest.username}</span>
                                             </div>
@@ -1092,9 +1161,9 @@ export default function Home() {
                                                 </h4>
 
                                                 <span className="text-xs text-gray-400">
-                          Created:{" "}
+                                                    Created:{" "}
                                                     {new Date(activeRequest.created_at).toLocaleString()}
-                        </span>
+                                                </span>
                                             </div>
 
                                             <div className="mt-4">
@@ -1104,19 +1173,19 @@ export default function Home() {
                                                     </label>
                                                     {commentPostError && (
                                                         <span className="text-sm text-red-500">
-                              {commentPostError}
-                            </span>
+                                                            {commentPostError}
+                                                        </span>
                                                     )}
                                                 </div>
 
                                                 <div className="mt-2">
-                          <textarea
-                              value={commentText}
-                              onChange={(e) => setCommentText(e.target.value)}
-                              rows={4}
-                              placeholder="Write a comment…"
-                              className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-purple-300"
-                          />
+                                                    <textarea
+                                                        value={commentText}
+                                                        onChange={(e) => setCommentText(e.target.value)}
+                                                        rows={4}
+                                                        placeholder="Write a comment…"
+                                                        className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-purple-300"
+                                                    />
                                                 </div>
 
                                                 <div className="mt-3 flex justify-end py-4">
@@ -1144,20 +1213,63 @@ export default function Home() {
                                                         const displayName =
                                                             c.username || c.user?.username || c.user_id || "User";
 
+                                                        const canModifyComment =
+                                                            isCommentOwner(c.user_id) || canManageAllComments;
+
                                                         return (
                                                             <div
                                                                 key={c.id}
                                                                 className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-800"
                                                             >
-                                                                <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                                                                    {displayName} •{" "}
-                                                                    {c.created_at
-                                                                        ? new Date(c.created_at).toLocaleString()
-                                                                        : ""}
+                                                                <div className="flex items-start justify-between">
+                                                                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                                                                        {displayName} •{" "}
+                                                                        {c.created_at
+                                                                            ? new Date(c.created_at).toLocaleString()
+                                                                            : ""}
+                                                                        {c.updated_at && c.updated_at !== c.created_at && (
+                                                                            <span className="ml-1 text-[10px] text-gray-400">(edited)</span>
+                                                                        )}
+                                                                    </div>
+
+                                                                    {canModifyComment && (
+                                                                        <CardDropdown
+                                                                            onEdit={() => handleEditComment(c)}
+                                                                            onDelete={() => openDeleteCommentModal(c)}
+                                                                        />
+                                                                    )}
                                                                 </div>
-                                                                <p className="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-wrap">
-                                                                    {c.content || ""}
-                                                                </p>
+
+                                                                {editingCommentId === c.id ? (
+                                                                    <div className="mt-2 space-y-2">
+                                                                        <textarea
+                                                                            value={editingCommentText}
+                                                                            onChange={(e) => setEditingCommentText(e.target.value)}
+                                                                            rows={3}
+                                                                            className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm"
+                                                                        />
+
+                                                                        <div className="flex gap-2">
+                                                                            <button
+                                                                                onClick={() => saveEditComment(c.id)}
+                                                                                className="text-xs px-3 py-1 rounded bg-purple-600 text-white hover:bg-purple-700"
+                                                                            >
+                                                                                Save
+                                                                            </button>
+
+                                                                            <button
+                                                                                onClick={cancelEditComment}
+                                                                                className="text-xs px-3 py-1 rounded border border-gray-300 dark:border-gray-600"
+                                                                            >
+                                                                                Cancel
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                ) : (
+                                                                    <p className="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-wrap">
+                                                                        {c.content || ""}
+                                                                    </p>
+                                                                )}
                                                             </div>
                                                         );
                                                     })}
@@ -1170,8 +1282,8 @@ export default function Home() {
                                         <div className="flex items-center gap-2 text-gray-600 dark:text-gray-200">
                                             <MessageSquare className="w-5 h-5" />
                                             <span className="text-sm">
-                        {activeRequest.commentCount || 0}
-                      </span>
+                                                {activeRequest.commentCount || 0}
+                                            </span>
                                         </div>
 
                                         <div
