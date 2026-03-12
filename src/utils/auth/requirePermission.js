@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
-import ROLE_PERMISSIONS from "@/config/rolePermissions";
+import { NextResponse } from "next/server.js";
+import ROLE_PERMISSIONS from "@/config/rolePermissions.js";
 
 export default function requirePermission(role, permission) {
   const permissions = ROLE_PERMISSIONS[role];
