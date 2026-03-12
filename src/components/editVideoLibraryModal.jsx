@@ -15,7 +15,6 @@ export default function EditVideoModal({ isOpen, closeModal, onSave, item }) {
             link: formData.get("link") || "",
             video_file: formData.get("video_file")?.size > 0 ? formData.get("video_file") : null,
             date_posted: formData.get("date_posted") || "",
-            se_name: formData.get("se_name") || "",
             thumbnail: formData.get("thumbnail")?.size > 0 ? formData.get("thumbnail") : null,
         };
 
@@ -132,17 +131,6 @@ export default function EditVideoModal({ isOpen, closeModal, onSave, item }) {
 
 
                                     <div className="space-y-4">
-                                        <div>
-                                            <label className="block text-sm font-medium dark:text-gray-200 mb-1">
-                                                SE Name
-                                            </label>
-                                            <input
-                                                name="se_name"
-                                                defaultValue={item?.se_name || ""}
-                                                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none transition"
-                                            />
-                                        </div>
-
                                         <div>
                                             <label className="block text-sm font-medium dark:text-gray-200 mb-1">
                                                 Description
