@@ -14,7 +14,6 @@ export default function EditVideoModal({ isOpen, closeModal, onSave, item }) {
             description: formData.get("description"),
             link: formData.get("link") || "",
             video_file: formData.get("video_file")?.size > 0 ? formData.get("video_file") : null,
-            date_posted: formData.get("date_posted") || "",
             thumbnail: formData.get("thumbnail")?.size > 0 ? formData.get("thumbnail") : null,
         };
 
@@ -63,7 +62,7 @@ export default function EditVideoModal({ isOpen, closeModal, onSave, item }) {
                                 {/* Form */}
                                 <form onSubmit={handleSubmit} className="space-y-5">
                                     {/* Row 1: Title + Date */}
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 gap-4">
                                         <div>
                                             <label className="block text-sm font-medium dark:text-gray-200 mb-1">
                                                 Title
@@ -75,24 +74,14 @@ export default function EditVideoModal({ isOpen, closeModal, onSave, item }) {
                                                 required
                                             />
                                         </div>
-                                        <div>
-                                            <label className="block text-sm font-medium dark:text-gray-200 mb-1">
-                                                Date Posted
-                                            </label>
-                                            <input
-                                                name="date_posted"
-                                                type="date"
-                                                defaultValue={item?.date_posted ? new Date(item.date_posted).toISOString().slice(0, 10) : ""}
-                                                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none transition"
-                                            />
-                                        </div>
                                     </div>
 
                                     <div className="flex items-center gap-4">
                                         <div className="flex-1">
                                             <div>
                                                 <label className="block text-sm font-medium dark:text-gray-200 mb-1">
-                                                    Video File
+                                                    Video File <small className="text-gray-600">(File will remain
+                                                    unchanged if left blank)</small>
                                                 </label>
                                                 <input
                                                     name="video_file"
@@ -104,7 +93,6 @@ export default function EditVideoModal({ isOpen, closeModal, onSave, item }) {
                           hover:file:bg-gray-500 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700
                           rounded-lg px-2 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500
                           outline-none transition"/>
-                                                <small className="text-gray-600">File will remain unchanged if left blank.</small>
                                             </div>
                                         </div>
                                         <div className="relative flex items-center justify-center w-12">
@@ -114,7 +102,6 @@ export default function EditVideoModal({ isOpen, closeModal, onSave, item }) {
                                                 or
                                             </span>
                                         </div>
-
                                         <div className="flex-1">
                                             <label className="block text-sm font-medium dark:text-gray-200 mb-1">
                                                 Video URL
@@ -124,7 +111,7 @@ export default function EditVideoModal({ isOpen, closeModal, onSave, item }) {
                                                 type="url"
                                                 defaultValue={item?.video_url || ""}
                                                 placeholder="https://youtube.com/watch?v=VIDEO"
-                                                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                                                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3.5 focus:ring-2 focus:ring-indigo-500 outline-none transition"
                                             />
                                         </div>
                                     </div>
