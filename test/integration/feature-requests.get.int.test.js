@@ -43,7 +43,9 @@ describe("Integration: GET /api/feature-requests", function () {
             const { status, json } = await client.request(url, { method: "GET" });
 
             expect(status).to.equal(200);
-            expect(json).to.be.an("array");
+            expect(json).to.be.an("object");
+            expect(json).to.have.property("featureRequests");
+            expect(json.featureRequests).to.be.an("array");
         });
     }
 
