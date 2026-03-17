@@ -59,6 +59,19 @@ export async function updateSession(request) {
 
     if (!user || authError) return NextResponse.redirect(new URL("/login", request.url));
 
+    const emailDomain = user.email.split("@")[1];
+
+    const { data: domainRecord } = await supabase
+        .from("signup_email_domains")
+        .select("active")
+        .eq("domain", emailDomain)
+        .single();
+
+    if (!domainRecord?.active) {
+        // Sign them out immediately
+        return NextResponse.redirect(new URL("/login?error=disabled", request.url));
+    }
+
     // Optional: add user id header
     const response = NextResponse.next();
     response.headers.set("x-user-id", user.id);

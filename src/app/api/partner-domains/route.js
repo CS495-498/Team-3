@@ -33,7 +33,7 @@ async function handlePost(req) {
   if (error2) return error2;
 
   const body = await req.json();
-  const { domain, type, reason } = body;
+  const { domain, type, reason, active } = body;
 
   if (!domain || !type) {
     return NextResponse.json({ error: "Domain and type are required" }, { status: 400 });
@@ -47,6 +47,7 @@ async function handlePost(req) {
         domain,
         type,
         reason: reason || null,
+        active: active ?? true
       },
     ])
     .select()
@@ -58,52 +59,6 @@ async function handlePost(req) {
   }
 
   return NextResponse.json(data, { status: 201 });
-}
-
-// PUT /api/partner-domains/:id
-async function handlePut(req, { params }) {
-  const supabase = await createClient();
-  const { id } = params;
-
-  const { error: error2, profile } = await requireAuthWithPermission(PERMISSIONS.MANAGE_PARTNERS);
-  if (error2) return error2;
-
-  const { domain, type, reason } = await req.json();
-
-  if (!domain || !type) {
-    return NextResponse.json({ error: "Domain and type are required" }, { status: 400 });
-  }
-
-  const { data, error } = await supabase
-    .from("signup_email_domains")
-    .update({ domain, type, reason: reason || null })
-    .eq("id", id)
-    .select()
-    .single();
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  return NextResponse.json(data, { status: 200 });
-}
-
-// DELETE /api/partner-domains/:id
-async function handleDelete(req, { params }) {
-  const supabase = await createClient();
-  const { id } = params;
-
-  const { error: error2, profile } = await requireAuthWithPermission(PERMISSIONS.MANAGE_PARTNERS);
-  if (error2) return error2;
-
-  const { data, error } = await supabase
-    .from("signup_email_domains")
-    .delete()
-    .eq("id", id)
-    .select()
-    .single();
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  return NextResponse.json(data, { status: 200 });
 }
 
 

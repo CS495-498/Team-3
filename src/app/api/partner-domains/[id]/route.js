@@ -12,7 +12,7 @@ async function handlePut(req, { params }) {
   const { error: error2, profile } = await requireAuthWithPermission(PERMISSIONS.MANAGE_PARTNERS);
   if (error2) return error2;
 
-  const { domain, type, reason } = await req.json();
+  const { domain, type, reason, active } = await req.json();
 
   if (!domain || !type) {
     return NextResponse.json({ error: "Domain and type are required" }, { status: 400 });
@@ -20,7 +20,12 @@ async function handlePut(req, { params }) {
 
   const { data, error } = await supabase
     .from("signup_email_domains")
-    .update({ domain, type, reason: reason || null })
+    .update({
+      domain,
+      type,
+      reason: reason || null,
+      active
+    })
     .eq("id", id)
     .select()
     .single();

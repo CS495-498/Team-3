@@ -12,11 +12,13 @@ export default function EditPartnerDomainModal({ domain, open, onOpenChange, onS
   const [formReason, setFormReason] = useState(domain?.reason || "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [formActive, setFormActive] = useState(domain?.active ?? true);
 
   useEffect(() => {
     setFormDomain(domain?.domain || "");
     setFormType(domain?.type || "allow");
     setFormReason(domain?.reason || "");
+    setFormActive(domain?.active ?? true);
   }, [domain]);
 
   const handleSave = async () => {
@@ -33,6 +35,7 @@ export default function EditPartnerDomainModal({ domain, open, onOpenChange, onS
           domain: formDomain,
           type: formType,
           reason: formReason,
+          active: formActive
         }),
       });
       if (!res.ok) {
@@ -56,30 +59,48 @@ export default function EditPartnerDomainModal({ domain, open, onOpenChange, onS
         </DialogHeader>
 
         <div className="space-y-4 mt-2">
-          <div>
-            <label className="block mb-1 text-sm font-medium">Domain</label>
-            <Input
-              placeholder="example.com"
-              value={formDomain}
-              onChange={(e) => setFormDomain(e.target.value)}
-            />
-          </div>
+
+          {!domain?.id && (
+            <div>
+              <label className="block mb-1 text-sm font-medium">Domain</label>
+              <Input
+                placeholder="example.com"
+                value={formDomain}
+                onChange={(e) => setFormDomain(e.target.value)}
+              />
+            </div>
+          )}
+
+          {!domain?.id && (
+            <div>
+              <label className="block mb-1 text-sm font-medium">Allow Signups</label>
+              <Select
+                value={formType}
+                onValueChange={(v) => setFormType(v)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="allow">Yes</SelectItem>
+                  <SelectItem value="deny">No</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {!domain?.id && (
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={formActive}
+                onCheckedChange={setFormActive}
+              />
+              <span className="text-sm">Active</span>
+            </div>
+          )}
 
           <div>
-            <label className="block mb-1 text-sm font-medium">Type</label>
-            <Select value={formType} onValueChange={setFormType}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="allow">Allow</SelectItem>
-                <SelectItem value="deny">Deny</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <label className="block mb-1 text-sm font-medium">Reason (optional)</label>
+            <label className="block mb-1 text-sm font-medium">Reason</label>
             <Input
               placeholder="Reason or notes"
               value={formReason}
@@ -87,7 +108,6 @@ export default function EditPartnerDomainModal({ domain, open, onOpenChange, onS
             />
           </div>
 
-          {error && <p className="text-destructive text-sm">{error}</p>}
         </div>
 
         <DialogFooter className="mt-4 flex justify-end space-x-2">
