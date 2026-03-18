@@ -7,6 +7,7 @@ const PERMISSIONS = {
 
 
   UPLOAD_NOTIFICATIONS: "upload_notifications",
+  MANAGE_BULLETIN_BOARD: "manage_bulletin_board",
 
   // Content publishing
   PUBLISH_DEMO_INSTRUCTIONS: "publish_demo_instructions",

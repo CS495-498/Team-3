@@ -18,6 +18,7 @@ import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor
 export default function Home() {
     const { user } = useUser();
     const canUploadNotifications = user && hasPermission(user.role, PERMISSIONS.UPLOAD_NOTIFICATIONS);
+    const canManageBulletinBoard = user && hasPermission(user.role, PERMISSIONS.MANAGE_BULLETIN_BOARD);
 
     const [entry, setEntry] = useState({});
     const [isLoading, setIsLoading] = useState(true);
@@ -25,9 +26,12 @@ export default function Home() {
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState("");
 
+    const [showBulletinEditor, setShowBulletinEditor] = useState(false);
+    const [isSavingBulletin, setIsSavingBulletin] = useState(false);
+    const bulletinEditorRef = useRef(null);
+
     const expiredAlertsRef = useRef(new Set());
     const deleteTimeoutRef = useRef(null);
-    const editorRef = useRef(null);
 
     const getContent = async () => {
         console.log("Fetching homepage content...");
@@ -124,8 +128,7 @@ export default function Home() {
                 json_data[key] = value instanceof File && value.size > 0 ? value.name : value;
             }
 
-            const rawHtml = editorRef.current?.getHTML() ?? "";
-            const alert_description = DOMPurify.sanitize(rawHtml);
+            const alert_description = json_data.alert_description ?? "";
 
             const newNotification = {
                 alert_title: json_data.alert_title,
@@ -166,6 +169,40 @@ export default function Home() {
         }
     };
 
+    const handleBulletinSave = async () => {
+        if (!entry?.uid) return;
+        setIsSavingBulletin(true);
+        try {
+            const rawHtml = bulletinEditorRef.current?.getHTML() ?? "";
+            const bulletin_board = DOMPurify.sanitize(rawHtml);
+
+            const response = await fetch("/api/update-bulletin-board", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    entryUid: entry.uid,
+                    bulletin_board,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to save bulletin board");
+            }
+
+            const result = await response.json();
+            setEntry(prev => ({ ...prev, bulletin_board: result.entry.bulletin_board }));
+            setShowBulletinEditor(false);
+            setToastMessage("Bulletin board updated!");
+            setShowToast(true);
+            setTimeout(() => setShowToast(false), 2000);
+        } catch (error) {
+            console.error("Bulletin board save failed:", error);
+            alert("Failed to save bulletin board.");
+        } finally {
+            setIsSavingBulletin(false);
+        }
+    };
+
     if (isLoading) {
         return <LoadingIndicator label="Loading dashboard..." />;
     }
@@ -180,16 +217,26 @@ export default function Home() {
             <div className="flex flex-col w-full max-w-6xl mx-auto justify-start items-start relative z-10 p-8">
                 <div className="flex flex-wrap items-start justify-between w-full mb-10">
                     <h1 className="text-4xl font-bold mt-10">Contentstack Portal</h1>
-                    {canUploadNotifications && (
-                        <button
-                            type="button"
-                            onClick={() => setModalOpen(true)}
-                            className="mt-10 text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition"
-                        >
-                            Add Notification
-                        </button>
-                    )}
-
+                    <div className="flex items-center gap-3 mt-10">
+                        {canManageBulletinBoard && (
+                            <button
+                                type="button"
+                                onClick={() => setShowBulletinEditor(!showBulletinEditor)}
+                                className="text-white bg-gradient-to-r from-slate-600 to-slate-800 hover:from-slate-700 hover:to-slate-900 focus:ring-4 focus:outline-none focus:ring-slate-300 font-medium rounded-md text-sm px-4 py-2 transition"
+                            >
+                                Edit Bulletin Board
+                            </button>
+                        )}
+                        {canUploadNotifications && (
+                            <button
+                                type="button"
+                                onClick={() => setModalOpen(true)}
+                                className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition"
+                            >
+                                Add Notification
+                            </button>
+                        )}
+                    </div>
 
                     <AnimatePresence>
                         {modalOpen && (
@@ -209,13 +256,13 @@ export default function Home() {
 
                                 <div className="fixed inset-0 flex items-center justify-center p-6">
                                     <motion.div
-                                        className="w-full max-w-2xl mx-auto"
+                                        className="w-full max-w-xl mx-auto"
                                         initial={{ opacity: 0, scale: 0.96, y: -8 }}
                                         animate={{ opacity: 1, scale: 1, y: 0 }}
                                         exit={{ opacity: 0, scale: 0.96, y: -8 }}
                                         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
                                     >
-                                        <Dialog.Panel className="w-full rounded-xl bg-white dark:bg-gray-700 p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
+                                        <Dialog.Panel className="w-full rounded-xl bg-white dark:bg-gray-700 p-8 shadow-2xl">
                                             <Dialog.Title className="font-bold text-2xl mb-4">Add An Alert</Dialog.Title>
 
                                             <form onSubmit={handleSubmit} className="space-y-5 w-full">
@@ -270,9 +317,12 @@ export default function Home() {
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                                                         Alert Description
                                                     </label>
-                                                    <div className="w-full min-h-[300px] rounded-md border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-1">
-                                                        <SimpleEditor html="" editorRef={editorRef} />
-                                                    </div>
+                                                    <textarea
+                                                        name="alert_description"
+                                                        rows={4}
+                                                        placeholder="Enter alert description"
+                                                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition resize-none"
+                                                    />
                                                 </div>
 
                                                 <div className="flex justify-end gap-3 pt-4">
@@ -298,19 +348,47 @@ export default function Home() {
                         )}
                     </AnimatePresence>
                 </div>
-                <div className="w-full mb-24 mt-3">
-                    {visibleAlerts.length ? (
-                        visibleAlerts.map((note, idx) => (
-                            <AlertCard
-                                key={note.uid || note._metadata?.uid || idx}
-                                note={note}
-                                index={idx}
-                                onExpire={handleExpiredAlert}
+
+                {showBulletinEditor && canManageBulletinBoard && (
+                    <div className="w-full mb-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 p-5">
+                        <h2 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">
+                            Edit Bulletin Board
+                        </h2>
+                        <div className="w-full min-h-[300px] rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 p-1">
+                            <SimpleEditor
+                                html={entry?.bulletin_board ?? ""}
+                                editorRef={bulletinEditorRef}
                             />
-                        ))
-                    ) : (
-                        <div className="text-gray-500 italic mt-3">No notifications</div>
-                    )}
+                        </div>
+                        <div className="flex justify-end gap-3 mt-4">
+                            <button
+                                type="button"
+                                onClick={() => setShowBulletinEditor(false)}
+                                className="px-5 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleBulletinSave}
+                                disabled={isSavingBulletin}
+                                className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                                {isSavingBulletin ? "Saving..." : "Save"}
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                <div className="w-full mb-24 mt-3">
+                    {visibleAlerts.map((note, idx) => (
+                        <AlertCard
+                            key={note.uid || note._metadata?.uid || idx}
+                            note={note}
+                            index={idx}
+                            onExpire={handleExpiredAlert}
+                        />
+                    ))}
                     {hasMore && (
                         <div
                             ref={ref}
@@ -326,6 +404,19 @@ export default function Home() {
                                 Showing {visibleAlerts.length} of {alerts.length} alerts
                             </p>
                         </div>
+                    )}
+                    {entry?.bulletin_board ? (
+                        <div className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 mt-4 shadow-sm">
+                            <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">Bulletin Board</h2>
+                            <div
+                                className="prose prose-sm max-w-none dark:prose-invert [&_a]:underline"
+                                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(entry.bulletin_board) }}
+                            />
+                        </div>
+                    ) : (
+                        !visibleAlerts.length && (
+                            <div className="text-gray-500 italic mt-3">No notifications</div>
+                        )
                     )}
                 </div>
             </div>
