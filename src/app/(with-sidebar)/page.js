@@ -350,7 +350,7 @@ export default function Home() {
                 </div>
 
                 {showBulletinEditor && canManageBulletinBoard && (
-                    <div className="w-full mb-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 p-5">
+                    <div className="animate-slide-fade-from-top w-full mb-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 p-5">
                         <h2 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">
                             Edit Bulletin Board
                         </h2>
