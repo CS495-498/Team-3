@@ -5,6 +5,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Info } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function EditPartnerDomainModal({ domain, open, onOpenChange, onSaved }) {
   const [formDomain, setFormDomain] = useState(domain?.domain || "");
@@ -72,30 +80,53 @@ export default function EditPartnerDomainModal({ domain, open, onOpenChange, onS
           )}
 
           {!domain?.id && (
-            <div>
-              <label className="block mb-1 text-sm font-medium">Allow Signups</label>
-              <Select
-                value={formType}
-                onValueChange={(v) => setFormType(v)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="allow">Yes</SelectItem>
-                  <SelectItem value="deny">No</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Allow Signups</span>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground cursor-pointer" />
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    <p>
+                      Controls whether users with this email domain can create new accounts.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+
+              <Switch
+                checked={formType === "allow"}
+                onCheckedChange={(value) =>
+                  setFormType(value ? "allow" : "deny")
+                }
+              />
             </div>
           )}
 
           {!domain?.id && (
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Active</span>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground cursor-pointer" />
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    <p>
+                      Determines whether users with this domain can log in and use the platform.
+                      Disabling this will block access for existing accounts.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+
               <Switch
                 checked={formActive}
                 onCheckedChange={setFormActive}
               />
-              <span className="text-sm">Active</span>
             </div>
           )}
 
