@@ -1,7 +1,21 @@
 import * as cheerio from 'cheerio';
+import { lookup } from 'dns/promises';
 import { readFile } from 'fs/promises';
+import { isIP } from 'net';
 import { join } from 'path';
 import { withLogging } from '@/utils/withLogging';
+import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
+import PERMISSIONS from "@/config/permissions";
+
+const ALLOWED_PORTS = new Set(['', '80', '443']);
+const BLOCKED_HOSTNAMES = new Set([
+  'localhost',
+  '127.0.0.1',
+  '0.0.0.0',
+  '::1',
+  '169.254.169.254',
+  'metadata.google.internal',
+]);
 
 function normalizeUrl(url) {
   if (!url || typeof url !== 'string') {
@@ -25,6 +39,86 @@ function normalizeUrl(url) {
   }
 }
 
+function isPrivateIpv4(address) {
+  const parts = address.split('.').map(Number);
+  if (parts.length !== 4 || parts.some(Number.isNaN)) return true;
+
+  const [a, b] = parts;
+  return (
+    a === 0 ||
+    a === 10 ||
+    a === 127 ||
+    (a === 100 && b >= 64 && b <= 127) ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    (a === 198 && (b === 18 || b === 19)) ||
+    a >= 224
+  );
+}
+
+function isPrivateIpv6(address) {
+  const normalized = address.toLowerCase();
+
+  return (
+    normalized === '::' ||
+    normalized === '::1' ||
+    normalized.startsWith('fc') ||
+    normalized.startsWith('fd') ||
+    normalized.startsWith('fe8') ||
+    normalized.startsWith('fe9') ||
+    normalized.startsWith('fea') ||
+    normalized.startsWith('feb') ||
+    normalized.startsWith('::ffff:127.') ||
+    normalized.startsWith('::ffff:10.') ||
+    normalized.startsWith('::ffff:169.254.') ||
+    normalized.startsWith('::ffff:172.16.') ||
+    normalized.startsWith('::ffff:172.17.') ||
+    normalized.startsWith('::ffff:172.18.') ||
+    normalized.startsWith('::ffff:172.19.') ||
+    normalized.startsWith('::ffff:172.2') ||
+    normalized.startsWith('::ffff:172.30.') ||
+    normalized.startsWith('::ffff:172.31.') ||
+    normalized.startsWith('::ffff:192.168.')
+  );
+}
+
+function isPrivateAddress(address) {
+  const version = isIP(address);
+  if (version === 4) return isPrivateIpv4(address);
+  if (version === 6) return isPrivateIpv6(address);
+  return true;
+}
+
+async function assertSafeOutboundUrl(url) {
+  const hostname = url.hostname.toLowerCase();
+
+  if (url.username || url.password) {
+    throw new Error('URLs with embedded credentials are not allowed');
+  }
+
+  if (!ALLOWED_PORTS.has(url.port)) {
+    throw new Error('Only standard HTTP(S) ports are allowed');
+  }
+
+  if (
+    BLOCKED_HOSTNAMES.has(hostname) ||
+    hostname.endsWith('.local') ||
+    hostname.endsWith('.internal')
+  ) {
+    throw new Error('Hostname is not allowed');
+  }
+
+  const addresses = await lookup(hostname, { all: true, verbatim: true });
+  if (!addresses.length) {
+    throw new Error('Hostname did not resolve');
+  }
+
+  if (addresses.some(({ address }) => isPrivateAddress(address))) {
+    throw new Error('Private network addresses are not allowed');
+  }
+}
+
 async function getDefaultImage() {
   try {
     const imagePath = join(process.cwd(), 'public', 'default-demo-thumbnail.webp');
@@ -45,6 +139,12 @@ async function getDefaultImage() {
 }
 
 async function handlePOST(request) {
+  const { error } = await requireAuthWithPermission(
+    PERMISSIONS.UPLOAD_DEMO_WEBSITES
+  );
+
+  if (error) return error;
+
   try {
     const { url } = await request.json();
     
@@ -55,9 +155,10 @@ async function handlePOST(request) {
     let normalizedUrl;
     try {
       normalizedUrl = normalizeUrl(url);
+      await assertSafeOutboundUrl(new URL(normalizedUrl));
     } catch (e) {
       return Response.json({ 
-        error: 'Invalid URL format',
+        error: 'Invalid or disallowed URL',
         details: e.message 
       }, { status: 400 });
     }
@@ -107,7 +208,10 @@ async function handlePOST(request) {
     }
 
     try {
-      const imageResponse = await fetch(ogImage, {
+      const safeImageUrl = normalizeUrl(ogImage);
+      await assertSafeOutboundUrl(new URL(safeImageUrl));
+
+      const imageResponse = await fetch(safeImageUrl, {
         signal: AbortSignal.timeout(10000)
       });
       
@@ -124,7 +228,7 @@ async function handlePOST(request) {
         success: true,
         screenshot: base64,
         contentType: contentType,
-        imageUrl: ogImage,
+        imageUrl: safeImageUrl,
         isDefault: false
       });
     } catch (imageError) {
