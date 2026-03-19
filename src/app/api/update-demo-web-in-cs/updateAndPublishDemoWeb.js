@@ -1,5 +1,13 @@
 export async function updateAndPublishDemoWeb(entryUid, demos, fetchFunc = fetch) {
   try {
+    if (!entryUid) {
+      return { status: 422, error: "Missing entryUid" };
+    }
+
+    if (!Array.isArray(demos)) {
+      return { status: 422, error: "Missing demos array" };
+    }
+
     // Step 1: Update the entry
     const updateResponse = await fetchFunc(
       `https://api.contentstack.io/v3/content_types/custom_demos/entries/${entryUid}`,

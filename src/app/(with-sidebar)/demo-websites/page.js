@@ -29,6 +29,7 @@ import CardDropdown from "@/components/cardDropdown.jsx";
 
 import EditDemoWebsiteModal from "@/components/editDemoWebsiteModal.jsx";
 import DeleteModal from "@/components/deleteModal";
+import { getDemoWebsiteEntry } from "./getDemoWebsiteEntry";
 
 export default function Demos() {
     const [entry, setEntry] = useState({});
@@ -60,16 +61,11 @@ export default function Demos() {
         isPending,
     } = useBookmarks(BOOKMARK_TYPES.DEMO_WEBSITE);
     const getContent = async () => {
-        const entry = await Stack.getElementByTypeWithRefs(
-            "custom_demos",
-            "en-us",
-            ["demos"
-            ]
-        );
+        const entry = await getDemoWebsiteEntry();
         console.log("CMS Entry:", entry);
         console.log("Demo:", entry);
 
-        setEntry(entry[0][0]);
+        setEntry(entry);
         setIsLoading(false);
     };
 

@@ -101,4 +101,20 @@ describe("updateAndPublishDemoWeb()", () => {
     expect(result.status).to.equal(500);
     expect(result.error).to.equal("Unexpected crash");
   });
+
+  it("returns 422 when entryUid is missing", async () => {
+    const result = await updateAndPublishDemoWeb(null, [mockDemo], fetchStub);
+
+    expect(result.status).to.equal(422);
+    expect(result.error).to.equal("Missing entryUid");
+    expect(fetchStub.called).to.be.false;
+  });
+
+  it("returns 422 when demos is missing", async () => {
+    const result = await updateAndPublishDemoWeb("entry123", null, fetchStub);
+
+    expect(result.status).to.equal(422);
+    expect(result.error).to.equal("Missing demos array");
+    expect(fetchStub.called).to.be.false;
+  });
 });
