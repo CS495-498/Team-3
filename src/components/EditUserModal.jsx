@@ -55,7 +55,6 @@ export default function EditUserModal({ user, open, onOpenChange, onSaved }) {
         body: JSON.stringify({
           full_name: fullName,
           username,
-          email,
           role,
         }),
       });
@@ -104,7 +103,9 @@ export default function EditUserModal({ user, open, onOpenChange, onSaved }) {
             <Input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={() => { }}
+              disabled={true} // disable editing
+              className="bg-gray-100 cursor-not-allowed"
             />
           </div>
 

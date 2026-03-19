@@ -1,5 +1,8 @@
 {
-  "reporter": ["text", "html"],
+  "reporter": [
+    "text",
+    "html"
+  ],
   "include": [
     "src/app/api/**/*.js"
   ],
@@ -11,7 +14,8 @@
     "src/app/**/layout.js",
     "src/app/**/loading.js",
     "src/app/**/error.js",
-    "src/app/**/components/**"
+    "src/app/**/components/**",
+    "src/app/**/route.js"
   ],
   "all": true
 }

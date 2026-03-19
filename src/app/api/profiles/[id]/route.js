@@ -195,149 +195,76 @@ async function handlePut(req, context) {
 
 }
 
-async function handlePatch(request, { params }) {
-    const { id: profileId } = await params;
+export async function handlePatch(request, { params }) {
+  const { id: profileId } = await params;
 
-    // -------------------------
-    // 1. AUTHORIZATION, ADMIN Only
-    // -------------------------
-    const { error, supabase } = await requireAuthWithPermission(
-        PERMISSIONS.MANAGE_USERS
-    );
+  // -------------------------
+  // 1. AUTHORIZATION (ADMIN ONLY)
+  // -------------------------
+  const { error, supabase } = await requireAuthWithPermission(
+    PERMISSIONS.MANAGE_USERS
+  );
 
-    if (error) return error;
+  if (error) return error;
 
-    // -------------------------
-    // 2. PARSE BODY
-    // -------------------------
-    let body;
-    try {
-        body = await request.json();
-    } catch {
-        return NextResponse.json(
-            { error: "Invalid JSON body" },
-            { status: 400 }
-        );
+  // -------------------------
+  // 2. PARSE BODY
+  // -------------------------
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const {
+    // Note: we intentionally ignore `email` to prevent admins from updating it
+    role,
+    full_name,
+    username,
+    active_persona_id,
+  } = body;
+
+  // -------------------------
+  // 3. VALIDATION
+  // -------------------------
+  if (role && !isValidRole(role)) {
+    return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+  }
+
+  // -------------------------
+  // 4. UPDATE PROFILE TABLE
+  // -------------------------
+  const updates = {
+    ...(role !== undefined && { role }),
+    ...(full_name !== undefined && { full_name }),
+    ...(username !== undefined && { username }),
+    ...(active_persona_id !== undefined && { active_persona_id }),
+    updated_at: new Date().toISOString(),
+  };
+
+  let updatedProfile = null;
+
+  if (Object.keys(updates).length > 1) {
+    const { data, error: updateError } = await supabase
+      .from("profiles")
+      .update(updates)
+      .eq("id", profileId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error("Profile update error:", updateError);
+      return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
-    const {
-        email,
-        role,
-        full_name,
-        username,
-        active_persona_id,
-    } = body;
+    updatedProfile = data;
+  }
 
-    // -------------------------
-    // 3. VALIDATION
-    // -------------------------
-    if (role && !isValidRole(role)) {
-        return NextResponse.json(
-            { error: "Invalid role" },
-            { status: 400 }
-        );
-    }
-
-    // -------------------------
-    // 4. UPDATE AUTH EMAIL (ADMIN)
-    // -------------------------
-    const serviceSupabase = await createServiceRoleClient();
-    if (email) {
-
-
-        const { data: users, error: listError } =
-            await serviceSupabase.auth.admin.listUsers({
-                page: 1,
-                perPage: 1000,
-            });
-
-        if (listError) {
-            return NextResponse.json(
-                { error: "Failed to validate email" },
-                { status: 500 }
-            );
-        }
-
-        const emailTaken = users.users.find(
-            (u) => u.email === email && u.id !== profileId
-        );
-
-        if (emailTaken) {
-            return NextResponse.json(
-                { error: "Email already in use by another account" },
-                { status: 409 }
-            );
-        }
-
-        // -------------------------
-        // 5. UPDATE AUTH EMAIL
-        // -------------------------
-        const { error: emailError } =
-            await serviceSupabase.auth.admin.updateUserById(profileId, {
-                email,
-            });
-
-        if (emailError) {
-            return NextResponse.json(
-                { error: emailError.message },
-                { status: 400 }
-            );
-        }
-    }
-
-    // -------------------------
-    // 5. UPDATE PROFILE TABLE
-    // -------------------------
-    const updates = {
-        ...(role !== undefined && { role }),
-        ...(full_name !== undefined && { full_name }),
-        ...(username !== undefined && { username }),
-        ...(active_persona_id !== undefined && { active_persona_id }),
-        updated_at: new Date().toISOString(),
-    };
-
-    let updatedProfile = null;
-
-    if (Object.keys(updates).length > 1) {
-        const { data, error: updateError } = await supabase
-            .from("profiles")
-            .update(updates)
-            .eq("id", profileId)
-            .select()
-            .single();
-
-        if (updateError) {
-            console.error("Profile update error:", updateError);
-            return NextResponse.json(
-                { error: updateError.message },
-                { status: 500 }
-            );
-        }
-
-        updatedProfile = data;
-    }
-
-    // -------------------------
-    // 6. SUCCESS
-    // -------------------------
-
-    // Fetch the updated Auth user email
-    const { data: authUser, error: authError } = await serviceSupabase.auth.admin.getUserById(profileId);
-
-    if (authError || !authUser?.user) {
-        console.error("Failed to fetch updated auth user:", authError);
-    }
-
-    // Combine profile and auth email
-    const fullUpdatedUser = {
-        ...updatedProfile,
-        email: authUser?.user?.email || updatedProfile?.email || null,
-    };
-    return NextResponse.json(
-        fullUpdatedUser,
-        { status: 200 }
-    );
-
+  // -------------------------
+  // 5. SUCCESS RESPONSE
+  // -------------------------
+  return NextResponse.json(updatedProfile, { status: 200 });
 }
 
 // -------------------- DELETE PROFILE (ADMIN) --------------------

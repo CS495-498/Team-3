@@ -4,6 +4,7 @@ const PERMISSIONS = {
   UPDATE_OWN_PROFILE: "update_own_profile",
   VIEW_LOGS: "view_logs",
   VIEW_METRICS:"view_metrics",
+  MANAGE_PARTNERS: "manage_partners",
 
 
   UPLOAD_NOTIFICATIONS: "upload_notifications",
