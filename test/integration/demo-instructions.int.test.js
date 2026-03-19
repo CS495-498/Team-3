@@ -6,6 +6,7 @@ describe("Integration: demo instructions routes", function () {
     this.timeout(30000);
 
     const createUrl = `${config.baseUrl}/api/demo-instructions`;
+    const deleteUrl = `${config.baseUrl}/api/demo-instructions`;
     const updateUrl = `${config.baseUrl}/api/demo-instructions/update`;
     let createdInstruction = null;
 
@@ -37,6 +38,28 @@ describe("Integration: demo instructions routes", function () {
             expect(json).to.deep.equal({ error: "Unauthorized" });
         }
     }
+
+    after(async () => {
+        if (!createdInstruction?.uid) {
+            return;
+        }
+
+        const client = createCookieClient();
+        await login(client, config.users.contentstack);
+
+        const { status, json, text } = await client.request(deleteUrl, {
+            method: "DELETE",
+            body: { instructionUid: createdInstruction.uid },
+        });
+
+        expect(status, text).to.equal(200);
+        expect(json).to.deep.equal({
+            success: true,
+            message: "Instruction deleted successfully",
+        });
+
+        createdInstruction = null;
+    });
 
     describe("POST /api/demo-instructions", function () {
         it("returns 401 when unauthenticated", async () => {
@@ -160,6 +183,64 @@ describe("Integration: demo instructions routes", function () {
             expect(json.entry.title).to.equal(updatedTitle);
             expect(json.entry.author_name).to.equal(updatedAuthor);
             expect(json.entry.blog_content).to.equal(updatedHtml);
+
+            createdInstruction = {
+                ...createdInstruction,
+                title: updatedTitle,
+                html: updatedHtml,
+            };
+        });
+    });
+
+    describe("DELETE /api/demo-instructions", function () {
+        it("returns 401 when unauthenticated", async () => {
+            const client = createCookieClient();
+
+            const { status, json } = await client.request(deleteUrl, {
+                method: "DELETE",
+                body: {
+                    instructionUid: "demo-uid",
+                },
+            });
+
+            expectUnauthenticated(status, json);
+        });
+
+        it("returns 403 for partner users without publish permission", async () => {
+            const client = createCookieClient();
+            await login(client, config.users.partner);
+
+            const { status, json } = await client.request(deleteUrl, {
+                method: "DELETE",
+                body: {
+                    instructionUid: "demo-uid",
+                },
+            });
+
+            expect(status).to.equal(403);
+            expect(json).to.deep.equal({ error: "Forbidden: insufficient permissions" });
+        });
+
+        it("allows contentstack users to delete the demo instruction created by this suite", async () => {
+            const client = createCookieClient();
+            await login(client, config.users.contentstack);
+
+            expect(createdInstruction, "Expected an existing created instruction to delete").to.exist;
+
+            const { status, json, text } = await client.request(deleteUrl, {
+                method: "DELETE",
+                body: {
+                    instructionUid: createdInstruction.uid,
+                },
+            });
+
+            expect(status, text).to.equal(200);
+            expect(json).to.deep.equal({
+                success: true,
+                message: "Instruction deleted successfully",
+            });
+
+            createdInstruction = null;
         });
     });
 });
