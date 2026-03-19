@@ -59,8 +59,10 @@ const iconMapper = {
 
 const ADMIN_PAGES = [
     { title: "User Management", href: "/admin/usermanagement", permission: PERMISSIONS.MANAGE_USERS },
+    { title: "Partner Management", href: "/admin/partnermanagement", permission: PERMISSIONS.MANAGE_PARTNERS }, 
     { title: "Logs", href: "/admin/logs", permission: PERMISSIONS.VIEW_LOGS },
     { title: "Metrics", href: "/admin/metrics", permission: PERMISSIONS.VIEW_METRICS },
+    
 ];
 
 // ErrorBoundary for graceful fallback
