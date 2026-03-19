@@ -29,9 +29,12 @@ export default function AdminPartnerDomainsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editingDomain, setEditingDomain] = useState(null);
+  const [editingReason, setEditingReason] = useState(null);
 
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [activeFilter, setActiveFilter] = useState("all");
+  const [signupFilter, setSignupFilter] = useState("all");
 
   // Toast state
   const [toastOpen, setToastOpen] = useState(false);
@@ -64,11 +67,25 @@ export default function AdminPartnerDomainsPage() {
 
   const filteredDomains = useMemo(() => {
     return domains.filter((d) => {
-      const matchesSearch = !search || d.domain.toLowerCase().includes(search.toLowerCase());
-      const matchesType = typeFilter === "all" || d.type === typeFilter;
-      return matchesSearch && matchesType;
+      const matchesSearch =
+        !search || d.domain.toLowerCase().includes(search.toLowerCase());
+
+      const matchesType =
+        typeFilter === "all" || d.type === typeFilter;
+
+      const matchesActive =
+        activeFilter === "all" ||
+        (activeFilter === "active" && d.active) ||
+        (activeFilter === "inactive" && !d.active);
+
+      const matchesSignup =
+        signupFilter === "all" ||
+        (signupFilter === "allowed" && d.type === "allow") ||
+        (signupFilter === "blocked" && d.type === "deny");
+
+      return matchesSearch && matchesType && matchesActive && matchesSignup;
     });
-  }, [domains, search, typeFilter]);
+  }, [domains, search, typeFilter, activeFilter, signupFilter]);
 
   const getTypeVariant = (type) => {
     switch (type) {
@@ -104,14 +121,30 @@ export default function AdminPartnerDomainsPage() {
 
   // Toggle fields (allowSignups / active)
   const handleToggle = async (domainId, field, value) => {
+    const previousDomains = domains;
+
+    // ✅ optimistic update
+    setDomains((prev) =>
+      prev.map((d) =>
+        d.id === domainId
+          ? {
+            ...d,
+            ...(field === "type"
+              ? { type: value ? "allow" : "deny" }
+              : { [field]: value }),
+          }
+          : d
+      )
+    );
+
     try {
-      const current = domains.find((d) => d.id === domainId);
+      const current = previousDomains.find((d) => d.id === domainId);
       if (!current) return;
 
       const updated = {
         domain: current.domain,
-        type: field === "type" ? value : current.type,
-        reason: current.reason || null,
+        type: field === "type" ? (value ? "allow" : "deny") : current.type,
+        reason: field === "reason" ? value : current.reason,
         active: field === "active" ? value : current.active,
       };
 
@@ -122,22 +155,21 @@ export default function AdminPartnerDomainsPage() {
         body: JSON.stringify(updated),
       });
 
-      if (!res.ok) {
-        const body = await res.json();
-        throw new Error(body.error || "Failed to update domain");
-      }
+      if (!res.ok) throw new Error("Failed to update domain");
 
       const updatedDomain = await res.json();
 
+      // ✅ sync with server (in case backend modifies anything)
       setDomains((prev) =>
         prev.map((d) => (d.id === updatedDomain.id ? updatedDomain : d))
       );
-
-      showToast(`Domain ${updatedDomain.domain} updated`);
     } catch (err) {
+      // ❗ rollback on failure
+      setDomains(previousDomains);
       setError(err.message);
     }
   };
+
 
   return (
     <div className="p-6">
@@ -149,22 +181,50 @@ export default function AdminPartnerDomainsPage() {
           </div>
 
           <div className="flex flex-col gap-2 md:flex-row md:items-center">
-            <Input
-              placeholder="Search by domain…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="md:max-w-sm"
-            />
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="md:w-48">
-                <SelectValue placeholder="Filter by type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="allow">Allow</SelectItem>
-                <SelectItem value="deny">Deny</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+              <Input
+                placeholder="Search by domain…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="md:max-w-sm"
+              />
+
+              {/* Active Filter */}
+              <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-full">
+                <span className="text-xs text-muted-foreground">Status:</span>
+                {["all", "active", "inactive"].map((value) => (
+                  <Button
+                    key={value}
+                    size="sm"
+                    variant={activeFilter === value ? "default" : "outline"}
+                    className="h-7 px-3 text-xs rounded-full capitalize"
+                    onClick={() => setActiveFilter(value)}
+                  >
+                    {value === "all" ? "All" : value}
+                  </Button>
+                ))}
+              </div>
+
+              {/* Signup Filter */}
+              <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-full">
+                <span className="text-xs text-muted-foreground">Signups:</span>
+                {["all", "allowed", "blocked"].map((value) => (
+                  <Button
+                    key={value}
+                    size="sm"
+                    variant={signupFilter === value ? "default" : "outline"}
+                    className="h-7 px-3 text-xs rounded-full capitalize"
+                    onClick={() => setSignupFilter(value)}
+                  >
+                    {value === "all"
+                      ? "All"
+                      : value === "allowed"
+                        ? "Allowed"
+                        : "Blocked"}
+                  </Button>
+                ))}
+              </div>
+            </div>
           </div>
         </CardHeader>
 
@@ -200,7 +260,9 @@ export default function AdminPartnerDomainsPage() {
                     <TableCell>
                       <Switch
                         checked={domain.type === "allow"}
-                        onCheckedChange={(value) => handleToggle(domain.id, "type", value ? "allow" : "deny")}
+                        onCheckedChange={(value) =>
+                          handleToggle(domain.id, "type", value)
+                        }
                       />
                     </TableCell>
                     <TableCell>
@@ -209,21 +271,48 @@ export default function AdminPartnerDomainsPage() {
                         onCheckedChange={(value) => handleToggle(domain.id, "active", value)}
                       />
                     </TableCell>
-                    <TableCell>{domain.reason || "—"}</TableCell>
+                    <TableCell>
+
+                      {editingReason?.id === domain.id ? (
+                        <Input
+                          value={editingReason.reason || ""}
+                          onChange={(e) =>
+                            setEditingReason((prev) => ({
+                              ...prev,
+                              reason: e.target.value,
+                            }))
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault(); // ✅ prevents blur firing immediately
+                              handleToggle(domain.id, "reason", editingReason.reason);
+                              setEditingReason(null);
+                            }
+                          }}
+
+                          onBlur={() => {
+                            handleToggle(domain.id, "reason", editingReason.reason);
+                            setEditingReason(null);
+                          }}
+                          autoFocus
+                          className="h-8"
+                        />
+                      ) : (
+                        <div
+                          className="cursor-pointer text-muted-foreground hover:text-foreground"
+                          onClick={() =>
+                            setEditingReason({
+                              id: domain.id,
+                              reason: domain.reason,
+                            })
+                          }
+                        >
+                          {domain.reason || "—"}
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right space-x-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          setEditingDomain({
-                            id: domain.id,
-                            domain: domain.domain,
-                            reason: domain.reason
-                          })
-                        }
-                      >
-                        Edit
-                      </Button>
+
                       <Button size="icon" variant="destructive" onClick={() => handleDeleteDomain(domain)} className="h-8 w-8">
                         <Trash2 className="h-4 w-4" />
                       </Button>
