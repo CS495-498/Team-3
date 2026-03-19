@@ -1,7 +1,7 @@
+// updateDeleteComment.test.js
 import { expect } from 'chai';
 import sinon from 'sinon';
-// hasPermission.js (or import in test)
-import PERMISSIONS from '../../src/config/permissions.js';
+import { hasPermission } from '../../../src/utils/hasPermission.js';
 
 // Inline helpers to mimic frontend comment logic
 function canEditComment(currentUserId, comment, role) {
