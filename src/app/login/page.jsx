@@ -36,7 +36,7 @@ export default function LoginPage() {
     if (!error) return;
 
     if (error === "disabled") {
-      setSystemMessage("Your organization's access has been disabled. Please contact your administrator.");
+      setSystemMessage("Access for your organization has been disabled. Please contact your administrator.");
     }
 
     if (error === "unauthorized") {
