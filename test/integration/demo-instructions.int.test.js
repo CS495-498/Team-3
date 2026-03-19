@@ -98,12 +98,12 @@ describe("Integration: demo instructions routes", function () {
             const title = buildInstructionTitle();
             const html = "<p>Created by integration test</p>";
 
-            const { status, json } = await client.request(createUrl, {
+            const { status, json, text } = await client.request(createUrl, {
                 method: "POST",
                 body: { title, html },
             });
 
-            expect(status).to.equal(200);
+            expect(status, text).to.equal(200);
             expectSuccessShape(json);
             expect(json.message).to.equal("Instruction created, published & library updated");
             expect(json.instruction_uid).to.be.a("string").and.not.empty;
@@ -164,7 +164,7 @@ describe("Integration: demo instructions routes", function () {
             const updatedHtml = "<p>Updated integration content</p>";
             const updatedAuthor = "Integration Test Author";
 
-            const { status, json } = await client.request(updateUrl, {
+            const { status, json, text } = await client.request(updateUrl, {
                 method: "POST",
                 body: {
                     uid: createdInstruction.uid,
@@ -174,7 +174,7 @@ describe("Integration: demo instructions routes", function () {
                 },
             });
 
-            expect(status).to.equal(200);
+            expect(status, text).to.equal(200);
             expectSuccessShape(json);
             expect(json.message).to.equal("Entry updated and published successfully");
             expect(json.entry).to.be.an("object");
