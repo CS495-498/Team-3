@@ -4,7 +4,6 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import DOMPurify from "isomorphic-dompurify";
 import {
     ChevronsUp,
-    ChevronsDown,
     MessageSquare,
     Paperclip,
     FileText,
@@ -766,17 +765,6 @@ export default function Home() {
                                     <span className="text-sm font-medium text-gray-800 dark:text-gray-50">
                                         {getEffectiveVoteCount(req)}
                                     </span>
-
-                                    <button
-                                        type="button"
-                                        className={`p-1 rounded-md transition ${voteState === "down"
-                                            ? "text-red-600"
-                                            : "text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
-                                            }`}
-                                        onClick={() => handleVote(req.id, "down")}
-                                    >
-                                        <ChevronsDown className="w-5 h-5" />
-                                    </button>
                                 </div>
 
                                 <div className="flex-shrink-0 flex items-center justify-center mr-4">

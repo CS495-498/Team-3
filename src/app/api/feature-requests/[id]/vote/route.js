@@ -19,9 +19,9 @@ async function handlePost(req, { params }) {
 
     const { vote } = await req.json();
 
-    if (!["up", "down", "remove"].includes(vote)) {
+    if (!["up", "remove"].includes(vote)) {
         return NextResponse.json(
-            { error: "Vote must be 'up', 'down', or 'remove'" },
+            { error: "Vote must be 'up' or 'remove'" },
             { status: 400 }
         );
     }
@@ -36,18 +36,17 @@ async function handlePost(req, { params }) {
 
             if (delErr) throw delErr;
         } else {
-            // UPSERT vote (up = true, down = false)
+            // UPSERT vote (up = true)
             const { error: upErr } = await supabase
                 .from("votes")
                 .upsert(
                     {
                         user_id: profile.id,
                         req_id: id,
-                        Upvoted: vote === "up" ? true : false,
+                        Upvoted: vote === "up",
                     },
                     { onConflict: "user_id,req_id" }
                 );
-
             if (upErr) throw upErr;
         }
 
@@ -58,10 +57,8 @@ async function handlePost(req, { params }) {
 
         if (countErr) throw countErr;
 
-        const upCount = votes.filter(v => v.Upvoted === true).length;
-        const downCount = votes.filter(v => v.Upvoted === false).length;
+        const total = votes.length;
 
-        const total = upCount - downCount;
 
         return NextResponse.json({ number_of_votes: total }, { status: 200 });
 
