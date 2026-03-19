@@ -46,6 +46,7 @@ jobs:
           node -e "console.log('CONTENTSTACK_API_KEY present?', !!process.env.CONTENTSTACK_API_KEY)"
           node -e "console.log('CONTENTSTACK_MANAGEMENT_TOKEN present?', !!process.env.CONTENTSTACK_MANAGEMENT_TOKEN)"
           node -e "console.log('CONTENTSTACK_ENVIRONMENT present?', !!process.env.CONTENTSTACK_ENVIRONMENT)"
+          node -e "console.log('CONTENTSTACK_ENVIRONMENT value:', JSON.stringify(process.env.CONTENTSTACK_ENVIRONMENT))"
           node -e "console.log('TEST_PARTNER_EMAIL present?', !!process.env.TEST_PARTNER_EMAIL)"
           node -e "console.log('TEST_CONTENTSTACK_EMAIL present?', !!process.env.TEST_CONTENTSTACK_EMAIL)"
           node -e "console.log('TEST_ADMIN_EMAIL present?', !!process.env.TEST_ADMIN_EMAIL)"
