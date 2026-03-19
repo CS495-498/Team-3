@@ -60,7 +60,6 @@ describe("Integration: demo instructions routes", function () {
 
         createdInstruction = null;
     });
-
     describe("POST /api/demo-instructions", function () {
         it("returns 401 when unauthenticated", async () => {
             const client = createCookieClient();
