@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import sinon from 'sinon';
-import { hasPermission } from '@/utils/hasPermission.js';
+import { hasPermission } from '../../../src/utils/hasPermission.js';
 
 // Inline helpers to mimic frontend comment logic
 function canEditComment(currentUserId, comment, role) {
