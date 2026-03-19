@@ -138,8 +138,8 @@ async function handlePOST(req) {
       body: JSON.stringify({
         entry: {
           demo_instructions: updatedRefs,
-          _version: libData.entry._version,
         },
+        _version: libData.entry._version,
       }),
     });
 
@@ -225,8 +225,8 @@ async function handleDELETE(req) {
       body: JSON.stringify({
         entry: {
           demo_instructions: updatedRefs,
-          _version: libData.entry._version,
         },
+        _version: libData.entry._version,
       }),
     });
     if (!updateRes.ok) {
