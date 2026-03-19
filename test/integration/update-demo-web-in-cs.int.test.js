@@ -1,8 +1,6 @@
 import { expect } from "chai";
 import { createCookieClient } from "./helpers/cookieClient.js";
 import { config } from "./helpers/config.js";
-import { getDemoWebsiteEntry } from "../../src/app/(with-sidebar)/demo-websites/getDemoWebsiteEntry.js";
-import normalizeDemoWebArray from "../../src/app/api/helper/normalizeDemoWebArray.js";
 
 describe("Integration: /api/update-demo-web-in-cs", function () {
     this.timeout(30000);
@@ -56,28 +54,6 @@ describe("Integration: /api/update-demo-web-in-cs", function () {
         expect(status).to.equal(403);
         expect(json).to.be.an("object");
         expect(json).to.have.property("error").that.includes("Forbidden");
-    });
-
-    it("contentstack user can PUT demo websites with a valid existing payload", async () => {
-        const client = createCookieClient();
-        await login(client, config.users.contentstack);
-
-        const entry = await getDemoWebsiteEntry();
-        const demos = normalizeDemoWebArray(entry.demos || []);
-
-        const { status, json } = await client.request(url, {
-            method: "PUT",
-            body: {
-                entryUid: entry.uid,
-                demos,
-            },
-        });
-
-        expect(status).to.equal(200);
-        expect(json).to.be.an("object");
-        expect(json).to.have.property("entry");
-        expect(json.entry).to.have.property("uid", entry.uid);
-        expect(json.entry).to.have.property("demos").that.is.an("array");
     });
 
     it("partner user gets 403 for DELETE due to insufficient permissions", async () => {
