@@ -399,11 +399,12 @@ export default function DemoInstructions() {
 
                                         {canPublishDemoInstructions && (
                                             <div className="absolute right-14 top-3 z-10">
-                                                <CardDropdown
-                                                    onEdit={() => openEditModal(demo)}
-                                                    onDelete={() => openDeleteModal(demo)}
-                                                />
-                                            </div>
+                                                    <CardDropdown
+                                                        onEdit={() => openEditModal(demo)}
+                                                        onDelete={() => openDeleteModal(demo)}
+                                                        editLabel="Edit Title"
+                                                    />
+                                                </div>
                                         )}
                                     </Card>
                                 );
