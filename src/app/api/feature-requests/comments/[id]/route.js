@@ -40,8 +40,12 @@ async function handlePut(req, { params }) {
         }
 
         const isOwner = comment.user_id === profile.id;
+        const canManageAll = hasPermission(
+            profile.role,
+            PERMISSIONS.MANAGE_ALL_COMMENTS
+        );
 
-        if (!isOwner) {
+        if (!isOwner && !canManageAll) {
             return NextResponse.json(
                 { error: "Unauthorized" },
                 { status: 403 }
@@ -67,7 +71,6 @@ async function handlePut(req, { params }) {
         return NextResponse.json({ error: err.message }, { status: 500 });
     }
 }
-
 
 
 /*
@@ -99,9 +102,12 @@ async function handleDelete(req, { params }) {
         }
 
         const isOwner = comment.user_id === profile.id;
+        const canManageAll = hasPermission(
+            profile.role,
+            PERMISSIONS.MANAGE_ALL_COMMENTS
+        );
 
-
-        if (!isOwner) {
+        if (!isOwner && !canManageAll) {
             return NextResponse.json(
                 { error: "Unauthorized" },
                 { status: 403 }
@@ -125,5 +131,6 @@ async function handleDelete(req, { params }) {
         return NextResponse.json({ error: err.message }, { status: 500 });
     }
 }
+
 export const PUT = withLogging(handlePut);
 export const DELETE = withLogging(handleDelete);
