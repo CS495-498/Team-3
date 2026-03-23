@@ -63,8 +63,7 @@ export default function Demos() {
         const entry = await Stack.getElementByTypeWithRefs(
             "custom_demos",
             "en-us",
-            ["demos"
-            ]
+            ["demos"]
         );
         console.log("CMS Entry:", entry);
         console.log("Demo:", entry);
