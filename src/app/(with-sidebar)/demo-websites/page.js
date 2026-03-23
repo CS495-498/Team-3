@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useEffect, Fragment, useMemo } from "react";
 import Stack, { onEntryChange } from "@/lib/cstack";
-import Link from "next/link";
 import Image from "next/image";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import BookmarkButton from "@/components/bookmark-button";
@@ -81,6 +80,30 @@ export default function Demos() {
         demo?.uid ||
         demo?.system?.uid ||
         null;
+
+    const normalizeWebsiteUrl = (value) => {
+        if (!value || typeof value !== "string") return "";
+
+        const trimmed = value.trim();
+        if (!trimmed) return "";
+
+        const withProtocol = /^https?:\/\//i.test(trimmed)
+            ? trimmed
+            : `https://${trimmed}`;
+
+        try {
+            return new URL(withProtocol).href;
+        } catch {
+            return trimmed;
+        }
+    };
+
+    const openDemoWebsite = (value) => {
+        const normalizedUrl = normalizeWebsiteUrl(value);
+        if (!normalizedUrl || normalizedUrl === "#") return;
+
+        window.open(normalizedUrl, "_blank", "noopener,noreferrer");
+    };
 
     const demos = entry?.demos?.filter((demo) => {
         const query = searchQuery.toLowerCase();
@@ -176,7 +199,7 @@ export default function Demos() {
             setIsSubmitting(true); // START LOADING
 
             const thumbnailFile = data.get("image");
-            const demoUrl = json_data.url;
+            const demoUrl = normalizeWebsiteUrl(json_data.url);
 
             if (!json_data.title?.trim()) {
                 alert("Please provide a title.");
@@ -230,7 +253,7 @@ export default function Demos() {
             const newDemo = {
                 link: {
                     title: json_data.title || "Demo Link",
-                    href: json_data.url || "",
+                    href: demoUrl,
                 },
                 image: uploadedThumb?.asset?.uid || null,
                 title: json_data.title,
@@ -285,7 +308,7 @@ export default function Demos() {
 
             const newTitle = data.get("title");
             const newDescription = data.get("description");
-            const newLinkTitle = data.get("link");
+            const newLinkTitle = normalizeWebsiteUrl(data.get("link"));
             const newImageFile = data.get("image");
 
 
@@ -588,32 +611,50 @@ export default function Demos() {
                             {visibleDemos.map((demo, idx) => {
                                 const demoId = getDemoId(demo);
                                 const key = demoId || `demo-${idx}`;
+                                const demoHref = normalizeWebsiteUrl(demo?.link?.href) || "#";
                                 return (
                                     <div key={key} className="relative group">
-                                        <Card className="min-h-[340px] flex flex-col rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 bg-white dark:bg-gray-800">
+                                        <Card
+                                            className="min-h-[340px] flex cursor-pointer flex-col rounded-xl bg-white shadow-md transition-shadow duration-300 hover:shadow-xl dark:bg-gray-800"
+                                            onClick={() => openDemoWebsite(demoHref)}
+                                            onKeyDown={(event) => {
+                                                if (event.key === "Enter" || event.key === " ") {
+                                                    event.preventDefault();
+                                                    openDemoWebsite(demoHref);
+                                                }
+                                            }}
+                                            role="link"
+                                            tabIndex={0}
+                                        >
                                             {demo?.image?.url && (
                                                 <div className="relative w-full aspect-video">
-                                                    <Link href={demo?.link?.href || "#"} target="_blank" rel="noopener noreferrer">
-                                                        <Image
-                                                            src={demo.image.url}
-                                                            alt={demo.title || "Demo image"}
-                                                            fill
-                                                            className="object-cover rounded-t-xl"
-                                                        />
-                                                    </Link>
+                                                    <Image
+                                                        src={demo.image.url}
+                                                        alt={demo.title || "Demo image"}
+                                                        fill
+                                                        className="object-cover rounded-t-xl"
+                                                    />
                                                 </div>
                                             )}
 
                                             <CardHeader className="p-6 flex flex-col flex-grow">
                                                 <div className="flex justify-between items-start mb-2">
-                                                    <CardTitle className="text-lg font-semibold leading-tight line-clamp-1">
-                                                        {demo?.title}
-                                                    </CardTitle>
+                                                    <div className="min-w-0">
+                                                        <CardTitle className="text-lg font-semibold leading-tight line-clamp-1 hover:underline">
+                                                            {demo?.title}
+                                                        </CardTitle>
+                                                    </div>
                                                     {canUploadDemoWebsites && (
-                                                        <CardDropdown
-                                                            onEdit={() => openEditModal(demo)}
-                                                            onDelete={() => openDeleteModal(demo)}
-                                                        />
+                                                        <div
+                                                            data-no-card-open
+                                                            onClick={(event) => event.stopPropagation()}
+                                                            onKeyDown={(event) => event.stopPropagation()}
+                                                        >
+                                                            <CardDropdown
+                                                                onEdit={() => openEditModal(demo)}
+                                                                onDelete={() => openDeleteModal(demo)}
+                                                            />
+                                                        </div>
                                                     )}
 
                                                 </div>
@@ -625,14 +666,20 @@ export default function Demos() {
                                             </CardHeader>
                                         </Card>
 
-                                        <BookmarkButton
-                                            active={demoId ? isBookmarked(demoId) : false}
-                                            disabled={!demoId || isPending(demoId)}
-                                            onToggle={() => handleBookmarkToggle(demo)}
-                                            className="absolute top-2 sm:top-3 right-2 sm:right-3 shadow-md"
-                                            titleWhenActive="Remove demo from bookmarks"
-                                            titleWhenInactive="Save demo to bookmarks"
-                                        />
+                                        <div
+                                            data-no-card-open
+                                            onClick={(event) => event.stopPropagation()}
+                                            onKeyDown={(event) => event.stopPropagation()}
+                                        >
+                                            <BookmarkButton
+                                                active={demoId ? isBookmarked(demoId) : false}
+                                                disabled={!demoId || isPending(demoId)}
+                                                onToggle={() => handleBookmarkToggle(demo)}
+                                                className="absolute top-2 sm:top-3 right-2 sm:right-3 shadow-md"
+                                                titleWhenActive="Remove demo from bookmarks"
+                                                titleWhenInactive="Save demo to bookmarks"
+                                            />
+                                        </div>
                                     </div>
                                 );
                             })}
