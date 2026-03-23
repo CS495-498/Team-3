@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/table";
 
 import { Card, CardContent } from "@/components/ui/card";
+import {format} from "date-fns";
 
 export default function MetricsPage() {
 
@@ -125,7 +126,7 @@ export default function MetricsPage() {
         [lineData]
     );
 
-    const errorPercentage = Number(latest.error_percentage || 0);
+    const errorPercentage = Number(latest.error_percentage || 0).toFixed(2);
 
     const pieData = [
         { name: "Errors", value: errorPercentage },
@@ -139,6 +140,11 @@ export default function MetricsPage() {
 
     return (
         <div className="p-6 space-y-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <div className="flex items-center gap-4">
+                    <h1 className="text-3xl font-bold">System Metrics</h1>
+                </div>
+            </div>
 
             {/* RPM LINE CHART */}
 
@@ -151,10 +157,16 @@ export default function MetricsPage() {
 
                     <ResponsiveContainer width="100%" height={300}>
                         <LineChart data={lineData}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="date" />
-                            <YAxis />
-                            <Tooltip />
+                            <CartesianGrid strokeDasharray="3 3"/>
+                            <XAxis dataKey="date" tickFormatter={(val) => format(new Date(val), "MM/d-HH:mm")}/>
+                            <YAxis/>
+                            <Tooltip
+                                labelFormatter={(val) => format(new Date(val), "MMM d, HH:mm")}
+                                formatter={(value, name) => [
+                                    name === "avg_hourly_rpm" ? `${value.toFixed(2)} RPM` : `${value.toFixed(2)}%`,
+                                    name === "avg_hourly_rpm" ? "Avg Hourly RPM" : "Error Rate"
+                                ]}
+                            />
                             <Line
                                 type="monotone"
                                 dataKey="avg_hourly_rpm"
@@ -181,7 +193,7 @@ export default function MetricsPage() {
                                 dataKey="value"
                                 nameKey="name"
                                 outerRadius={110}
-                                label
+                                label={({ name, value }) => `${name}: ${value}%`}
                             >
                                 {pieData.map((entry, index) => (
                                     <Cell
@@ -191,7 +203,9 @@ export default function MetricsPage() {
                                 ))}
                             </Pie>
 
-                            <Tooltip />
+                            <Tooltip
+                                formatter={(value) => [`${value}%`, "Error Rate"]}
+                            />
                         </PieChart>
                     </ResponsiveContainer>
 
@@ -207,90 +221,86 @@ export default function MetricsPage() {
                         Average Latency Per Endpoint (MS)
                     </h2>
 
-                    <ResponsiveContainer width="100%" height={300}>
+                    <ResponsiveContainer width="100%" height={320}>
                         <BarChart
                             layout="vertical"
                             data={endpointLatencyData}
                         >
-                            <CartesianGrid strokeDasharray="3 3" />
+                            <CartesianGrid strokeDasharray="3 3"/>
 
-                            <XAxis type="number" />
+                            <XAxis type="number"/>
                             <YAxis
                                 type="category"
                                 dataKey="endpoint"
                                 width={220}
                             />
 
-                            <Tooltip />
+                            <Tooltip/>
 
-                            <Bar dataKey="avg_latency" />
-                        </BarChart>
-                    </ResponsiveContainer>
+                                <Bar dataKey="avg_latency"/>
+                            </BarChart>
+                        </ResponsiveContainer>
 
-                </CardContent>
-            </Card>
+                    </CardContent>
+                </Card>
 
-            {/* USER CRUD TABLE */}
+                {/* USER CRUD TABLE */}
 
-            <Card>
-                <CardContent className="pt-6">
+                <Card>
+                    <CardContent className="pt-6">
 
-                    <h2 className="text-lg font-semibold mb-4">
-                        Weekly User CRUD Activity
-                    </h2>
+                        <h2 className="text-lg font-semibold mb-4">
+                            User CRUD Activity
+                        </h2>
 
-                    <div className="max-h-[450px] overflow-y-auto border rounded">
+                        <div className="max-h-[450px] overflow-y-auto border rounded">
 
-                        <Table>
+                            <Table>
 
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>User</TableHead>
-                                    <TableHead>Date Range</TableHead>
-                                    <TableHead>POST</TableHead>
-                                    <TableHead>GET</TableHead>
-                                    <TableHead>PUT</TableHead>
-                                    <TableHead>DELETE</TableHead>
-                                    <TableHead>Total</TableHead>
-                                </TableRow>
-                            </TableHeader>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>User ID</TableHead>
+                                        <TableHead>Date Range</TableHead>
+                                        <TableHead>POST</TableHead>
+                                        <TableHead>GET</TableHead>
+                                        <TableHead>PUT</TableHead>
+                                        <TableHead>DELETE</TableHead>
+                                        <TableHead>Total</TableHead>
+                                    </TableRow>
+                                </TableHeader>
 
-                            <TableBody>
+                                <TableBody>
 
-                                {crudOps.map((row) => {
+                                    {crudOps.map((row) => {
 
-                                    const total =
-                                        Number(row.total_post || 0) +
-                                        Number(row.total_get || 0) +
-                                        Number(row.total_put || 0) +
-                                        Number(row.total_delete || 0);
+                                        const total =
+                                            Number(row.total_post || 0) +
+                                            Number(row.total_get || 0) +
+                                            Number(row.total_put || 0) +
+                                            Number(row.total_delete || 0);
 
-                                    return (
-                                        <TableRow key={`${row.user_id}-${row.start_date}`}>
-                                            <TableCell>{row.user_id}</TableCell>
-                                            <TableCell>
-                                                {row.start_date} → {row.end_date}
-                                            </TableCell>
-                                            <TableCell>{row.total_post}</TableCell>
-                                            <TableCell>{row.total_get}</TableCell>
-                                            <TableCell>{row.total_put}</TableCell>
-                                            <TableCell>{row.total_delete}</TableCell>
-                                            <TableCell className="font-bold">
-                                                {total}
-                                            </TableCell>
-                                        </TableRow>
-                                    );
-                                })}
+                                        return (
+                                            <TableRow key={`${row.user_id}-${row.start_date}`}>
+                                                <TableCell>{row.user_id}</TableCell>
+                                                <TableCell>
+                                                    {format(new Date(row.start_date), 'MMMM dd')} → {format(new Date(row.end_date), 'MMMM dd')}
 
-                            </TableBody>
-
-                        </Table>
-
-                    </div>
-
-                </CardContent>
-            </Card>
-
+                                                </TableCell>
+                                                <TableCell>{row.total_post}</TableCell>
+                                                <TableCell>{row.total_get}</TableCell>
+                                                <TableCell>{row.total_put}</TableCell>
+                                                <TableCell>{row.total_delete}</TableCell>
+                                                <TableCell className="font-bold">
+                                                    {total}
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </CardContent>
+                </Card>
         </div>
     );
 }

@@ -5,10 +5,6 @@ import PERMISSIONS from "@/config/permissions";
 import { hasPermission } from "@/utils/hasPermission";
 import { withLogging } from "@/utils/withLogging";
 
-/*
-EDIT COMMENT
-PUT /api/feature-requests/comments/[id]
-*/
 async function handlePut(req, { params }) {
     const { id } = await params;
     const supabase = await createClient();

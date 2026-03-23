@@ -34,6 +34,7 @@ export default function DemoInstructions() {
     const [dialogEditorContent, setDialogEditorContent] = useState("");
     const editorRef = useRef(null);
     const [showToast, setShowToast] = useState(false);
+    const [toastMessage, setToastMessage] = useState("");
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
@@ -117,9 +118,33 @@ export default function DemoInstructions() {
         setIsEditOpen(false);
     };
 
-    const handleConfirmDelete = () => {
-        console.log("Delete confirmed for:", selectedItem);
-        setIsDeleteOpen(false);
+    const handleConfirmDelete = async () => {
+        try {
+            if (!selectedItem?.uid) {
+                alert("Could not locate this instruction.");
+                return;
+            }
+
+            const response = await fetch("/api/demo-instructions", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ instructionUid: selectedItem.uid }),
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(text);
+            }
+
+            setIsDeleteOpen(false);
+            setToastMessage("Demo instruction deleted successfully!");
+            setShowToast(true);
+            setTimeout(() => setShowToast(false), 2000);
+            getContent();
+        } catch (error) {
+            console.error("Delete failed:", error);
+            alert("Failed to delete instruction.");
+        }
     };
 
     const handleBookmarkToggle = async (demo) => {
@@ -149,7 +174,7 @@ export default function DemoInstructions() {
     return (
         <div className="pl-10 pt-6 min-h-screen flex flex-col w-full">
             <SuccessToast
-                message="Demo instruction uploaded successfully!"
+                message={toastMessage}
                 isOpen={showToast}
                 onClose={() => setShowToast(false)}
             />
@@ -228,6 +253,7 @@ export default function DemoInstructions() {
                                                         if (data.success) {
                                                             console.log("Uploaded successfully:", data);
                                                             setIsOpen(false);
+                                                            setToastMessage("Demo instruction uploaded successfully!");
                                                             setShowToast(true);
                                                             setTimeout(() => {
                                                                 setShowToast(false);
