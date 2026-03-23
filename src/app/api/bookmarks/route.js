@@ -93,11 +93,6 @@ export async function handleCreateBookmark(request, supabase) {
       user_id: user.id,
       resource_type: resourceType,
       resource_id: resourceId,
-      resource_title: body?.title || null,
-      resource_description: body?.description || null,
-      resource_url: body?.url || null,
-      resource_thumbnail: body?.thumbnail || null,
-      metadata: body?.extra || null,
     };
 
     const { data, error } = await supabase

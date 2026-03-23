@@ -89,7 +89,7 @@ export function useBookmarks(resourceType) {
   }, []);
 
   const toggleBookmark = useCallback(
-    async (resourceId, metadata = {}) => {
+    async (resourceId) => {
       if (!resourceId) {
         return { error: "MISSING_RESOURCE_ID" };
       }
@@ -134,11 +134,6 @@ export function useBookmarks(resourceType) {
           body: JSON.stringify({
             resourceType,
             resourceId,
-            title: metadata.title || null,
-            description: metadata.description || null,
-            url: metadata.url || null,
-            thumbnail: metadata.thumbnail || null,
-            extra: metadata.extra || null,
           }),
         });
 

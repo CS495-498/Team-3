@@ -140,15 +140,7 @@ export default function Demos() {
             alert("Unable to bookmark this demo because it is missing an identifier.");
             return;
         }
-        const result = await toggleBookmark(resourceId, {
-            title: demo?.title,
-            description: demo?.description,
-            url: demo?.link?.href,
-            thumbnail: demo?.image?.url,
-            extra: {
-                type: "demoWebsite",
-            },
-        });
+        const result = await toggleBookmark(resourceId);
 
         if (result?.error === "AUTH_REQUIRED") {
             alert("Please sign in to bookmark demos.");
