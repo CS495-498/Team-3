@@ -199,7 +199,7 @@ export function SimpleEditor({ html = "<p></p>", editorRef }) {
   }, [editor, editorRef]);
 
   return (
-    <div className="simple-editor-wrapper w-full max-w-full h-full min-h-[300px] border border-gray-300 rounded-md p-1">
+    <div className="simple-editor-wrapper w-full max-w-full h-full min-h-[300px]">
   <EditorContext.Provider value={{ editor }}>
     <Toolbar
       ref={toolbarRef}
