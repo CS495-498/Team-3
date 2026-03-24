@@ -29,6 +29,11 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
 
+          # Contentstack keys required by demo-instructions routes
+          CONTENTSTACK_API_KEY: ${{ secrets.CONTENTSTACK_API_KEY }}
+          CONTENTSTACK_MANAGEMENT_TOKEN: ${{ secrets.CONTENTSTACK_MANAGEMENT_TOKEN }}
+          CONTENTSTACK_ENVIRONMENT: ${{ secrets.CONTENTSTACK_ENVIRONMENT }}
+
           # your integration test harness vars
           TEST_BASE_URL: http://localhost:3005
           TEST_PARTNER_EMAIL: ${{ secrets.TEST_PARTNER_EMAIL }}
@@ -38,6 +43,10 @@ jobs:
         run: |
           node -e "console.log('URL present?', !!process.env.NEXT_PUBLIC_SUPABASE_URL)"
           node -e "console.log('KEY present?', !!process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)"
+          node -e "console.log('CONTENTSTACK_API_KEY present?', !!process.env.CONTENTSTACK_API_KEY)"
+          node -e "console.log('CONTENTSTACK_MANAGEMENT_TOKEN present?', !!process.env.CONTENTSTACK_MANAGEMENT_TOKEN)"
+          node -e "console.log('CONTENTSTACK_ENVIRONMENT present?', !!process.env.CONTENTSTACK_ENVIRONMENT)"
+          node -e "console.log('CONTENTSTACK_ENVIRONMENT value:', JSON.stringify(process.env.CONTENTSTACK_ENVIRONMENT))"
           node -e "console.log('TEST_PARTNER_EMAIL present?', !!process.env.TEST_PARTNER_EMAIL)"
           node -e "console.log('TEST_CONTENTSTACK_EMAIL present?', !!process.env.TEST_CONTENTSTACK_EMAIL)"
           node -e "console.log('TEST_ADMIN_EMAIL present?', !!process.env.TEST_ADMIN_EMAIL)"
@@ -48,6 +57,11 @@ jobs:
           # Supabase keys REQUIRED for middleware / server
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+
+          # Contentstack keys required by demo-instructions routes
+          CONTENTSTACK_API_KEY: ${{ secrets.CONTENTSTACK_API_KEY }}
+          CONTENTSTACK_MANAGEMENT_TOKEN: ${{ secrets.CONTENTSTACK_MANAGEMENT_TOKEN }}
+          CONTENTSTACK_ENVIRONMENT: ${{ secrets.CONTENTSTACK_ENVIRONMENT }}
 
           # your integration test harness vars
           TEST_BASE_URL: http://localhost:3005
