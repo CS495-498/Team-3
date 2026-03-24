@@ -6,10 +6,10 @@ import { withLogging } from '@/utils/withLogging';
 async function handlePost(req) {
     const { displayName } = await req.json();
 
-    const { error2, profile, supabase } = await requireAuthWithPermission(
+    const { error: authError, profile, supabase } = await requireAuthWithPermission(
         PERMISSIONS.USE_PERSONAS
     );
-    if (error2) return error;
+    if (authError) return authError;
 
     if (!displayName?.trim()) {
         return NextResponse.json(
