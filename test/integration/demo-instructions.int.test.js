@@ -129,7 +129,6 @@ describe("Integration: demo instructions routes", function () {
                     uid: "demo-uid",
                     title: "Updated title",
                     html: "<p>Updated content</p>",
-                    author: "Integration Test",
                 },
             });
 
@@ -146,7 +145,6 @@ describe("Integration: demo instructions routes", function () {
                     uid: "demo-uid",
                     title: "Updated title",
                     html: "<p>Updated content</p>",
-                    author: "Integration Test",
                 },
             });
 
@@ -162,7 +160,7 @@ describe("Integration: demo instructions routes", function () {
 
             const updatedTitle = `${createdInstruction.title} Updated`;
             const updatedHtml = "<p>Updated integration content</p>";
-            const updatedAuthor = "Integration Test Author";
+            const expectedAuthor = "contentstack";
 
             const { status, json, text } = await client.request(updateUrl, {
                 method: "POST",
@@ -170,7 +168,6 @@ describe("Integration: demo instructions routes", function () {
                     uid: createdInstruction.uid,
                     title: updatedTitle,
                     html: updatedHtml,
-                    author: updatedAuthor,
                 },
             });
 
@@ -180,7 +177,7 @@ describe("Integration: demo instructions routes", function () {
             expect(json.entry).to.be.an("object");
             expect(json.entry.uid).to.equal(createdInstruction.uid);
             expect(json.entry.title).to.equal(updatedTitle);
-            expect(json.entry.author_name).to.equal(updatedAuthor);
+            expect(json.entry.author_name).to.equal(expectedAuthor);
             expect(json.entry.blog_content).to.equal(updatedHtml);
 
             createdInstruction = {
