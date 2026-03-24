@@ -116,16 +116,7 @@ export default function VideoLibrary() {
             return;
         }
 
-        const result = await toggleBookmark(resourceId, {
-            title: video?.title,
-            description: video?.description,
-            url: video?.video_url || video?.video_file?.url,
-            thumbnail: video?.thumbnail?.url,
-            extra: {
-                type: "video",
-                se_name: video?.se_name,
-            },
-        });
+        const result = await toggleBookmark(resourceId);
 
         if (result?.error === "AUTH_REQUIRED") {
             alert("Please sign in to bookmark videos.");

@@ -129,12 +129,7 @@ export default function DemoInstructions() {
             return;
         }
 
-        const result = await toggleBookmark(resourceId, {
-            title: demo?.title,
-            description: demo?.author_name,
-            url: demo?.url,
-            extra: { type: "demoInstruction" },
-        });
+        const result = await toggleBookmark(resourceId);
 
         if (result?.error === "AUTH_REQUIRED") {
             alert("Please sign in to bookmark demo instructions.");
