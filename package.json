@@ -77,7 +77,9 @@
     "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {
+    "@eslint/config-array": "^0.23.3",
     "@eslint/eslintrc": "^3",
+    "@eslint/object-schema": "^3.0.3",
     "@tailwindcss/postcss": "^4",
     "@types/lodash.throttle": "^4.1.9",
     "autoprefixer": "^10.4.21",

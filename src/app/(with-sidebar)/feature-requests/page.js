@@ -38,6 +38,9 @@ import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor
 import { useUser } from "@/context/UserContext";
 import { hasPermission } from "@/utils/hasPermission";
 import PERMISSIONS from "@/config/permissions";
+import {getUpvoteList} from "@/lib/featureRequests/votes/getUpvoteList.js";
+import {TooltipContent, TooltipProvider, TooltipTrigger} from "@radix-ui/react-tooltip";
+import {Tooltip} from "recharts";
 
 export default function Home() {
     const [currentUser, setCurrentUser] = useState(null);
@@ -98,6 +101,11 @@ export default function Home() {
     const [editingCommentId, setEditingCommentId] = useState(null);
     const [editingCommentText, setEditingCommentText] = useState("");
     const [deleteCommentId, setDeleteCommentId] = useState(null);
+
+    // Upvoter List
+    const [upvoteList, setUpvoteList] = useState([]);
+    const [viewList, setViewList] = useState(false);
+
 
     // Add/Edit RTE modal
     const [rteModalOpen, setRteModalOpen] = useState(false);
@@ -429,16 +437,16 @@ export default function Home() {
         }
     };
 
-    const handleVote = async (id, type) => {
+    const handleVote = async (id, upvoted) => {
         const currentVote = voteOverrides[id]?.vote ??
             visibleRequests.find((r) => r.id === id)?.currentUserVote ?? null;
 
-        const newVote = currentVote === type ? null : type;
+        const newVote = currentVote === upvoted ? null : upvoted;
 
         let delta;
-        if (currentVote === type) delta = type === "up" ? -1 : +1;
-        else if (currentVote) delta = type === "up" ? +2 : -2;
-        else delta = type === "up" ? +1 : -1;
+        if (currentVote === upvoted) delta = upvoted === "up" ? -1 : +1;
+        else if (currentVote) delta = upvoted === "up" ? +2 : -2;
+        else delta = upvoted === "up" ? +1 : -1;
 
         const existingDelta = voteOverrides[id]?.voteDelta || 0;
 
@@ -447,7 +455,7 @@ export default function Home() {
             [id]: { vote: newVote, voteDelta: existingDelta + delta },
         }));
 
-        const apiVote = currentVote === type ? "remove" : type;
+        const apiVote = currentVote === upvoted ? "remove" : upvoted;
 
         try {
             await castVote(id, apiVote);
@@ -461,6 +469,16 @@ export default function Home() {
             });
         }
     };
+
+    const openUpvoteList = async (id) => {
+        try {
+            const data = await getUpvoteList(id);
+            setUpvoteList(data || [])
+        } catch (error) {
+            console.error("Failed to retrieve upvote list:", error);
+            setUpvoteList([])
+        }
+    }
 
     // open full request + load comments
     const openRequest = async (req) => {
@@ -756,15 +774,29 @@ export default function Home() {
                                         className={`p-1 rounded-md transition ${voteState === "up"
                                             ? "text-green-600"
                                             : "text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
-                                            }`}
+                                        }`}
                                         onClick={() => handleVote(req.id, "up")}
                                     >
-                                        <ChevronsUp className="w-5 h-5" />
+                                        <ChevronsUp className="w-5 h-5 hover:bg-gray-200 dark:hover:bg-gray-800"/>
                                     </button>
-
-                                    <span className="text-sm font-medium text-gray-800 dark:text-gray-50">
-                                        {getEffectiveVoteCount(req)}
-                                    </span>
+                                    <button> {getEffectiveVoteCount(req)} </button>
+                                    <div className="relative">
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <button> {getEffectiveVoteCount(req)} </button>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    {/*{upvoteList.map((vote) => {*/}
+                                                    {/*    return (*/}
+                                                    {/*        */}
+                                                    {/*    )*/}
+                                                    {/*})}*/}
+                                                    This is a test
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    </div>
                                 </div>
 
                                 <div className="flex-shrink-0 flex items-center justify-center mr-4">

@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { redirect } from "next/navigation";
 import { createClient } from "@/utils/Supabase/server";
 import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
 import PERMISSIONS from "@/config/permissions";
@@ -32,11 +31,16 @@ async function handlePost(req, { params }) {
                 .from("votes")
                 .delete()
                 .eq("user_id", profile.id)
-                .eq("req_id", id);
+                .eq("req_id", id)
 
             if (delErr) throw delErr;
         } else {
             // UPSERT vote (up = true)
+            const { data: username } = await supabase
+                .from("profiles")
+                .select("username")
+                .eq("id", profile.id)
+                .single()
             const { error: upErr } = await supabase
                 .from("votes")
                 .upsert(
@@ -44,6 +48,7 @@ async function handlePost(req, { params }) {
                         user_id: profile.id,
                         req_id: id,
                         Upvoted: vote === "up",
+                        upvoter_username: username?.username
                     },
                     { onConflict: "user_id,req_id" }
                 );
@@ -52,7 +57,7 @@ async function handlePost(req, { params }) {
 
         const { data: votes, error: countErr } = await supabase
             .from("votes")
-            .select("Upvoted")
+            .select("*")
             .eq("req_id", id);
 
         if (countErr) throw countErr;
