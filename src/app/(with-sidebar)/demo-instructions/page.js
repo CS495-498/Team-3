@@ -14,7 +14,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import BookmarkButton from "@/components/bookmark-button";
 import { BOOKMARK_TYPES, useBookmarks } from "@/hooks/use-bookmarks";
 import CardDropdown from "@/components/cardDropdown.jsx";
-import EditDemoWebsiteModal from "@/components/editDemoWebsiteModal.jsx";
 import DeleteModal from "@/components/deleteModal.jsx";
 import EditDemoInstructionModal from "@/components/editDemoInstructions.jsx";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
@@ -31,7 +30,7 @@ export default function DemoInstructions() {
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [isOpen, setIsOpen] = useState(false);
-    const [dialogEditorContent, setDialogEditorContent] = useState("");
+    const [dialogEditorContent] = useState("");
     const editorRef = useRef(null);
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState("");
@@ -39,7 +38,7 @@ export default function DemoInstructions() {
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
 
-    const { user, loading } = useUser();
+    const { user } = useUser();
 
     const canPublishDemoInstructions =
         !!user && hasPermission(user.role, PERMISSIONS.PUBLISH_DEMO_INSTRUCTIONS);
@@ -69,15 +68,21 @@ export default function DemoInstructions() {
     const getInstructionId = (demo) =>
         demo?.uid || demo?.url || demo?.title;
 
-    const handleSubmit = async (e) => { };
+    const handleSubmit = async (e) => { e?.preventDefault?.(); };
 
-    const filteredDemos = entry?.demo_instructions?.filter((demo) => {
-        const query = searchQuery.toLowerCase();
-        return (
-            demo.title?.toLowerCase().includes(query) ||
-            demo.author_name?.toLowerCase().includes(query)
-        );
-    }) || [];
+    const filteredDemos = useMemo(() => {
+        const demos = entry?.demo_instructions ?? []
+        const query = searchQuery.trim().toLowerCase()
+
+        if (!query) return demos
+
+        return demos.filter((demo) => {
+            return (
+                demo.title?.toLowerCase().includes(query) ||
+                demo.author_name?.toLowerCase().includes(query)
+            )
+        })
+    }, [entry?.demo_instructions, searchQuery])
 
     const sortedInstructions = useMemo(() => {
         if (!filteredDemos.length) return [];
@@ -268,7 +273,7 @@ export default function DemoInstructions() {
                                                             }
                                                         }
                                                     }}
-                                                    className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
+                                                    className="text-white bg-linear-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
                                                 >
                                                     Upload
                                                 </button>
@@ -292,8 +297,8 @@ export default function DemoInstructions() {
                                                         Demo Content
                                                     </label>
 
-                                                    <div className="w-full min-h-[300px] rounded-md p-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700">
-                                                        <SimpleEditor html={dialogEditorContent} editorRef={editorRef} />
+                                                    <div className="w-full min-h-75 rounded-md p-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700">
+                                                        <SimpleEditor html={dialogEditorContent} editorRef={editorRef} assetParentUid={"blt4dd5900b16484a9e"} />
                                                     </div>
                                                 </div>
                                             </form>
@@ -309,7 +314,7 @@ export default function DemoInstructions() {
                         <button
                             onClick={() => setIsOpen(true)}
                             type="button"
-                            className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
+                            className="text-white bg-linear-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
                         >
                             Add Instructions
                         </button>
@@ -354,16 +359,38 @@ export default function DemoInstructions() {
                             {visibleInstructions.map((demo, idx) => {
                                 const instructionId = getInstructionId(demo);
                                 const key = instructionId ? `${instructionId}-${idx}` : `instruction-${idx}`;
-                                const previewHTML = DOMPurify.sanitize(demo?.blog_content || "<p>No preview available.</p>");
+                                const previewHTML = DOMPurify.sanitize(
+                                    demo?.blog_content || "<p>No preview available.</p>",
+                                    { ADD_TAGS: ["img"], ADD_ATTR: ["src", "alt", "title"] }
+                                );
 
                                 return (
                                     <Card
                                         key={key}
                                         className="relative group flex h-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-md transition-all hover:shadow-xl dark:border-gray-700 dark:bg-gray-800"
                                     >
-                                        <CardHeader className="gap-3 border-b border-gray-200 bg-gray-50 p-4 pr-24 dark:border-gray-700 dark:bg-gray-900/70">
-                                            <div className="flex items-start gap-3">
-                                                <div className="mt-0.5 rounded-lg bg-purple-100 p-2 dark:bg-purple-500/15">
+                                        <Link href={demo?.url || "#"} className="block">
+                                            <div
+                                                className="relative"
+                                                style={{
+                                                    height: "300px",
+                                                    padding: "20px",
+                                                    overflow: "hidden",
+                                                }}
+                                            >
+                                                <article className="prose prose-stone dark:prose-invert mx-auto my-0 max-w-4xl">
+                                                    <div dangerouslySetInnerHTML={{ __html: previewHTML }} />
+                                                </article>
+                                                <div
+                                                    className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none
+                       bg-linear-to-b from-transparent to-white dark:to-gray-800"
+                                                />
+                                            </div>
+                                        </Link>
+
+                                        <div className="px-4 py-3 bg-white dark:bg-gray-900 flex flex-col gap-1 rounded-b-xl">
+                                            <div className="flex justify-between items-center">
+                                                <div className="flex items-center gap-2">
                                                     <svg
                                                         xmlns="http://www.w3.org/2000/svg"
                                                         width="18"
