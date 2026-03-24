@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { createClient } from "@/utils/Supabase/client.js";
+import { useCallback, useEffect, useState } from "react";
 
 export const BOOKMARK_TYPES = {
   DEMO_WEBSITE: "demo_website",
@@ -14,10 +13,9 @@ export const BOOKMARK_TYPES = {
  * Keeps the UI in sync while requests are in-flight and surfaces lightweight errors.
  */
 export function useBookmarks(resourceType) {
-  const supabase = useMemo(() => createClient(), []);
   const [bookmarks, setBookmarks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [userId, setUserId] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [pendingMap, setPendingMap] = useState({});
 
   useEffect(() => {
@@ -26,40 +24,36 @@ export function useBookmarks(resourceType) {
     const loadBookmarks = async () => {
       setIsLoading(true);
       try {
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
+        const response = await fetch(
+          `/api/bookmarks?resourceType=${encodeURIComponent(resourceType)}`,
+          {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+          },
+        );
 
         if (!isMounted) return;
 
-        if (userError || !user) {
-          setUserId(null);
+        if (response.status === 401) {
+          setIsAuthenticated(false);
           setBookmarks([]);
-          setIsLoading(false);
           return;
         }
 
-        setUserId(user.id);
-
-        const { data, error } = await supabase
-          .from("bookmarks")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("resource_type", resourceType)
-          .order("created_at", { ascending: false });
-
-        if (!isMounted) return;
-
-        if (error) {
-          console.error("Failed to fetch bookmarks:", error);
+        if (!response.ok) {
+          console.error("Failed to fetch bookmarks:", response.status);
+          setIsAuthenticated(true);
           setBookmarks([]);
-        } else {
-          setBookmarks(data || []);
+          return;
         }
+
+        const data = await response.json();
+        setIsAuthenticated(true);
+        setBookmarks(Array.isArray(data) ? data : []);
       } catch (err) {
         if (isMounted) {
           console.error("Unexpected bookmark fetch error:", err);
+          setIsAuthenticated(false);
           setBookmarks([]);
         }
       } finally {
@@ -72,7 +66,7 @@ export function useBookmarks(resourceType) {
     return () => {
       isMounted = false;
     };
-  }, [resourceType, supabase]);
+  }, [resourceType]);
 
   const isBookmarked = useCallback(
     (resourceId) =>
@@ -95,11 +89,11 @@ export function useBookmarks(resourceType) {
   }, []);
 
   const toggleBookmark = useCallback(
-    async (resourceId, metadata = {}) => {
+    async (resourceId) => {
       if (!resourceId) {
         return { error: "MISSING_RESOURCE_ID" };
       }
-      if (!userId) {
+      if (!isAuthenticated) {
         return { error: "AUTH_REQUIRED" };
       }
 
@@ -108,17 +102,23 @@ export function useBookmarks(resourceType) {
 
       try {
         if (currentlyBookmarked) {
-          const { error } = await supabase
-            .from("bookmarks")
-            .delete()
-            .match({
-              user_id: userId,
-              resource_type: resourceType,
-              resource_id: resourceId,
-            });
+          const response = await fetch("/api/bookmarks", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              resourceType,
+              resourceId,
+            }),
+          });
 
-          if (error) {
-            console.error("Failed to remove bookmark:", error);
+          if (response.status === 401) {
+            setIsAuthenticated(false);
+            setBookmarks([]);
+            return { error: "AUTH_REQUIRED" };
+          }
+
+          if (!response.ok) {
+            console.error("Failed to remove bookmark:", response.status);
             return { error: "REQUEST_FAILED" };
           }
 
@@ -128,28 +128,27 @@ export function useBookmarks(resourceType) {
           return { bookmarked: false };
         }
 
-        const payload = {
-          user_id: userId,
-          resource_type: resourceType,
-          resource_id: resourceId,
-          resource_title: metadata.title || null,
-          resource_description: metadata.description || null,
-          resource_url: metadata.url || null,
-          resource_thumbnail: metadata.thumbnail || null,
-          metadata: metadata.extra || null,
-        };
+        const response = await fetch("/api/bookmarks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            resourceType,
+            resourceId,
+          }),
+        });
 
-        const { data, error } = await supabase
-          .from("bookmarks")
-          .insert(payload)
-          .select()
-          .single();
+        if (response.status === 401) {
+          setIsAuthenticated(false);
+          setBookmarks([]);
+          return { error: "AUTH_REQUIRED" };
+        }
 
-        if (error) {
-          console.error("Failed to create bookmark:", error);
+        if (!response.ok) {
+          console.error("Failed to create bookmark:", response.status);
           return { error: "REQUEST_FAILED" };
         }
 
+        const data = await response.json();
         setBookmarks((prev) => [...prev, data]);
         return { bookmarked: true };
       } catch (err) {
@@ -159,12 +158,12 @@ export function useBookmarks(resourceType) {
         setPending(resourceId, false);
       }
     },
-    [isBookmarked, resourceType, setPending, supabase, userId],
+    [isAuthenticated, isBookmarked, resourceType, setPending],
   );
 
   return {
     bookmarks,
-    isAuthenticated: Boolean(userId),
+    isAuthenticated,
     isLoading,
     isBookmarked,
     toggleBookmark,

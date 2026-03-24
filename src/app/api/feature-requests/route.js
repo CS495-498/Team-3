@@ -2,9 +2,7 @@ import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
 import PERMISSIONS from "@/config/permissions";
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/Supabase/server";
-import { fileTypeFromBuffer } from "file-type";
 import { createServiceRoleClient } from "@/utils/Supabase/server";
-import { sanitizeHtmlServer } from "@/lib/featureRequests/requests/sanitizeHtmlServer.js";
 import { withLogging } from '@/utils/withLogging';
 
 const ALLOWED_MIME_TYPES = [
@@ -26,11 +24,11 @@ const MAX_FILE_SIZE = 25 * 1024 * 1024;
 async function handleGet(request) {
   const supabase = await createClient();
 
-  const { error2, profile } = await requireAuthWithPermission(
+  const { error: authError, profile } = await requireAuthWithPermission(
     PERMISSIONS.VIEW_CONTENT
   );
 
-  if (error2) return error2;
+  if (authError) return authError;
 
   const { searchParams } = new URL(request.url);
 
@@ -173,7 +171,10 @@ async function handleGet(request) {
     }
 
     // Run all enrichment queries in parallel for speed
-    const supabaseServiceRole = await createServiceRoleClient();
+    const needsSignedUrls = pageData.some((req) => req.file_url);
+    const supabaseServiceRole = needsSignedUrls
+      ? await createServiceRoleClient()
+      : null;
 
     const [voteCountResult, commentResult, userVoteResult, ...signedUrlResults] = await Promise.all([
       // Vote counts (skip if already computed for vote sort)
@@ -253,12 +254,12 @@ async function handleGet(request) {
 async function handlePost(req) {
   const supabase = await createClient();
 
-  const { error2, profile } = await requireAuthWithPermission(
+  const { error: authError, profile } = await requireAuthWithPermission(
 
     PERMISSIONS.PUBLISH_FEATURE_REQUESTS
   );
 
-  if (error2) return error2;
+  if (authError) return authError;
 
   const contentLength = req.headers.get("content-length");
 
@@ -284,6 +285,7 @@ async function handlePost(req) {
     );
   }
 
+  const { sanitizeHtmlServer } = await import("@/lib/featureRequests/requests/sanitizeHtmlServer.js");
   const cleanContent = sanitizeHtmlServer(content)
 
   let filePath = null;
@@ -294,6 +296,7 @@ async function handlePost(req) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
+    const { fileTypeFromBuffer } = await import("file-type");
 
     // Detect actual file type
     const detectedType = await fileTypeFromBuffer(buffer);

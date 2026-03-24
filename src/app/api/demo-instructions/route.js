@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { withLogging } from '@/utils/withLogging';
+import { sanitizeHtmlServer } from "@/lib/featureRequests/requests/sanitizeHtmlServer.js";
 const BASE = "https://api.contentstack.io/v3";
 const API_KEY = process.env.CONTENTSTACK_API_KEY;
 const MANAGEMENT_TOKEN = process.env.CONTENTSTACK_MANAGEMENT_TOKEN;
@@ -20,8 +21,9 @@ async function handlePOST(req) {
   const author = profile.full_name || "Unknown";
   try {
     const { title, html } = await req.json();
+    const cleanHtml = sanitizeHtmlServer(html);
 
-    if (!title || !html) {
+    if (!title || !cleanHtml) {
       return NextResponse.json({ error: "Missing title or HTML" }, { status: 400 });
     }
 
@@ -68,7 +70,7 @@ async function handlePOST(req) {
           title,
           url,
           author_name: author || "",
-          blog_content: html,
+          blog_content: cleanHtml,
         },
       }),
     });
