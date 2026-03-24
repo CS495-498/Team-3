@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@contentstack/live-preview-utils": "^4.0.1",
+    "@preact/signals-core": "^1.14.0",
     "@floating-ui/react": "^0.27.17",
     "@headlessui/react": "^2.2.9",
     "@lexkit/editor": "^0.0.37",
