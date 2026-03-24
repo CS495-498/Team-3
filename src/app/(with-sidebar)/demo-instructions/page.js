@@ -10,9 +10,11 @@ import { useRef } from "react";
 import SuccessToast from "@/components/ui/success-toast.jsx";
 import LoadingIndicator from "@/components/ui/loading-indicator.jsx";
 
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import BookmarkButton from "@/components/bookmark-button";
 import { BOOKMARK_TYPES, useBookmarks } from "@/hooks/use-bookmarks";
 import CardDropdown from "@/components/cardDropdown.jsx";
+import EditDemoWebsiteModal from "@/components/editDemoWebsiteModal.jsx";
 import DeleteModal from "@/components/deleteModal.jsx";
 import EditDemoInstructionModal from "@/components/editDemoInstructions.jsx";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
@@ -29,15 +31,14 @@ export default function DemoInstructions() {
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [isOpen, setIsOpen] = useState(false);
-    const [dialogEditorContent] = useState("");
+    const [dialogEditorContent, setDialogEditorContent] = useState("");
     const editorRef = useRef(null);
     const [showToast, setShowToast] = useState(false);
-    const [toastMessage, setToastMessage] = useState("");
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
 
-    const { user } = useUser();
+    const { user, loading } = useUser();
 
     const canPublishDemoInstructions =
         !!user && hasPermission(user.role, PERMISSIONS.PUBLISH_DEMO_INSTRUCTIONS);
@@ -67,21 +68,15 @@ export default function DemoInstructions() {
     const getInstructionId = (demo) =>
         demo?.uid || demo?.url || demo?.title;
 
-    const handleSubmit = async (e) => { e?.preventDefault?.(); };
+    const handleSubmit = async (e) => { };
 
-    const filteredDemos = useMemo(() => {
-        const demos = entry?.demo_instructions ?? []
-        const query = searchQuery.trim().toLowerCase()
-
-        if (!query) return demos
-
-        return demos.filter((demo) => {
-            return (
-                demo.title?.toLowerCase().includes(query) ||
-                demo.author_name?.toLowerCase().includes(query)
-            )
-        })
-    }, [entry?.demo_instructions, searchQuery])
+    const filteredDemos = entry?.demo_instructions?.filter((demo) => {
+        const query = searchQuery.toLowerCase();
+        return (
+            demo.title?.toLowerCase().includes(query) ||
+            demo.author_name?.toLowerCase().includes(query)
+        );
+    }) || [];
 
     const sortedInstructions = useMemo(() => {
         if (!filteredDemos.length) return [];
@@ -122,33 +117,9 @@ export default function DemoInstructions() {
         setIsEditOpen(false);
     };
 
-    const handleConfirmDelete = async () => {
-        try {
-            if (!selectedItem?.uid) {
-                alert("Could not locate this instruction.");
-                return;
-            }
-
-            const response = await fetch("/api/demo-instructions", {
-                method: "DELETE",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ instructionUid: selectedItem.uid }),
-            });
-
-            if (!response.ok) {
-                const text = await response.text();
-                throw new Error(text);
-            }
-
-            setIsDeleteOpen(false);
-            setToastMessage("Demo instruction deleted successfully!");
-            setShowToast(true);
-            setTimeout(() => setShowToast(false), 2000);
-            getContent();
-        } catch (error) {
-            console.error("Delete failed:", error);
-            alert("Failed to delete instruction.");
-        }
+    const handleConfirmDelete = () => {
+        console.log("Delete confirmed for:", selectedItem);
+        setIsDeleteOpen(false);
     };
 
     const handleBookmarkToggle = async (demo) => {
@@ -178,7 +149,7 @@ export default function DemoInstructions() {
     return (
         <div className="pl-10 pt-6 min-h-screen flex flex-col w-full">
             <SuccessToast
-                message={toastMessage}
+                message="Demo instruction uploaded successfully!"
                 isOpen={showToast}
                 onClose={() => setShowToast(false)}
             />
@@ -257,7 +228,6 @@ export default function DemoInstructions() {
                                                         if (data.success) {
                                                             console.log("Uploaded successfully:", data);
                                                             setIsOpen(false);
-                                                            setToastMessage("Demo instruction uploaded successfully!");
                                                             setShowToast(true);
                                                             setTimeout(() => {
                                                                 setShowToast(false);
@@ -272,7 +242,7 @@ export default function DemoInstructions() {
                                                             }
                                                         }
                                                     }}
-                                                    className="text-white bg-linear-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
+                                                    className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
                                                 >
                                                     Upload
                                                 </button>
@@ -296,8 +266,8 @@ export default function DemoInstructions() {
                                                         Demo Content
                                                     </label>
 
-                                                    <div className="w-full min-h-75 rounded-md p-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700">
-                                                        <SimpleEditor html={dialogEditorContent} editorRef={editorRef} assetParentUid={"blt4dd5900b16484a9e"} />
+                                                    <div className="w-full min-h-[300px] rounded-md p-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700">
+                                                        <SimpleEditor html={dialogEditorContent} editorRef={editorRef} />
                                                     </div>
                                                 </div>
                                             </form>
@@ -313,7 +283,7 @@ export default function DemoInstructions() {
                         <button
                             onClick={() => setIsOpen(true)}
                             type="button"
-                            className="text-white bg-linear-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
+                            className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
                         >
                             Add Instructions
                         </button>
@@ -355,41 +325,19 @@ export default function DemoInstructions() {
                 {visibleInstructions.length > 0 ? (
                     <>
                         <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6 me-10">
-                            {sortedInstructions.map((demo, idx) => {
+                            {visibleInstructions.map((demo, idx) => {
                                 const instructionId = getInstructionId(demo);
                                 const key = instructionId ? `${instructionId}-${idx}` : `instruction-${idx}`;
-                                const previewHTML = DOMPurify.sanitize(
-                                    demo?.blog_content || "<p>No preview available.</p>",
-                                    { ADD_TAGS: ["img"], ADD_ATTR: ["src", "alt", "title"] }
-                                );
+                                const previewHTML = DOMPurify.sanitize(demo?.blog_content || "<p>No preview available.</p>");
 
                                 return (
-                                    <div
+                                    <Card
                                         key={key}
-                                        className="relative group bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl transition-all border border-gray-200 dark:border-gray-700"
+                                        className="relative group flex h-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-md transition-all hover:shadow-xl dark:border-gray-700 dark:bg-gray-800"
                                     >
-                                        <Link href={demo?.url || "#"} className="block">
-                                            <div
-                                                className="relative"
-                                                style={{
-                                                    height: "300px",
-                                                    padding: "20px",
-                                                    overflow: "hidden",
-                                                }}
-                                            >
-                                                <article className="prose prose-stone dark:prose-invert mx-auto my-0 max-w-4xl">
-                                                    <div dangerouslySetInnerHTML={{ __html: previewHTML }} />
-                                                </article>
-                                                <div
-                                                    className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none
-                       bg-linear-to-b from-transparent to-white dark:to-gray-800"
-                                                />
-                                            </div>
-                                        </Link>
-
-                                        <div className="px-4 py-3 bg-white dark:bg-gray-900 flex flex-col gap-1 rounded-b-xl">
-                                            <div className="flex justify-between items-center">
-                                                <div className="flex items-center gap-2">
+                                        <CardHeader className="gap-3 border-b border-gray-200 bg-gray-50 p-4 pr-24 dark:border-gray-700 dark:bg-gray-900/70">
+                                            <div className="flex items-start gap-3">
+                                                <div className="mt-0.5 rounded-lg bg-purple-100 p-2 dark:bg-purple-500/15">
                                                     <svg
                                                         xmlns="http://www.w3.org/2000/svg"
                                                         width="18"
@@ -408,33 +356,37 @@ export default function DemoInstructions() {
                                                         <line x1="9" y1="17" x2="15" y2="17" />
                                                         <line x1="9" y1="9" x2="11" y2="9" />
                                                     </svg>
-                                                    <h2 className="text-base font-semibold leading-tight line-clamp-1 text-gray-900 dark:text-gray-100">
-                                                        {demo?.title}
-                                                    </h2>
                                                 </div>
-                                                {canPublishDemoInstructions && (
-                                                    <CardDropdown
-                                                        onEdit={() => openEditModal(demo)}
-                                                        onDelete={() => openDeleteModal(demo)}
-                                                    />
-                                                )}
-
+                                                <div className="min-w-0">
+                                                    <CardTitle className="text-base leading-tight text-gray-900 dark:text-gray-100">
+                                                        <span className="line-clamp-2 break-words">
+                                                            {demo?.title || "Untitled instruction"}
+                                                        </span>
+                                                    </CardTitle>
+                                                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                                        {demo?.author_name ? `By ${demo.author_name}` : "Author unavailable"}
+                                                    </p>
+                                                </div>
                                             </div>
+                                        </CardHeader>
 
-                                            <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400 mt-1">
-                                                <svg
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    width="16"
-                                                    height="16"
-                                                    viewBox="0 0 24 24"
-                                                    className="shrink-0 fill-purple-600 dark:fill-purple-400"
-                                                >
-                                                    <circle cx="12" cy="8" r="4" />
-                                                    <path d="M4 20c0-4 4-6 8-6s8 2 8 6v1H4v-1z" />
-                                                </svg>
-                                                <p className="text-xs line-clamp-1">{demo?.author_name || ""}</p>
-                                            </div>
-                                        </div>
+                                        <Link href={demo?.url || "#"} className="block">
+                                            <CardContent
+                                                className="relative flex-1 p-5"
+                                                style={{
+                                                    height: "300px",
+                                                    overflow: "hidden",
+                                                }}
+                                            >
+                                                <article className="prose prose-stone dark:prose-invert mx-auto my-0 max-w-4xl">
+                                                    <div dangerouslySetInnerHTML={{ __html: previewHTML }} />
+                                                </article>
+                                                <div
+                                                    className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none
+                       bg-gradient-to-b from-transparent to-white dark:to-gray-800"
+                                                />
+                                            </CardContent>
+                                        </Link>
 
                                         <BookmarkButton
                                             active={instructionId ? isBookmarked(instructionId) : false}
@@ -444,7 +396,17 @@ export default function DemoInstructions() {
                                             titleWhenActive="Remove instruction from bookmarks"
                                             titleWhenInactive="Save instruction to bookmarks"
                                         />
-                                    </div>
+
+                                        {canPublishDemoInstructions && (
+                                            <div className="absolute right-14 top-3 z-10">
+                                                    <CardDropdown
+                                                        onEdit={() => openEditModal(demo)}
+                                                        onDelete={() => openDeleteModal(demo)}
+                                                        editLabel="Edit Title"
+                                                    />
+                                                </div>
+                                        )}
+                                    </Card>
                                 );
                             })}
                         </div>
@@ -483,4 +445,3 @@ export default function DemoInstructions() {
         </div>
     );
 }
-
