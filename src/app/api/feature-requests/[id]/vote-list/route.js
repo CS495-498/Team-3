@@ -14,7 +14,7 @@ async function handleGet(req, { params }){
 
     if (profileError) return profileError
 
-    const { data, dataError } = await supabase
+    const { data, error } = await supabase
         .from("votes")
         .select(`
         user_id,
@@ -22,15 +22,14 @@ async function handleGet(req, { params }){
         upvoter_username
         `)
         .eq("req_id", id)
-    if (dataError) {
-        console.error(dataError);
-        return NextResponse.json({ error: dataError.message}, { status: 500 });
+    if (error) {
+        console.error(error);
+        return NextResponse.json({ error: error.message}, { status: 500 });
     }
 
     const normalized = (data || []).map((c) => ({
         id: c.id,
-        content: c.content,
-        upvoter_username: c.user?.upvoter_username || null,
+        upvoter_username: c.upvoter_username || null,
     }))
 
     return NextResponse.json(normalized, { status: 200 });

@@ -763,6 +763,7 @@ export default function Home() {
 
                         const isCompleted = req.status === "completed";
 
+
                         return (
                             <li
                                 key={req.id}
@@ -782,19 +783,19 @@ export default function Home() {
                                     </button>
                                     <DropdownMenu onOpenChange={(open) => {
                                         if(open) getUpvoteData(req.id)
-                                    }}>
-                                        <DropdownMenuTrigger >
+                                    }} >
+                                        <DropdownMenuTrigger className="w-5 h-5 hover:bg-gray-200 dark:hover:bg-gray-800">
                                             {getEffectiveVoteCount(req)}
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent >
                                             {upvoteList === null ? (
                                                 <span className="px-2 py-1 text-sm">Loading...</span>
                                             ) : (upvoteList.length === 0 ? (
-                                                <span className="cursor-pointer"> No Upvotes</span>
+                                                <span className="px-2 py-1 text-sm"> No Upvotes</span>
                                             ) : (
-                                                (upvoteList.map((vote) => (
-                                                    <DropdownMenuItem key={vote.id}>
-                                                        {vote.username}
+                                                (upvoteList.map((vote, i) => (
+                                                    <DropdownMenuItem key={`${req.id}-${vote.id || i}`}>
+                                                        {vote.upvoter_username}
                                                     </DropdownMenuItem>
                                                     ))
                                                 )
