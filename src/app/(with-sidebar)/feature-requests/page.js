@@ -41,6 +41,7 @@ import PERMISSIONS from "@/config/permissions";
 import {getUpvoteList} from "@/lib/featureRequests/votes/getUpvoteList.js";
 import {TooltipContent, TooltipProvider, TooltipTrigger} from "@radix-ui/react-tooltip";
 import {Tooltip} from "recharts";
+import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from "@/components/ui/dropdown-menu";
 
 export default function Home() {
     const [currentUser, setCurrentUser] = useState(null);
@@ -103,8 +104,7 @@ export default function Home() {
     const [deleteCommentId, setDeleteCommentId] = useState(null);
 
     // Upvoter List
-    const [upvoteList, setUpvoteList] = useState([]);
-    const [viewList, setViewList] = useState(false);
+    const [upvoteList, setUpvoteList] = useState(null);
 
 
     // Add/Edit RTE modal
@@ -470,7 +470,8 @@ export default function Home() {
         }
     };
 
-    const openUpvoteList = async (id) => {
+    const getUpvoteData = async (id) => {
+        setUpvoteList(null)
         try {
             const data = await getUpvoteList(id);
             setUpvoteList(data || [])
@@ -779,24 +780,28 @@ export default function Home() {
                                     >
                                         <ChevronsUp className="w-5 h-5 hover:bg-gray-200 dark:hover:bg-gray-800"/>
                                     </button>
-                                    <button> {getEffectiveVoteCount(req)} </button>
-                                    <div className="relative">
-                                        <TooltipProvider>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <button> {getEffectiveVoteCount(req)} </button>
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                    {/*{upvoteList.map((vote) => {*/}
-                                                    {/*    return (*/}
-                                                    {/*        */}
-                                                    {/*    )*/}
-                                                    {/*})}*/}
-                                                    This is a test
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </TooltipProvider>
-                                    </div>
+                                    <DropdownMenu onOpenChange={(open) => {
+                                        if(open) getUpvoteData(req.id)
+                                    }}>
+                                        <DropdownMenuTrigger >
+                                            {getEffectiveVoteCount(req)}
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent >
+                                            {upvoteList === null ? (
+                                                <span className="px-2 py-1 text-sm">Loading...</span>
+                                            ) : (upvoteList.length === 0 ? (
+                                                <span className="cursor-pointer"> No Upvotes</span>
+                                            ) : (
+                                                (upvoteList.map((vote) => (
+                                                    <DropdownMenuItem key={vote.id}>
+                                                        {vote.username}
+                                                    </DropdownMenuItem>
+                                                    ))
+                                                )
+                                            ))
+                                            }
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </div>
 
                                 <div className="flex-shrink-0 flex items-center justify-center mr-4">
