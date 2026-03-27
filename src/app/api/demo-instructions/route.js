@@ -9,8 +9,15 @@ const ENVIRONMENT = process.env.CONTENTSTACK_ENVIRONMENT?.trim();
 import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
 import PERMISSIONS from "@/config/permissions";
 
-async function handlePOST(req) {
-  const { error, profile } = await requireAuthWithPermission(
+export async function handlePOST(
+  req,
+  {
+    requireAuthWithPermissionFn = requireAuthWithPermission,
+    sanitizeHtmlServerFn = sanitizeHtmlServer,
+    fetchFn = fetch,
+  } = {}
+) {
+  const { error, profile } = await requireAuthWithPermissionFn(
 
     PERMISSIONS.PUBLISH_DEMO_INSTRUCTIONS
   );
@@ -21,7 +28,7 @@ async function handlePOST(req) {
   const author = profile.full_name || "Unknown";
   try {
     const { title, html } = await req.json();
-    const cleanHtml = sanitizeHtmlServer(html);
+    const cleanHtml = sanitizeHtmlServerFn(html);
 
     if (!title || !cleanHtml) {
       return NextResponse.json({ error: "Missing title or HTML" }, { status: 400 });
@@ -42,7 +49,7 @@ async function handlePOST(req) {
     // -----------------------
     // Prevent URL conflicts
     // -----------------------
-    const checkRes = await fetch(
+    const checkRes = await fetchFn(
       `${BASE}/content_types/demo_instruction/entries?query=${encodeURIComponent(JSON.stringify({ url }))}`,
       {
         headers: { api_key: API_KEY, authorization: MANAGEMENT_TOKEN },
@@ -58,7 +65,7 @@ async function handlePOST(req) {
     // -----------------------
     // 1. CREATE ENTRY
     // -----------------------
-    const createRes = await fetch(`${BASE}/content_types/demo_instruction/entries`, {
+    const createRes = await fetchFn(`${BASE}/content_types/demo_instruction/entries`, {
       method: "POST",
       headers: {
         api_key: API_KEY,
@@ -85,7 +92,7 @@ async function handlePOST(req) {
     // -----------------------
     // 2. PUBLISH NEW ENTRY
     // -----------------------
-    const publishRes = await fetch(`${BASE}/content_types/demo_instruction/entries/${newEntryUid}/publish`, {
+    const publishRes = await fetchFn(`${BASE}/content_types/demo_instruction/entries/${newEntryUid}/publish`, {
       method: "POST",
       headers: {
         api_key: API_KEY,
@@ -108,7 +115,7 @@ async function handlePOST(req) {
     // -----------------------
     // 3. FETCH LIBRARY ENTRY
     // -----------------------
-    const libFetch = await fetch(`${BASE}/content_types/demo_instructions/entries/${LIBRARY_ENTRY_ID}`, {
+    const libFetch = await fetchFn(`${BASE}/content_types/demo_instructions/entries/${LIBRARY_ENTRY_ID}`, {
       headers: { api_key: API_KEY, authorization: MANAGEMENT_TOKEN },
     });
 
@@ -130,7 +137,7 @@ async function handlePOST(req) {
       },
     ];
 
-    const updateRes = await fetch(`${BASE}/content_types/demo_instructions/entries/${LIBRARY_ENTRY_ID}`, {
+    const updateRes = await fetchFn(`${BASE}/content_types/demo_instructions/entries/${LIBRARY_ENTRY_ID}`, {
       method: "PUT",
       headers: {
         api_key: API_KEY,
@@ -153,7 +160,7 @@ async function handlePOST(req) {
     // -----------------------
     // 5. PUBLISH LIBRARY ENTRY
     // -----------------------
-    const publishLibRes = await fetch(`${BASE}/content_types/demo_instructions/entries/${LIBRARY_ENTRY_ID}/publish`, {
+    const publishLibRes = await fetchFn(`${BASE}/content_types/demo_instructions/entries/${LIBRARY_ENTRY_ID}/publish`, {
       method: "POST",
       headers: {
         api_key: API_KEY,
@@ -190,8 +197,14 @@ async function handlePOST(req) {
 
 export const POST = withLogging(handlePOST);
 
-async function handleDELETE(req) {
-  const { error } = await requireAuthWithPermission(
+export async function handleDELETE(
+  req,
+  {
+    requireAuthWithPermissionFn = requireAuthWithPermission,
+    fetchFn = fetch,
+  } = {}
+) {
+  const { error } = await requireAuthWithPermissionFn(
     PERMISSIONS.PUBLISH_DEMO_INSTRUCTIONS
   );
   if (error) return error;
@@ -204,7 +217,7 @@ async function handleDELETE(req) {
     }
 
     // 1. Fetch library entry
-    const libFetch = await fetch(`${BASE}/content_types/demo_instructions/entries/${LIBRARY_ENTRY_ID}`, {
+    const libFetch = await fetchFn(`${BASE}/content_types/demo_instructions/entries/${LIBRARY_ENTRY_ID}`, {
       headers: { api_key: API_KEY, authorization: MANAGEMENT_TOKEN },
     });
     const libData = await libFetch.json();
@@ -217,7 +230,7 @@ async function handleDELETE(req) {
     const updatedRefs = currentRefs.filter((ref) => ref.uid !== instructionUid);
 
     // 3. Update library entry
-    const updateRes = await fetch(`${BASE}/content_types/demo_instructions/entries/${LIBRARY_ENTRY_ID}`, {
+    const updateRes = await fetchFn(`${BASE}/content_types/demo_instructions/entries/${LIBRARY_ENTRY_ID}`, {
       method: "PUT",
       headers: {
         api_key: API_KEY,
@@ -237,7 +250,7 @@ async function handleDELETE(req) {
     }
 
     // 4. Publish library entry
-    const publishLibRes = await fetch(`${BASE}/content_types/demo_instructions/entries/${LIBRARY_ENTRY_ID}/publish`, {
+    const publishLibRes = await fetchFn(`${BASE}/content_types/demo_instructions/entries/${LIBRARY_ENTRY_ID}/publish`, {
       method: "POST",
       headers: {
         api_key: API_KEY,
@@ -254,7 +267,7 @@ async function handleDELETE(req) {
     }
 
     // 5. Unpublish the individual instruction entry
-    await fetch(`${BASE}/content_types/demo_instruction/entries/${instructionUid}/unpublish`, {
+    await fetchFn(`${BASE}/content_types/demo_instruction/entries/${instructionUid}/unpublish`, {
       method: "POST",
       headers: {
         api_key: API_KEY,
@@ -267,7 +280,7 @@ async function handleDELETE(req) {
     });
 
     // 6. Delete the individual instruction entry
-    const deleteRes = await fetch(`${BASE}/content_types/demo_instruction/entries/${instructionUid}`, {
+    const deleteRes = await fetchFn(`${BASE}/content_types/demo_instruction/entries/${instructionUid}`, {
       method: "DELETE",
       headers: { api_key: API_KEY, authorization: MANAGEMENT_TOKEN },
     });
