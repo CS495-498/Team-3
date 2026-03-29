@@ -212,7 +212,7 @@ async function handleGet(request) {
     // Process user vote state
     const userVoteMap = {};
     (userVoteResult.data || []).forEach((v) => {
-      userVoteMap[v.req_id] = v.Upvoted ? "up" : "down";
+      userVoteMap[v.req_id] = "up";
     });
 
     // Build enriched response
