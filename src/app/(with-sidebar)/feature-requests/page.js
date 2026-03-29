@@ -40,6 +40,11 @@ import { useUser } from "@/context/UserContext";
 import { hasPermission } from "@/utils/hasPermission";
 import PERMISSIONS from "@/config/permissions";
 
+const FEATURE_REQUEST_ATTACHMENT_ACCEPT =
+    ".png,.jpg,.jpeg,.gif,.webp,.pdf,.mp4,.webm,.ogg";
+const FEATURE_REQUEST_ATTACHMENT_HELPER_TEXT =
+    "Allowed: PNG, JPG, GIF, WEBP, PDF, MP4, WEBM, OGG. Max size: 25 MB.";
+
 export default function Home() {
     const [currentUser, setCurrentUser] = useState(null);
 
@@ -256,6 +261,24 @@ export default function Home() {
 
     // strict sanitization (no embeds)
     const sanitizeHTML = (html) => DOMPurify.sanitize(html || "");
+
+    const uploadFeatureRequestImage = useCallback(async (file) => {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const res = await fetch("/api/feature-requests/images", {
+            method: "POST",
+            body: formData,
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok || !data?.src) {
+            throw new Error(data?.error || "Failed to upload image");
+        }
+
+        return data.src;
+    }, []);
 
     /**
      * IMPORTANT: This component NEVER renders a button.
@@ -972,12 +995,15 @@ export default function Home() {
                                         </div>
 
                                         <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white/60 dark:bg-gray-800/40 p-4">
-                                            <div className="flex items-center gap-2 mb-2">
+                                            <div className="flex items-center gap-2 mb-1">
                                                 <Paperclip className="w-4 h-4 text-gray-600 dark:text-gray-200" />
                                                 <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                                                     Attachment
                                                 </h4>
                                             </div>
+                                            <p className="mb-3 text-xs text-gray-500 dark:text-gray-300">
+                                                {FEATURE_REQUEST_ATTACHMENT_HELPER_TEXT}
+                                            </p>
 
                                             {(() => {
                                                 const displayUrl =
@@ -1020,6 +1046,7 @@ export default function Home() {
                                             <input
                                                 id="rte-file"
                                                 type="file"
+                                                accept={FEATURE_REQUEST_ATTACHMENT_ACCEPT}
                                                 onChange={(e) => {
                                                     const file = e.target.files?.[0] || null;
                                                     setRteFile(file);
@@ -1038,7 +1065,9 @@ export default function Home() {
                                                 htmlFor="rte-file"
                                                 className="text-white bg-linear-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap cursor-pointer inline-flex items-center"
                                             >
-                                                Choose file
+                                                {rteFile || selectedItem?.signed_file_url
+                                                    ? "Choose different file"
+                                                    : "Choose file"}
                                             </label>
                                         </div>
 
@@ -1050,7 +1079,8 @@ export default function Home() {
                                                 <SimpleEditor
                                                     html={dialogEditorContent}
                                                     editorRef={editorRef}
-                                                    enableImages={false}
+                                                    enableImages
+                                                    uploadImage={uploadFeatureRequestImage}
                                                 />
                                             </div>
                                         </div>
@@ -1122,14 +1152,6 @@ export default function Home() {
                                     </div>
 
                                     <div className="p-5 max-h-[75vh] overflow-y-auto space-y-6">
-                                        <article className="prose dark:prose-invert max-w-none">
-                                            <div
-                                                dangerouslySetInnerHTML={{
-                                                    __html: sanitizeHTML(activeRequest.content || ""),
-                                                }}
-                                            />
-                                        </article>
-
                                         {activeRequest.signed_file_url ? (
                                             <div className="flex items-start gap-3">
                                                 <AttachmentPreview
@@ -1153,6 +1175,14 @@ export default function Home() {
                                                 </div>
                                             </div>
                                         ) : null}
+
+                                        <article className="prose dark:prose-invert max-w-none">
+                                            <div
+                                                dangerouslySetInnerHTML={{
+                                                    __html: sanitizeHTML(activeRequest.content || ""),
+                                                }}
+                                            />
+                                        </article>
 
                                         {/* Comments */}
                                         <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
