@@ -2,18 +2,22 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/utils/Supabase/client";
 
 const supabase = createClient();
+export const AVATAR_UPDATED_EVENT = "avatar-updated";
 
 export function useCurrentAvatar(user, activePersona) {
     const [signedAvatarUrl, setSignedAvatarUrl] = useState(null);
     const [loading, setLoading] = useState(false);
+    const hasActivePersona = Boolean(activePersona);
+    const activePersonaId = activePersona?.id ?? null;
+    const activePersonaAvatarUrl = activePersona?.avatar_url ?? null;
 
     useEffect(() => {
         const fetchAvatar = async () => {
             if (!user?.id) return;
 
             // ---- PERSONA ----
-            if (activePersona) {
-                if (!activePersona.avatar_url) {
+            if (hasActivePersona) {
+                if (!activePersonaAvatarUrl) {
                     setSignedAvatarUrl(null);
                     return;
                 }
@@ -22,7 +26,7 @@ export function useCurrentAvatar(user, activePersona) {
 
                 const { data, error } = await supabase.storage
                     .from("avatars")
-                    .createSignedUrl(activePersona.avatar_url, 60 * 60);
+                    .createSignedUrl(activePersonaAvatarUrl, 60 * 60);
 
                 if (!error) {
                     setSignedAvatarUrl(data.signedUrl);
@@ -49,8 +53,20 @@ export function useCurrentAvatar(user, activePersona) {
             setLoading(false);
         };
 
+        const handleAvatarUpdated = () => {
+            fetchAvatar();
+        };
+
         fetchAvatar();
-    }, [user?.id, activePersona?.id, activePersona?.avatar_url]);
+        window.addEventListener(AVATAR_UPDATED_EVENT, handleAvatarUpdated);
+
+        return () => {
+            window.removeEventListener(
+                AVATAR_UPDATED_EVENT,
+                handleAvatarUpdated
+            );
+        };
+    }, [user?.id, hasActivePersona, activePersonaId, activePersonaAvatarUrl]);
 
     return { signedAvatarUrl, loading };
 }
