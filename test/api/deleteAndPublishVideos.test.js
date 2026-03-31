@@ -30,6 +30,51 @@ describe("deleteAndPublishVideos()", () => {
     expect(result.message).to.include("deleted");
   });
 
+  it("normalizes nested asset references before updating the entry", async () => {
+    fetchStub.onCall(0).resolves({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ entry: { uid: "entry123", videos: [] } }),
+    });
+
+    fetchStub.onCall(1).resolves({
+      ok: true,
+      status: 200,
+      text: async () => "Published",
+    });
+
+    await deleteAndPublishVideos(
+      "entry123",
+      [
+        {
+          video_file: { uid: "video-asset-1", url: "https://example.com/video.mp4" },
+          thumbnail: { uid: "thumb-asset-1", url: "https://example.com/thumb.png" },
+          title: "Video 1",
+          description: "Desc",
+          se_name: "video-1",
+          date_posted: "2026-03-31",
+        },
+      ],
+      fetchStub
+    );
+
+    const [, updateOptions] = fetchStub.firstCall.args;
+    expect(JSON.parse(updateOptions.body)).to.deep.equal({
+      entry: {
+        videos: [
+          {
+            video_file: "video-asset-1",
+            thumbnail: "thumb-asset-1",
+            title: "Video 1",
+            description: "Desc",
+            se_name: "video-1",
+            date_posted: "2026-03-31",
+          },
+        ],
+      },
+    });
+  });
+
   it("returns update error details when the entry update fails", async () => {
     fetchStub.onCall(0).resolves({
       ok: false,

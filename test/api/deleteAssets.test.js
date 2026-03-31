@@ -46,6 +46,27 @@ describe("deleteAssets()", () => {
     expect(result.details).to.equal("Cannot delete asset");
   });
 
+  it("treats missing assets as already deleted", async () => {
+    fetchStub.onCall(0).resolves({
+      ok: false,
+      status: 404,
+      text: async () => "Asset was not found",
+    });
+
+    fetchStub.onCall(1).resolves({
+      ok: true,
+      status: 204,
+      text: async () => "",
+    });
+
+    const result = await deleteAssets(["asset-1", "asset-2"], fetchStub);
+
+    expect(fetchStub.callCount).to.equal(2);
+    expect(result.status).to.equal(200);
+    expect(result.deletedAssetUids).to.deep.equal(["asset-2"]);
+    expect(result.skippedAssetUids).to.deep.equal(["asset-1"]);
+  });
+
   it("returns an error when assetUids is not an array", async () => {
     const result = await deleteAssets(null, fetchStub);
 

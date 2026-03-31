@@ -14,6 +14,9 @@ export async function deleteAssets(assetUids, fetchFunc = fetch) {
       };
     }
 
+    const deletedAssetUids = [];
+    const skippedAssetUids = [];
+
     for (const assetUid of normalizedAssetUids) {
       const deleteResponse = await fetchFunc(
         `https://api.contentstack.io/v3/assets/${assetUid}`,
@@ -27,18 +30,32 @@ export async function deleteAssets(assetUids, fetchFunc = fetch) {
       );
 
       if (!deleteResponse.ok) {
+        const details = await deleteResponse.text();
+
+        // Asset deletion is idempotent for our pipeline: if it is already gone,
+        // keep the successful entry update instead of surfacing a hard failure.
+        if (deleteResponse.status === 404) {
+          skippedAssetUids.push(assetUid);
+          continue;
+        }
+
         return {
           status: deleteResponse.status,
           error: `Failed to delete asset ${assetUid}`,
-          details: await deleteResponse.text(),
+          details,
         };
       }
+
+      deletedAssetUids.push(assetUid);
     }
 
     return {
       status: 200,
-      deletedAssetUids: normalizedAssetUids,
-      message: "Assets deleted successfully.",
+      deletedAssetUids,
+      skippedAssetUids,
+      message: skippedAssetUids.length
+        ? "Assets deleted successfully. Some assets were already missing."
+        : "Assets deleted successfully.",
     };
   } catch (err) {
     return { status: 500, error: err.message };
