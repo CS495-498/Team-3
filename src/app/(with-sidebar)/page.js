@@ -26,6 +26,7 @@ export default function Home() {
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState("");
 
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [showBulletinEditor, setShowBulletinEditor] = useState(false);
     const [isSavingBulletin, setIsSavingBulletin] = useState(false);
     const bulletinEditorRef = useRef(null);
@@ -119,6 +120,7 @@ export default function Home() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setIsSubmitting(true);
         try {
             const form = e.target;
             const data = new FormData(form);
@@ -166,6 +168,8 @@ export default function Home() {
         } catch (error) {
             console.error("Upload failed:", error);
             alert("Failed to add notification.");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -304,13 +308,17 @@ export default function Home() {
                                                     <label htmlFor="critical_value" className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                                                         Critical Value
                                                     </label>
-                                                    <input
+                                                    <select
                                                         id="critical_value"
-                                                        type="number"
                                                         name="critical_value"
-                                                        placeholder="Enter critical value"
-                                                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition"
-                                                    />
+                                                        className="w-50 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                                                    >
+                                                        <option value="">Select critical value</option>
+                                                        <option value="1">1</option>
+                                                        <option value="2">2</option>
+                                                        <option value="3">3</option>
+                                                        <option value="4">4</option>
+                                                    </select>
                                                 </div>
 
                                                 <div>
@@ -335,9 +343,20 @@ export default function Home() {
                                                     </button>
                                                     <button
                                                         type="submit"
-                                                        className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
+                                                        disabled={isSubmitting}
+                                                        className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                                                     >
-                                                        Save Alert
+                                                        {isSubmitting ? (
+                                                            <>
+                                                                <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                                </svg>
+                                                                Saving...
+                                                            </>
+                                                        ) : (
+                                                            "Save Alert"
+                                                        )}
                                                     </button>
                                                 </div>
                                             </form>
