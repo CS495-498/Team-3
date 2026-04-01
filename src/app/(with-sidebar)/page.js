@@ -314,10 +314,10 @@ export default function Home() {
                                                         className="w-50 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition"
                                                     >
                                                         <option value="">Select critical value</option>
-                                                        <option value="1">1</option>
+                                                        <option value="1">1 - (low importance)</option>
                                                         <option value="2">2</option>
                                                         <option value="3">3</option>
-                                                        <option value="4">4</option>
+                                                        <option value="4">4 - (high importance)</option>
                                                     </select>
                                                 </div>
 
