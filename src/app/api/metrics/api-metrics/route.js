@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import PERMISSIONS from "@/config/permissions.js";
 import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission.js";
-import {format} from "date-fns";
 
 export async function GET(request) {
 

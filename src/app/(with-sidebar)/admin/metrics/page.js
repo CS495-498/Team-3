@@ -154,7 +154,9 @@ export default function MetricsPage() {
                             {/* DATE FILTER */}
 
                             <Select value={dateFilter || "Within Last 12 Hours"} onValueChange={(v) => setDateFilter(v === "Within Last 12 Hours" ? "" : v)}>
-                                <SelectTrigger className="w-40"></SelectTrigger>
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="Within Last 12 Hours" />
+                                </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="Within Last 12 Hours">Within Last 12 Hours</SelectItem>
                                     <SelectItem value="Within Last Day">Within Last Day</SelectItem>
