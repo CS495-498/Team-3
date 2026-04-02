@@ -775,18 +775,18 @@ export default function Home() {
                                     <button
                                         type="button"
                                         className={`p-1 rounded-md transition ${voteState === "up"
-                                            ? "text-green-600"
+                                            ? "text-green-600 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
                                             : "text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
                                         }`}
                                         onClick={() => handleVote(req.id, "up")}
                                     >
-                                        <ChevronsUp className="w-5 h-5 hover:bg-gray-200 dark:hover:bg-gray-800"/>
+                                        <ChevronsUp className="w-5 h-5 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md"/>
                                     </button>
                                     <TooltipProvider>
                                         <Tooltip onOpenChange={(open) => {
                                             if(open) getUpvoteData(req.id)
                                         }} >
-                                            <TooltipTrigger className="w-5 h-5 hover:bg-gray-200 dark:hover:bg-gray-800">
+                                            <TooltipTrigger className="w-7 h-7 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md">
                                                 {getEffectiveVoteCount(req)}
                                             </TooltipTrigger>
                                             <TooltipContent className="flex flex-col gap-1 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-md text-gray-900 dark:text-gray-100" side="bottom">                                                {upvoteList === null ? (
@@ -887,16 +887,14 @@ export default function Home() {
                                         )}
                                     </div>
 
-                                    <div className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-200">
-                                        <button
-                                            type="button"
-                                            className="flex items-center hover:bg-gray-100 dark:hover:bg-gray-800"
-                                            onClick={() => openRequest(req)}
-                                        >
-                                            <MessageSquare className="w-5 h-5" />
-                                            <span className="text-sm px-1">{req.commentCount}</span>
-                                        </button>
-                                    </div>
+                                    <button
+                                        type="button"
+                                        className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition"
+                                        onClick={() => openRequest(req)}
+                                    >
+                                        <MessageSquare className="w-5 h-5"/>
+                                        <span className="text-sm px-1">{req.commentCount}</span>
+                                    </button>
                                 </div>
                             </li>
                         );
