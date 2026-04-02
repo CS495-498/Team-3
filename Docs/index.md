@@ -18,6 +18,10 @@ Team 3 is a CS495 Fall 2025 project. This Docs/ directory contains user and deve
 
 ## Quick links
 - Docs home: ./Docs/index.md
+- Client handover: ./Docs/ClientHandover/README.md
+- Deployment guide: ./Docs/ClientHandover/deployment.md
+- Monitoring guide: ./Docs/ClientHandover/monitoring.md
+- Runbooks: ./Docs/ClientHandover/runbooks.md
 - API reference: ./Docs/api
 - Meetings: ./Docs/meetings
 - UML: ./Docs/uml
