@@ -1,12 +1,15 @@
 import { expect } from "chai";
 import { config } from "./helpers/config.js";
+import { expectLoginSucceeded } from "./helpers/auth.js";
 import { createCookieClient } from "./helpers/cookieClient.js";
 
-const getSetCookie = (headers) => {
-    if (typeof headers.getSetCookie === "function") return headers.getSetCookie();
-    const v = headers.get("set-cookie");
-    return v ? [v] : [];
-};
+function readSetCookie(headers) {
+    if (typeof headers.getSetCookie === "function") {
+        return headers.getSetCookie()?.join("\n") ?? "";
+    }
+
+    return headers.get("set-cookie") ?? "";
+}
 
 describe("Integration: login -> redirect -> home", function () {
     this.timeout(30000);
@@ -19,12 +22,8 @@ describe("Integration: login -> redirect -> home", function () {
             body: { email: config.users.partner, password: config.password },
         });
 
-        expect(loginResp.status).to.equal(200);
-
-        const setCookie =
-            (typeof loginResp.headers.getSetCookie === "function"
-                ? loginResp.headers.getSetCookie()?.join("\n")
-                : loginResp.headers.get("set-cookie"));
+        expectLoginSucceeded(loginResp.status);
+        const setCookie = readSetCookie(loginResp.headers);
 
         expect(setCookie, "Expected Set-Cookie header").to.exist;
         expect(setCookie.toLowerCase()).to.include("httponly");
@@ -39,10 +38,7 @@ describe("Integration: login -> redirect -> home", function () {
         });
 
         expect(loginResp.status).to.equal(401);
-
-        const raw = (typeof loginResp.headers.getSetCookie === "function"
-            ? loginResp.headers.getSetCookie()?.join("\n")
-            : loginResp.headers.get("set-cookie")) ?? "";
+        const raw = readSetCookie(loginResp.headers);
 
         // Allow header to exist, but it must be empty/whitespace (no cookie actually set)
         expect(raw.trim(), "Did not expect Set-Cookie value on failed auth").to.equal("");

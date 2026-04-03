@@ -4,11 +4,11 @@ export async function deleteDemoWeb(entryUid, demos, fetchFunc = fetch) {
         // VALIDATION
         // -----------------------------
         if (!entryUid) {
-            return { status: 500, error: "Missing entryUid" };
+            return { status: 422, error: "Missing entryUid" };
         }
 
         if (!Array.isArray(demos)) {
-            return { status: 500, error: "Missing demos array" };
+            return { status: 422, error: "Missing demos array" };
         }
 
         // -----------------------------
