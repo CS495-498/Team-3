@@ -4,7 +4,6 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import DOMPurify from "isomorphic-dompurify";
 import {
     ChevronsUp,
-    ChevronsDown,
     MessageSquare,
     Paperclip,
     FileText,
@@ -39,6 +38,10 @@ import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor
 import { useUser } from "@/context/UserContext";
 import { hasPermission } from "@/utils/hasPermission";
 import PERMISSIONS from "@/config/permissions";
+import {getUpvoteList} from "@/lib/featureRequests/votes/getUpvoteList.js";
+import {TooltipContent, TooltipProvider, TooltipTrigger} from "@radix-ui/react-tooltip";
+import {Tooltip} from "@/components/ui/tooltip";
+import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from "@/components/ui/dropdown-menu";
 
 export default function Home() {
     const [currentUser, setCurrentUser] = useState(null);
@@ -99,6 +102,11 @@ export default function Home() {
     const [editingCommentId, setEditingCommentId] = useState(null);
     const [editingCommentText, setEditingCommentText] = useState("");
     const [deleteCommentId, setDeleteCommentId] = useState(null);
+
+    // Upvoter List
+    const [upvoteList, setUpvoteList] = useState(null);
+    const [open, setOpen] = useState(false);
+
 
     // Add/Edit RTE modal
     const [rteModalOpen, setRteModalOpen] = useState(false);
@@ -430,16 +438,16 @@ export default function Home() {
         }
     };
 
-    const handleVote = async (id, type) => {
+    const handleVote = async (id, upvoted) => {
         const currentVote = voteOverrides[id]?.vote ??
             visibleRequests.find((r) => r.id === id)?.currentUserVote ?? null;
 
-        const newVote = currentVote === type ? null : type;
+        const newVote = currentVote === upvoted ? null : upvoted;
 
         let delta;
-        if (currentVote === type) delta = type === "up" ? -1 : +1;
-        else if (currentVote) delta = type === "up" ? +2 : -2;
-        else delta = type === "up" ? +1 : -1;
+        if (currentVote === upvoted) delta = upvoted === "up" ? -1 : +1;
+        else if (currentVote) delta = upvoted === "up" ? +2 : -2;
+        else delta = upvoted === "up" ? +1 : -1;
 
         const existingDelta = voteOverrides[id]?.voteDelta || 0;
 
@@ -448,7 +456,7 @@ export default function Home() {
             [id]: { vote: newVote, voteDelta: existingDelta + delta },
         }));
 
-        const apiVote = currentVote === type ? "remove" : type;
+        const apiVote = currentVote === upvoted ? "remove" : upvoted;
 
         try {
             await castVote(id, apiVote);
@@ -462,6 +470,17 @@ export default function Home() {
             });
         }
     };
+
+    const getUpvoteData = async (id) => {
+        setUpvoteList(null)
+        try {
+            const data = await getUpvoteList(id);
+            setUpvoteList(data || [])
+        } catch (error) {
+            console.error("Failed to retrieve upvote list:", error);
+            setUpvoteList([])
+        }
+    }
 
     // open full request + load comments
     const openRequest = async (req) => {
@@ -745,6 +764,7 @@ export default function Home() {
 
                         const isCompleted = req.status === "completed";
 
+
                         return (
                             <li
                                 key={req.id}
@@ -755,28 +775,36 @@ export default function Home() {
                                     <button
                                         type="button"
                                         className={`p-1 rounded-md transition ${voteState === "up"
-                                            ? "text-green-600"
+                                            ? "text-green-600 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
                                             : "text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
-                                            }`}
+                                        }`}
                                         onClick={() => handleVote(req.id, "up")}
                                     >
-                                        <ChevronsUp className="w-5 h-5" />
+                                        <ChevronsUp className="w-5 h-5 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md"/>
                                     </button>
-
-                                    <span className="text-sm font-medium text-gray-800 dark:text-gray-50">
-                                        {getEffectiveVoteCount(req)}
-                                    </span>
-
-                                    <button
-                                        type="button"
-                                        className={`p-1 rounded-md transition ${voteState === "down"
-                                            ? "text-red-600"
-                                            : "text-gray-700 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800"
-                                            }`}
-                                        onClick={() => handleVote(req.id, "down")}
-                                    >
-                                        <ChevronsDown className="w-5 h-5" />
-                                    </button>
+                                    <TooltipProvider>
+                                        <Tooltip onOpenChange={(open) => {
+                                            if(open) getUpvoteData(req.id)
+                                        }} >
+                                            <TooltipTrigger className="w-7 h-7 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md">
+                                                {getEffectiveVoteCount(req)}
+                                            </TooltipTrigger>
+                                            <TooltipContent className="flex flex-col gap-1 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-md text-gray-900 dark:text-gray-100" side="bottom">                                                {upvoteList === null ? (
+                                                    <span className="px-2 py-1 text-sm">Loading...</span>
+                                                ) : (upvoteList.length === 0 ? (
+                                                    <span className="px-2 py-1 text-sm"> No Upvotes</span>
+                                                ) : (
+                                                    (upvoteList.map((vote, i) => (
+                                                            <span key={`${req.id}-${vote.id || i}`}>
+                                                                {vote.upvoter_username}
+                                                            </span>
+                                                        ))
+                                                    )
+                                                ))
+                                                }
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
                                 </div>
 
                                 <div className="flex-shrink-0 flex items-center justify-center mr-4">
@@ -859,16 +887,14 @@ export default function Home() {
                                         )}
                                     </div>
 
-                                    <div className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-200">
-                                        <button
-                                            type="button"
-                                            className="flex items-center hover:bg-gray-100 dark:hover:bg-gray-800"
-                                            onClick={() => openRequest(req)}
-                                        >
-                                            <MessageSquare className="w-5 h-5" />
-                                            <span className="text-sm px-1">{req.commentCount}</span>
-                                        </button>
-                                    </div>
+                                    <button
+                                        type="button"
+                                        className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition"
+                                        onClick={() => openRequest(req)}
+                                    >
+                                        <MessageSquare className="w-5 h-5"/>
+                                        <span className="text-sm px-1">{req.commentCount}</span>
+                                    </button>
                                 </div>
                             </li>
                         );

@@ -240,11 +240,7 @@ export function NavProjects() {
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <SidebarMenuButton
-                                    className="
-                                    dark:text-gray-200 
-                                    dark:hover:bg-[#1b1b1f]
-                                "
-                                >
+                                    className="dark:text-gray-200 dark:hover:bg-[#1b1b1f]">
                                     <div className="w-10 h-10 rounded-full border-4 border-white dark:border-gray-900 shadow-xl overflow-hidden">{
                                         <img
                                             src={signedAvatarUrl ? signedAvatarUrl : "/DefaultProfile.png"}
@@ -254,14 +250,7 @@ export function NavProjects() {
                                 </SidebarMenuButton>
                             </DropdownMenuTrigger>
 
-                            <DropdownMenuContent
-                                side="top"
-                                className="
-                                w-[--radix-popper-anchor-width]
-                                dark:bg-[#18181b]
-                                dark:border-gray-800
-                            "
-                            >
+                            <DropdownMenuContent side="top" className="w-[--radix-popper-anchor-width] dark:bg-[#18181b]dark:border-gray-800">
                                 <AccountPageButton />
                                 <SignOutButton />
                             </DropdownMenuContent>
