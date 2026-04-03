@@ -60,6 +60,23 @@ export default function VideoLibrary() {
     const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const isLoomUrl = (url) => {
+        if (!url) return false;
+        try {
+            const u = new URL(url);
+            const host = u.hostname.replace(/^www\./, "");
+            return host === "loom.com";
+        } catch {
+            return false;
+        }
+    };
+
+    const redirectTo = (url) => {
+        if (!url) return;
+        // If you want SAME TAB redirect instead, use: window.location.href = url;
+        window.open(url, "_blank", "noopener,noreferrer");
+    };
+
     const openEditModal = (demo) => {
         setSelectedItem(demo);
         setIsEditOpen(true);
@@ -99,16 +116,7 @@ export default function VideoLibrary() {
             return;
         }
 
-        const result = await toggleBookmark(resourceId, {
-            title: video?.title,
-            description: video?.description,
-            url: video?.video_url || video?.video_file?.url,
-            thumbnail: video?.thumbnail?.url,
-            extra: {
-                type: "video",
-                se_name: video?.se_name,
-            },
-        });
+        const result = await toggleBookmark(resourceId);
 
         if (result?.error === "AUTH_REQUIRED") {
             alert("Please sign in to bookmark videos.");
@@ -148,7 +156,6 @@ export default function VideoLibrary() {
             const query = searchQuery.toLowerCase();
             return (
                 video.title?.toLowerCase().includes(query) ||
-                video.se_name?.toLowerCase().includes(query) ||
                 video.description?.toLowerCase().includes(query)
             );
         }) || [];
@@ -274,8 +281,6 @@ export default function VideoLibrary() {
 
         const title = data.get("title");
         const description = data.get("description");
-        const se_name = data.get("se_name");
-        const date_posted = data.get("date_posted");
 
         const videoFile = data.get("video_file");
         const videoURL = data.get("video_url")?.trim();
@@ -332,8 +337,6 @@ export default function VideoLibrary() {
                 thumbnail: uploadedThumb?.asset?.uid || null,
                 title,
                 description,
-                se_name,
-                date_posted: date_posted || new Date().toISOString(),
             };
 
             const updatedVideos = appendVideo(entry, newVideo);
@@ -491,7 +494,7 @@ export default function VideoLibrary() {
                                             </div>
 
                                             <form onSubmit={handleSubmit} className="space-y-5">
-                                                <div className="grid grid-cols-2 gap-4">
+                                                <div className="grid grid-cols-1 gap-4">
                                                     <div>
                                                         <label className="block text-sm font-medium dark:text-gray-200 mb-1">
                                                             Title
@@ -500,16 +503,6 @@ export default function VideoLibrary() {
                                                             name="title"
                                                             className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none transition"
                                                             required
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-sm font-medium dark:text-gray-200 mb-1">
-                                                            Date Posted
-                                                        </label>
-                                                        <input
-                                                            name="date_posted"
-                                                            type="date"
-                                                            className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none transition"
                                                         />
                                                     </div>
                                                 </div>
@@ -550,23 +543,13 @@ export default function VideoLibrary() {
                                                             type="url"
                                                             placeholder="https://youtube.com/watch?v=VIDEO"
                                                             onChange={handleVideoUrlChange}
-                                                            className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                                                            className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3.5 focus:ring-2 focus:ring-indigo-500 outline-none transition"
                                                         />
                                                     </div>
                                                 </div>
 
 
                                                 <div className="space-y-4">
-                                                    <div>
-                                                        <label className="block text-sm font-medium dark:text-gray-200 mb-1">
-                                                            SE Name
-                                                        </label>
-                                                        <input
-                                                            name="se_name"
-                                                            className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none transition"
-                                                        />
-                                                    </div>
-
                                                     <div>
                                                         <label className="block text-sm font-medium dark:text-gray-200 mb-1">
                                                             Description
@@ -731,12 +714,26 @@ export default function VideoLibrary() {
                                                                 src={video?.thumbnail?.url}
                                                                 alt={video?.title || "Video thumbnail"}
                                                                 className="w-full h-full object-cover cursor-pointer hover:opacity-80"
-                                                                onClick={() => setPlayingIndex(index)}
+                                                                onClick={() => {
+                                                                    const url = video?.video_url?.trim();
+                                                                    if (isLoomUrl(url)) {
+                                                                        redirectTo(url);
+                                                                        return;
+                                                                    }
+                                                                    setPlayingIndex(index);
+                                                                }}
                                                             />
 
                                                             <div
                                                                 className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 hover:opacity-100 cursor-pointer"
-                                                                onClick={() => setPlayingIndex(index)}
+                                                                onClick={() => {
+                                                                    const url = video?.video_url?.trim();
+                                                                    if (isLoomUrl(url)) {
+                                                                        redirectTo(url);
+                                                                        return;
+                                                                    }
+                                                                    setPlayingIndex(index);
+                                                                }}
                                                             >
                                                                 <svg
                                                                     xmlns="http://www.w3.org/2000/svg"

@@ -2,7 +2,7 @@
 import { Dialog } from "@headlessui/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
-import React, { useState } from "react";
+import React from "react";
 
 export default function EditDemoInstructionModal({ isOpen, closeModal, onSave, item }) {
     return (
@@ -34,7 +34,7 @@ export default function EditDemoInstructionModal({ isOpen, closeModal, onSave, i
                             <Dialog.Panel className="w-full max-h-[90vh] rounded-xl bg-white dark:bg-gray-800 p-6 md:p-8 shadow-2xl overflow-y-auto">
                                 <div className="flex justify-between items-center mb-6">
                                     <Dialog.Title className="font-bold text-2xl dark:text-gray-100">
-                                        Edit Demo Instructions
+                                        Edit Title
                                     </Dialog.Title>
                                     <button onClick={closeModal}>
                                         <X className="h-6 w-6 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300" />
@@ -48,12 +48,6 @@ export default function EditDemoInstructionModal({ isOpen, closeModal, onSave, i
 
                                         const updatedItem = {
                                             title: formData.get("title"),
-                                            description: formData.get("description"),
-                                            link: formData.get("link") || "",
-                                            image:
-                                                formData.get("image")?.size > 0
-                                                    ? formData.get("image")
-                                                    : null,
                                         };
 
                                         onSave(updatedItem);
@@ -71,16 +65,6 @@ export default function EditDemoInstructionModal({ isOpen, closeModal, onSave, i
                                             className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none transition"
                                         />
                                     </div>
-                                    <div>
-                                        <label className="block text-sm font-medium dark:text-gray-200 mb-1">
-                                            Author
-                                        </label>
-                                        <textarea
-                                            name="author_name"
-                                            defaultValue={item?.author_name || ""}
-                                            className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none transition resize-none"
-                                        />
-                                    </div>
                                     <div className="flex justify-end gap-3 pt-4">
                                         <button
                                             type="button"
@@ -93,7 +77,7 @@ export default function EditDemoInstructionModal({ isOpen, closeModal, onSave, i
                                             type="submit"
                                             className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition"
                                         >
-                                            Save Changes
+                                            Save Title
                                         </button>
                                     </div>
                                 </form>

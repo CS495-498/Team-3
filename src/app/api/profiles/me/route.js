@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/Supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
-import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission.js";
-import PERMISSIONS from "@/config/permissions";
 import { withLogging } from '@/utils/withLogging';
+import ROLE_PERMISSIONS from "@/config/rolePermissions.js";
+import PERMISSIONS from "@/config/permissions.js";
 
 
 async function handleGet() {
@@ -32,22 +32,31 @@ async function handleGet() {
             );
         }
 
-        const { data: personas, error: personasError } = await supabase
-            .from("personas")
-            .select("*")
-            .eq("owner_id", user.id);
+        const userPermissions = ROLE_PERMISSIONS[profile.role] || [];
+        const canUsePersonas = userPermissions.includes(PERMISSIONS.USE_PERSONAS);
 
-        if (personasError) {
-            return NextResponse.json(
-                { error: personasError.message },
-                { status: 500 }
-            );
+        let personas = [];
+        let activePersona = null;
+
+        if (canUsePersonas) {
+            const { data: personaData, error: personasError } = await supabase
+                .from("personas")
+                .select("*")
+                .eq("owner_id", user.id);
+
+            if (personasError) {
+                return NextResponse.json(
+                    { error: personasError.message },
+                    { status: 500 }
+                );
+            }
+
+            personas = personaData ?? [];
+            activePersona =
+                profile.active_persona_id
+                    ? personas.find(p => p.id === profile.active_persona_id) ?? null
+                    : null;
         }
-
-        const activePersona =
-            profile.active_persona_id
-                ? personas.find(p => p.id === profile.active_persona_id) ?? null
-                : null;
 
         return NextResponse.json({
             id: user.id,
@@ -57,6 +66,7 @@ async function handleGet() {
             avatar_url: profile.avatar_url ?? "",
             personas,
             activePersona,
+            canUsePersonas,
         });
     } catch (err) {
         console.error("GET /api/profiles/me error:", err);
@@ -172,4 +182,3 @@ async function handlePut(req) {
 export const GET = withLogging(handleGet);
 export const DELETE = withLogging(handleDelete);
 export const PUT = withLogging(handlePut);
-

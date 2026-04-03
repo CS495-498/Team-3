@@ -1,24 +1,27 @@
 import { NextResponse, redirect } from "next/server";
 import { withLogging } from '@/utils/withLogging';
+import { sanitizeHtmlServer } from "@/lib/featureRequests/requests/sanitizeHtmlServer.js";
 const BASE = "https://api.contentstack.io/v3";
 const API_KEY = process.env.CONTENTSTACK_API_KEY;
 const MANAGEMENT_TOKEN = process.env.CONTENTSTACK_MANAGEMENT_TOKEN;
-const ENVIRONMENT = process.env.CONTENTSTACK_ENVIRONMENT;
+const ENVIRONMENT = process.env.CONTENTSTACK_ENVIRONMENT?.trim();
 import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
 import PERMISSIONS from "@/config/permissions";
 
 async function handlePOST(req) {
   const { error, profile } = await requireAuthWithPermission(
-  
+
     PERMISSIONS.PUBLISH_DEMO_INSTRUCTIONS
   );
 
   if (error) return error;
 
   try {
-    const { uid, title, html, author } = await req.json();
+    const { uid, title, html } = await req.json();
+    const cleanHtml = sanitizeHtmlServer(html);
+    const author = profile.full_name || "Unknown";
 
-    if (!uid || !title || !html) {
+    if (!uid || !title || !cleanHtml) {
       return NextResponse.json({ error: "Missing UID, title, or HTML" }, { status: 400 });
     }
 
@@ -48,7 +51,7 @@ async function handlePOST(req) {
         entry: {
           title,
           author_name: author || "",
-          blog_content: html,
+          blog_content: cleanHtml,
         },
         _version: entryVersion,
       }),

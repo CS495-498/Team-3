@@ -3,9 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import SuccessToast from "@/components/ui/success-toast.jsx"
-import { useSearchParams } from "next/navigation";
 
-export default function LoginPage() {
+export default function LoginPageClient({ initialError }) {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -28,22 +27,18 @@ export default function LoginPage() {
     return () => clearTimeout(timer)
   }, [])
 
-  const searchParams = useSearchParams();
-
   useEffect(() => {
-    const error = searchParams.get("error");
+    if (!initialError) return;
 
-    if (!error) return;
-
-    if (error === "disabled") {
+    if (initialError === "disabled") {
       setSystemMessage("Access for your organization has been disabled. Please contact your administrator.");
     }
 
-    if (error === "unauthorized") {
-      setSystemMessage("You don’t have permission to access that page.");
+    if (initialError === "unauthorized") {
+      setSystemMessage("You don't have permission to access that page.");
     }
     window.history.replaceState({}, "", "/login");
-  }, [searchParams]);
+  }, [initialError]);
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -133,7 +128,7 @@ export default function LoginPage() {
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder="********"
                     className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#88563b]"
                   />
                 </div>
@@ -185,7 +180,7 @@ export default function LoginPage() {
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder="********"
                     className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#88563b]"
                   />
                 </div>

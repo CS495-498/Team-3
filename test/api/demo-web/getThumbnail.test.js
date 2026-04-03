@@ -1,24 +1,29 @@
 import { expect } from 'chai';
 import sinon from 'sinon';
-import { POST } from '../../../src/app/api/capture-screenshot/route.js';
+import { getThumbnail } from '../../../src/app/api/capture-screenshot/getThumbnail.js';
 
-describe('Open Graph Image Getter API', () => {
-  let originalFetch;
+describe('getThumbnail', () => {
+  let fetchStub;
+  let lookupStub;
+  let readFileStub;
 
   beforeEach(() => {
-    // Save original fetch
-    originalFetch = globalThis.fetch;
+    fetchStub = sinon.stub();
+    lookupStub = sinon.stub().resolves([{ address: '93.184.216.34' }]);
+    readFileStub = sinon.stub().resolves(Buffer.from('default-image-data'));
   });
 
-  afterEach(() => {
-    // Restore original fetch
-    globalThis.fetch = originalFetch;
-  });
+  function createDeps() {
+    return {
+      fetchImpl: fetchStub,
+      lookup: lookupStub,
+      readFile: readFileStub,
+    };
+  }
 
-  // Helper to mock fetch
   function mockFetch(responses) {
     let callCount = 0;
-    globalThis.fetch = sinon.stub().callsFake(async (url, options) => {
+    fetchStub.callsFake(async () => {
       const response = responses[callCount] || responses[responses.length - 1];
       callCount++;
 
@@ -40,21 +45,13 @@ describe('Open Graph Image Getter API', () => {
 
   describe('URL Validation', () => {
     it('should return 400 when URL is missing', async () => {
-      const request = {
-        json: async () => ({})
-      };
+      const result = await getThumbnail(undefined, createDeps());
 
-      const response = await POST(request);
-      const data = await response.json();
-
-      expect(data.error).to.equal('URL is required');
+      expect(result.status).to.equal(400);
+      expect(result.body.error).to.equal('URL is required');
     });
 
     it('should accept URL without protocol and add https', async () => {
-      const request = {
-        json: async () => ({ url: 'example.com' })
-      };
-
       mockFetch([
         {
           text: '<meta property="og:image" content="https://example.com/image.jpg" />'
@@ -65,45 +62,21 @@ describe('Open Graph Image Getter API', () => {
         }
       ]);
 
-      await POST(request);
+      await getThumbnail('example.com', createDeps());
 
-      expect(globalThis.fetch.firstCall.args[0]).to.equal('https://example.com/');
+      expect(fetchStub.firstCall.args[0]).to.equal('https://example.com/');
     });
 
     it('should reject invalid URL format', async () => {
-      const request = {
-        json: async () => ({ url: 'not a valid url at all!!!' })
-      };
+      const result = await getThumbnail('not a valid url at all!!!', createDeps());
 
-      const response = await POST(request);
-      const data = await response.json();
-
-      expect(data.error).to.equal('Invalid URL format');
+      expect(result.status).to.equal(400);
+      expect(result.body.error).to.equal('Invalid or disallowed URL');
     });
-
-    // it('should reject non-http protocols', async () => {
-    //   const request = {
-    //     json: async () => ({ url: 'ftp://example.com' })
-    //   };
-
-    //   const response = await POST(request);
-    //   const data = await response.json();
-
-    //   // Should either reject with error OR return default image fallback
-    //   // (depending on whether URL validation or fetch fails first)
-    //   const hasError = data.error !== undefined;
-    //   const hasDefaultFallback = data.isDefault === true;
-
-    //   expect(hasError || hasDefaultFallback).to.be.true;
-    // });
   });
 
   describe('OG Image Extraction', () => {
     it('should extract og:image from meta tag', async () => {
-      const request = {
-        json: async () => ({ url: 'https://example.com' })
-      };
-
       const htmlContent = `
         <html>
           <head>
@@ -120,19 +93,14 @@ describe('Open Graph Image Getter API', () => {
         }
       ]);
 
-      const response = await POST(request);
-      const data = await response.json();
+      const result = await getThumbnail('https://example.com', createDeps());
 
-      expect(data.success).to.be.true;
-      expect(data.imageUrl).to.equal('https://example.com/og-image.jpg');
-      expect(data.isDefault).to.be.false;
+      expect(result.body.success).to.be.true;
+      expect(result.body.imageUrl).to.equal('https://example.com/og-image.jpg');
+      expect(result.body.isDefault).to.be.false;
     });
 
     it('should extract og:image:url as fallback', async () => {
-      const request = {
-        json: async () => ({ url: 'https://example.com' })
-      };
-
       const htmlContent = `
         <html>
           <head>
@@ -149,17 +117,12 @@ describe('Open Graph Image Getter API', () => {
         }
       ]);
 
-      const response = await POST(request);
-      const data = await response.json();
+      const result = await getThumbnail('https://example.com', createDeps());
 
-      expect(data.imageUrl).to.equal('https://example.com/image.jpg');
+      expect(result.body.imageUrl).to.equal('https://example.com/image.jpg');
     });
 
     it('should use Twitter image as fallback when OG image not found', async () => {
-      const request = {
-        json: async () => ({ url: 'https://example.com' })
-      };
-
       const htmlContent = `
         <html>
           <head>
@@ -176,19 +139,14 @@ describe('Open Graph Image Getter API', () => {
         }
       ]);
 
-      const response = await POST(request);
-      const data = await response.json();
+      const result = await getThumbnail('https://example.com', createDeps());
 
-      expect(data.imageUrl).to.equal('https://example.com/twitter.jpg');
+      expect(result.body.imageUrl).to.equal('https://example.com/twitter.jpg');
     });
   });
 
   describe('Image URL Normalization', () => {
     it('should handle protocol-relative URLs', async () => {
-      const request = {
-        json: async () => ({ url: 'https://example.com' })
-      };
-
       const htmlContent = '<meta property="og:image" content="//cdn.example.com/image.jpg" />';
 
       mockFetch([
@@ -199,16 +157,12 @@ describe('Open Graph Image Getter API', () => {
         }
       ]);
 
-      await POST(request);
+      await getThumbnail('https://example.com', createDeps());
 
-      expect(globalThis.fetch.secondCall.args[0]).to.equal('https://cdn.example.com/image.jpg');
+      expect(fetchStub.secondCall.args[0]).to.equal('https://cdn.example.com/image.jpg');
     });
 
     it('should handle relative URLs', async () => {
-      const request = {
-        json: async () => ({ url: 'https://example.com/page' })
-      };
-
       const htmlContent = '<meta property="og:image" content="/images/og.jpg" />';
 
       mockFetch([
@@ -219,16 +173,12 @@ describe('Open Graph Image Getter API', () => {
         }
       ]);
 
-      await POST(request);
+      await getThumbnail('https://example.com/page', createDeps());
 
-      expect(globalThis.fetch.secondCall.args[0]).to.equal('https://example.com/images/og.jpg');
+      expect(fetchStub.secondCall.args[0]).to.equal('https://example.com/images/og.jpg');
     });
 
     it('should handle absolute URLs', async () => {
-      const request = {
-        json: async () => ({ url: 'https://example.com' })
-      };
-
       const htmlContent = '<meta property="og:image" content="https://cdn.example.com/image.jpg" />';
 
       mockFetch([
@@ -239,151 +189,102 @@ describe('Open Graph Image Getter API', () => {
         }
       ]);
 
-      await POST(request);
+      await getThumbnail('https://example.com', createDeps());
 
-      expect(globalThis.fetch.secondCall.args[0]).to.equal('https://cdn.example.com/image.jpg');
+      expect(fetchStub.secondCall.args[0]).to.equal('https://cdn.example.com/image.jpg');
     });
   });
 
   describe('Default Image Fallback', () => {
     it('should return default image when page fetch fails', async () => {
-      const request = {
-        json: async () => ({ url: 'https://example.com' })
-      };
-
       mockFetch([
         { error: new Error('Network error') }
       ]);
 
-      const response = await POST(request);
-      const data = await response.json();
+      const result = await getThumbnail('https://example.com', createDeps());
 
-      // Should either return default image or an error
-      // The API tries to return default image, but that requires filesystem access
-      expect(data.isDefault === true || data.error).to.exist;
+      expect(result.body.isDefault).to.be.true;
     });
 
     it('should return default image when no OG image found', async () => {
-      const request = {
-        json: async () => ({ url: 'https://example.com' })
-      };
-
-      const htmlContent = '<html><head></head></html>';
-
       mockFetch([
-        { text: htmlContent }
+        { text: '<html><head></head></html>' }
       ]);
 
-      const response = await POST(request);
-      const data = await response.json();
+      const result = await getThumbnail('https://example.com', createDeps());
 
-      // Should either return default image or an error
-      expect(data.isDefault === true || data.error).to.exist;
+      expect(result.body.isDefault).to.be.true;
     });
 
     it('should return default image when OG image fetch fails', async () => {
-      const request = {
-        json: async () => ({ url: 'https://example.com' })
-      };
-
-      const htmlContent = '<meta property="og:image" content="https://example.com/image.jpg" />';
-
       mockFetch([
-        { text: htmlContent },
+        { text: '<meta property="og:image" content="https://example.com/image.jpg" />' },
         { error: new Error('Image fetch failed') }
       ]);
 
-      const response = await POST(request);
-      const data = await response.json();
+      const result = await getThumbnail('https://example.com', createDeps());
 
-      // Should either return default image or an error
-      expect(data.isDefault === true || data.error).to.exist;
+      expect(result.body.isDefault).to.be.true;
     });
   });
 
   describe('Response Format', () => {
     it('should return base64 encoded image', async () => {
-      const request = {
-        json: async () => ({ url: 'https://example.com' })
-      };
-
-      const htmlContent = '<meta property="og:image" content="https://example.com/image.jpg" />';
       const fakeImageData = Buffer.from('fake-image-data');
 
       mockFetch([
-        { text: htmlContent },
+        { text: '<meta property="og:image" content="https://example.com/image.jpg" />' },
         {
           headers: { 'content-type': 'image/jpeg' },
           arrayBuffer: fakeImageData
         }
       ]);
 
-      const response = await POST(request);
-      const data = await response.json();
+      const result = await getThumbnail('https://example.com', createDeps());
 
-      expect(data.screenshot).to.be.a('string');
-      expect(data.contentType).to.equal('image/jpeg');
-      expect(data.success).to.be.true;
+      expect(result.body.screenshot).to.be.a('string');
+      expect(result.body.contentType).to.equal('image/jpeg');
+      expect(result.body.success).to.be.true;
     });
 
     it('should include content type from response headers', async () => {
-      const request = {
-        json: async () => ({ url: 'https://example.com' })
-      };
-
-      const htmlContent = '<meta property="og:image" content="https://example.com/image.png" />';
-
       mockFetch([
-        { text: htmlContent },
+        { text: '<meta property="og:image" content="https://example.com/image.png" />' },
         {
           headers: { 'content-type': 'image/png' },
           arrayBuffer: Buffer.from('fake-image-data')
         }
       ]);
 
-      const response = await POST(request);
-      const data = await response.json();
+      const result = await getThumbnail('https://example.com', createDeps());
 
-      expect(data.contentType).to.equal('image/png');
+      expect(result.body.contentType).to.equal('image/png');
     });
 
     it('should default to image/jpeg when content-type is missing', async () => {
-      const request = {
-        json: async () => ({ url: 'https://example.com' })
-      };
-
-      const htmlContent = '<meta property="og:image" content="https://example.com/image.jpg" />';
-
       mockFetch([
-        { text: htmlContent },
+        { text: '<meta property="og:image" content="https://example.com/image.jpg" />' },
         {
           headers: {},
           arrayBuffer: Buffer.from('fake-image-data')
         }
       ]);
 
-      const response = await POST(request);
-      const data = await response.json();
+      const result = await getThumbnail('https://example.com', createDeps());
 
-      expect(data.contentType).to.equal('image/jpeg');
+      expect(result.body.contentType).to.equal('image/jpeg');
     });
   });
 
   describe('Timeout Handling', () => {
     it('should timeout after 10 seconds for page fetch', async () => {
-      const request = {
-        json: async () => ({ url: 'https://example.com' })
-      };
-
       mockFetch([
         { error: new Error('Timeout') }
       ]);
 
-      const response = await POST(request);
-      const data = await response.json();
+      const result = await getThumbnail('https://example.com', createDeps());
 
-      // Should fall back to default image or return error
-      expect(data.isDefault === true || data.error).to.exist;
+      expect(result.body.isDefault).to.be.true;
     });
   });
 });

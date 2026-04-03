@@ -11,7 +11,7 @@ import {
     autoUpdate,
 } from "@floating-ui/react";
 
-export default function CardDropdown({ onEdit, onDelete }) {
+export default function CardDropdown({ onEdit, onDelete, editLabel = "Edit" }) {
     const { refs, floatingStyles } = useFloating({
         placement: "bottom-end",
         middleware: [offset(8), flip(), shift({ padding: 12 })],
@@ -44,7 +44,7 @@ export default function CardDropdown({ onEdit, onDelete }) {
                             } flex w-full items-center gap-2 px-3 py-2 rounded-md`}
                         >
                             <Pencil className="h-4 w-4 text-gray-700 dark:text-gray-300" />
-                            Edit
+                            {editLabel}
                         </button>
                     )}
                 </MenuItem>

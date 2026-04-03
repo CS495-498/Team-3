@@ -72,7 +72,6 @@ export default function ArticleWithEditor({ params }) {
           uid: entry.uid,
           title: entry.title,
           html: updatedHTML,
-          author: entry.author_name,
         }),
       });
 
