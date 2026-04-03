@@ -2,7 +2,7 @@ import { createClient } from '@/utils/Supabase/server.js'
 import { revalidatePath } from 'next/cache'
 import { NextResponse } from 'next/server'
 
-export async function POST(req) {
+export async function POST() {
     const supabase = await createClient()
 
     // Check if a user's logged in
@@ -15,7 +15,5 @@ export async function POST(req) {
     }
 
     revalidatePath('/', 'layout')
-    return NextResponse.redirect(new URL('/login', req.url), {
-        status: 302,
-    })
+    return NextResponse.json({ success: true })
 }
