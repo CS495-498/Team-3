@@ -1,30 +1,37 @@
 "use client";
 
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
-import { RoleProvider } from "@/context/RoleContext";
+import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { UserProvider } from "@/context/UserContext";
-import { User } from "lucide-react";
 
+function SidebarLayoutContent({ children }) {
+  const { isMobile, open } = useSidebar();
+  const desktopOffset = !isMobile && open ? "md:ml-64" : "md:ml-0";
 
+  return (
+    <main className={`min-h-screen overflow-auto transition-[margin] duration-200 ease-linear ${desktopOffset}`}>
+      <div className="sticky top-0 z-30 flex items-center border-b bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <SidebarTrigger
+          showLabel
+          className="border border-border bg-background shadow-sm hover:bg-accent"
+        />
+      </div>
+      <div className="flex-1">
+        {children}
+      </div>
+    </main>
+  );
+}
 
 export default function WithSidebarLayout({ children }) {
   return (
     <UserProvider>
-    <SidebarProvider>
-      <div className="flex min-h-screen w-screen">
-        
-        {/* Sidebar wrapper that prevents flex growth */}
-        <div className=" sticky top-0 col-span-1 h-screen">
+      <SidebarProvider>
+        <div className="min-h-screen w-full bg-background">
           <AppSidebar />
+          <SidebarLayoutContent>{children}</SidebarLayoutContent>
         </div>
-
-        {/* Main content */}
-        <main className="flex-1 flex flex-col min-h-screen overflow-auto">
-          {children}
-        </main>
-      </div>
-    </SidebarProvider>
+      </SidebarProvider>
     </UserProvider>
   );
 }

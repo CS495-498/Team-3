@@ -227,23 +227,28 @@ const Sidebar = React.forwardRef((
 })
 Sidebar.displayName = "Sidebar"
 
-const SidebarTrigger = React.forwardRef(({ className, onClick, ...props }, ref) => {
-  const { toggleSidebar } = useSidebar()
+const SidebarTrigger = React.forwardRef(({ className, onClick, showLabel = false, ...props }, ref) => {
+  const { toggleSidebar, isMobile, open, openMobile } = useSidebar()
+  const isOpen = isMobile ? openMobile : open
+  const actionLabel = isOpen ? "Close sidebar" : "Open sidebar"
 
   return (
     <Button
       ref={ref}
       data-sidebar="trigger"
       variant="ghost"
-      size="icon"
-      className={cn("h-7 w-7", className)}
+      size={showLabel ? "sm" : "icon"}
+      aria-label={actionLabel}
+      title={actionLabel}
+      className={cn(showLabel ? "h-10 gap-2 px-3" : "h-7 w-7", className)}
       onClick={(event) => {
         onClick?.(event)
         toggleSidebar()
       }}
       {...props}>
       <PanelLeft />
-      <span className="sr-only">Toggle Sidebar</span>
+      {showLabel ? <span>{isOpen ? "Hide Sidebar" : "Show Sidebar"}</span> : null}
+      <span className="sr-only">{actionLabel}</span>
     </Button>
   );
 })

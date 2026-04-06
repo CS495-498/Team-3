@@ -141,7 +141,7 @@ export function NavProjects() {
     return (
         <Sidebar
             side={entry?.side_of_screen}
-            collapsible="none"
+            collapsible="offcanvas"
             className="dark:bg-[#0f0f11] bg-white transition-colors"
         >
             {/* Header */}
