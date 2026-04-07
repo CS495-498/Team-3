@@ -599,15 +599,15 @@ export default function Demos() {
             <div className="flex-1">
                 {visibleDemos.length > 0 ? (
                     <>
-                        <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6 me-10">
+                        <div className="mt-6 me-10 grid grid-cols-1 gap-6 items-stretch sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
                             {visibleDemos.map((demo, idx) => {
                                 const demoId = getDemoId(demo);
                                 const key = demoId || `demo-${idx}`;
                                 const demoHref = normalizeWebsiteUrl(demo?.link?.href) || "#";
                                 return (
-                                    <div key={key} className="relative group">
+                                    <div key={key} className="relative group h-full">
                                         <Card
-                                            className="min-h-[340px] flex cursor-pointer flex-col rounded-xl bg-white shadow-md transition-shadow duration-300 hover:shadow-xl dark:bg-gray-800"
+                                            className="flex h-[360px] cursor-pointer flex-col overflow-hidden rounded-xl bg-white shadow-md transition-shadow duration-300 hover:shadow-xl dark:bg-gray-800"
                                             onClick={() => openDemoWebsite(demoHref)}
                                             onKeyDown={(event) => {
                                                 if (event.key === "Enter" || event.key === " ") {
@@ -629,7 +629,7 @@ export default function Demos() {
                                                 </div>
                                             )}
 
-                                            <CardHeader className="p-6 flex flex-col flex-grow">
+                                            <CardHeader className="flex flex-1 flex-col overflow-hidden p-6">
                                                 <div className="flex justify-between items-start mb-2">
                                                     <div className="min-w-0">
                                                         <CardTitle className="text-lg font-semibold leading-tight line-clamp-1 hover:underline">
@@ -651,7 +651,7 @@ export default function Demos() {
 
                                                 </div>
                                                 <CardDescription
-                                                    className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed overflow-y-auto pr-2 line-clamp-3"
+                                                    className="min-h-0 flex-1 overflow-hidden text-sm leading-relaxed text-gray-600 line-clamp-4 dark:text-gray-300"
                                                 >
                                                     {demo?.description}
                                                 </CardDescription>
