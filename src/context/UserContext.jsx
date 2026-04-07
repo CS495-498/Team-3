@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 
+export const CURRENT_USER_UPDATED_EVENT = "current-user-updated";
 const UserContext = createContext({ user: null, loading: true });
 
 export function UserProvider({ children }) {
@@ -39,6 +40,19 @@ export function UserProvider({ children }) {
 
     // Always fetch to ensure data is fresh
     fetchUser();
+
+    const handleCurrentUserUpdated = () => {
+      fetchUser();
+    };
+
+    window.addEventListener(CURRENT_USER_UPDATED_EVENT, handleCurrentUserUpdated);
+
+    return () => {
+      window.removeEventListener(
+        CURRENT_USER_UPDATED_EVENT,
+        handleCurrentUserUpdated
+      );
+    };
   }, []);
 
   return (

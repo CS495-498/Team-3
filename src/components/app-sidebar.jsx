@@ -12,7 +12,6 @@ import PERMISSIONS from "@/config/permissions";
 import Stack, { onEntryChange } from "@/lib/cstack";
 import SignOutButton from "./signout-button";
 import AccountPageButton from "@/components/account-page-button.jsx";
-import { createClient } from "@/utils/Supabase/client.js";
 import { useCurrentAvatar } from "@/hooks/use-current-avatar.js";
 
 import {
@@ -106,7 +105,10 @@ export function NavProjects() {
     const [isAdminOpen, setIsAdminOpen] = useState(true);
 
     const { user, loading } = useUser();
-    const { signedAvatarUrl } = useCurrentAvatar(user);
+    const activePersona = user?.activePersona ?? null;
+    const sidebarName = activePersona?.full_name || user?.full_name || "Your Account";
+    const sidebarUsername = activePersona?.username || user?.username || "Username";
+    const { signedAvatarUrl } = useCurrentAvatar(user, activePersona);
 
     // Fetch Contentstack header/navigation
     useEffect(() => {
@@ -246,7 +248,16 @@ export function NavProjects() {
                                             src={signedAvatarUrl ? signedAvatarUrl : "/DefaultProfile.png"}
                                             className="w-full h-full object-cover"
                                         />
-                                    }</div>{user?.username ?? "Username"} <ChevronUp className="ml-auto" />
+                                    }</div>
+                                    <div className="flex min-w-0 flex-col items-start text-left">
+                                        <span className="max-w-[11rem] truncate text-sm font-medium">
+                                            {sidebarName}
+                                        </span>
+                                        <span className="max-w-[11rem] truncate text-xs opacity-70">
+                                            @{sidebarUsername}
+                                        </span>
+                                    </div>
+                                    <ChevronUp className="ml-auto" />
                                 </SidebarMenuButton>
                             </DropdownMenuTrigger>
 
