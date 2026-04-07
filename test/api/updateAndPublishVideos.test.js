@@ -32,6 +32,41 @@ describe("updateAndPublishVideos()", () => {
     expect(fetchStub.calledTwice).to.be.true;
   });
 
+  it("normalizes nested asset references before updating videos", async () => {
+    fetchStub.onCall(0).resolves({
+      ok: true,
+      text: async () => JSON.stringify({ entry: { videos: [] } })
+    });
+
+    fetchStub.onCall(1).resolves({
+      ok: true,
+      text: async () => "Published"
+    });
+
+    await updateAndPublishVideos("entry123", [{
+      video_file: { uid: "video-asset-1", filename: "clip.mp4" },
+      thumbnail: { uid: "thumb-asset-1", filename: "thumb.png" },
+      title: "Video 1",
+      description: "Desc",
+      se_name: "video-1",
+      date_posted: "2026-03-31"
+    }], fetchStub);
+
+    const [, updateOptions] = fetchStub.firstCall.args;
+    expect(JSON.parse(updateOptions.body)).to.deep.equal({
+      entry: {
+        videos: [{
+          video_file: "video-asset-1",
+          thumbnail: "thumb-asset-1",
+          title: "Video 1",
+          description: "Desc",
+          se_name: "video-1",
+          date_posted: "2026-03-31"
+        }]
+      }
+    });
+  });
+
   it("returns error when update fails", async () => {
     const mockUpdateResponse = {
       ok: false,
