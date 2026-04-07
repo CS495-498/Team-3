@@ -19,6 +19,7 @@ export default function ArticleWithEditor({ params }) {
   const [isOpen, setIsOpen] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [dialogEditorContent, setDialogEditorContent] = useState("");
   const editorRef = useRef(null);
 
@@ -65,6 +66,7 @@ export default function ArticleWithEditor({ params }) {
     setEntry((prev) => ({ ...prev, blog_content: updatedHTML }));
 
     try {
+      setIsSaving(true);
       const response = await fetch("/api/demo-instructions/update", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -80,17 +82,17 @@ export default function ArticleWithEditor({ params }) {
         throw new Error(`Failed to save: ${text}`);
       }
 
-
-
+      setIsOpen(false);
+      setShowToast(true);
+      setTimeout(() => {
+        setShowToast(false);
+      }, 2000);
     } catch (err) {
       console.error(err);
       alert("Failed to save. Check console for details.");
+    } finally {
+      setIsSaving(false);
     }
-    setIsOpen(false);
-    setShowToast(true);
-    setTimeout(() => {
-      setShowToast(false);
-    }, 2000);
   };
 
   if (isLoading) {
@@ -151,7 +153,17 @@ export default function ArticleWithEditor({ params }) {
             </DialogTitle>
 
             <div className="flex gap-2">
-              <Button onClick={handleSave}>Save</Button>
+              <Button onClick={handleSave} disabled={isSaving} className="flex items-center gap-2">
+                {isSaving ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Saving...</span>
+                  </>
+                ) : "Save"}
+              </Button>
               <Button onClick={() => setIsOpen(false)} className="bg-red-400 text-white">
                 Cancel
               </Button>
