@@ -56,7 +56,6 @@ export default function MetricsPage() {
         //     params.set("end_date", endDate.toISOString());
         if (groupBy)
             params.set("groupBy", groupBy);
-
         params.set("dateFilter", dateFilter);
 
         const res = await fetch(`${endpoint}?${params.toString()}`);
@@ -70,6 +69,7 @@ export default function MetricsPage() {
         let mounted = true;
 
         const loadAll = async () => {
+
 
             setLoading(true);
 

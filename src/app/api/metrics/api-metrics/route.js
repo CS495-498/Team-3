@@ -66,6 +66,7 @@ export async function GET(request) {
 
         if (groupBy === "date") {
 
+
             const grouped = {};
 
             (data || []).forEach(row => {
