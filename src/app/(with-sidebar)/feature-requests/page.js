@@ -48,16 +48,6 @@ const FEATURE_REQUEST_ATTACHMENT_ACCEPT =
 const FEATURE_REQUEST_ATTACHMENT_HELPER_TEXT =
     "Allowed: PNG, JPG, GIF, WEBP, PDF, MP4, WEBM, OGG. Max size: 25 MB.";
 
-const FEATURE_REQUEST_ATTACHMENT_ACCEPT =
-    ".png,.jpg,.jpeg,.gif,.webp,.pdf,.mp4,.webm,.ogg";
-const FEATURE_REQUEST_ATTACHMENT_HELPER_TEXT =
-    "Allowed: PNG, JPG, GIF, WEBP, PDF, MP4, WEBM, OGG. Max size: 25 MB.";
-
-const FEATURE_REQUEST_ATTACHMENT_ACCEPT =
-    ".png,.jpg,.jpeg,.gif,.webp,.pdf,.mp4,.webm,.ogg";
-const FEATURE_REQUEST_ATTACHMENT_HELPER_TEXT =
-    "Allowed: PNG, JPG, GIF, WEBP, PDF, MP4, WEBM, OGG. Max size: 25 MB.";
-
 export default function Home() {
     const [currentUser, setCurrentUser] = useState(null);
 
