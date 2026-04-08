@@ -48,11 +48,13 @@ export default function VideoLibrary() {
     const [playingIndex, setPlayingIndex] = useState(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [showToast, setShowToast] = useState(false);
+    const [toastMessage, setToastMessage] = useState("");
     const [isOpen, setIsOpen] = useState(false);
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
     const [selectedItem, setSelectedItem] = useState(null);
+    const [selectedIndex, setSelectedIndex] = useState(null);
 
     // New state for thumbnail generation
     const [thumbnailPreview, setThumbnailPreview] = useState(null);
@@ -83,7 +85,11 @@ export default function VideoLibrary() {
     };
 
     const openDeleteModal = (demo) => {
+        const originalIndex = entry?.videos?.findIndex(
+            (video) => getVideoId(video) === getVideoId(demo)
+        );
         setSelectedItem(demo);
+        setSelectedIndex(originalIndex);
         setIsDeleteOpen(true);
     };
 
@@ -102,7 +108,7 @@ export default function VideoLibrary() {
 
     const { user, loading: userLoading } = useUser();
     const canUploadVideo =
-        user?.role && hasPermission(user.role, "upload_video_library");
+        user?.role && hasPermission(user.role, PERMISSIONS.UPLOAD_VIDEO_LIBRARY);
 
 
 
@@ -359,6 +365,7 @@ export default function VideoLibrary() {
             setEntry(updatedEntry.entry);
             setIsOpen(false);
             resetThumbnailState();
+            setToastMessage("Video added!");
             setShowToast(true);
 
             setTimeout(() => {
@@ -389,9 +396,56 @@ export default function VideoLibrary() {
         setIsEditOpen(false);
     };
 
-    const handleConfirmDelete = () => {
-        console.log("Delete confirmed for:", selectedItem);
-        setIsDeleteOpen(false);
+    const handleConfirmDelete = async () => {
+        try {
+            if (selectedIndex == null || selectedIndex < 0) {
+                alert("Could not locate this video in the source list.");
+                return;
+            }
+
+            const updatedVideos = [...(entry?.videos || [])];
+            const [removedVideo] = updatedVideos.splice(selectedIndex, 1);
+
+            const assetUids = [
+                removedVideo?.video_file?.uid || removedVideo?.video_file || null,
+                removedVideo?.thumbnail?.uid || removedVideo?.thumbnail || null,
+            ].filter(Boolean);
+
+            const response = await fetch("/api/update-video-library-in-cs", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    entryUid: entry.uid,
+                    videos: updatedVideos.map((video) => ({
+                        video_url: video?.video_url || undefined,
+                        video_file: video?.video_file?.uid || video?.video_file || undefined,
+                        thumbnail: video?.thumbnail?.uid || video?.thumbnail || undefined,
+                        title: video?.title || undefined,
+                        description: video?.description || undefined,
+                        se_name: video?.se_name || undefined,
+                        date_posted: video?.date_posted || undefined,
+                    })),
+                    assetUids,
+                }),
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(text);
+            }
+
+            const result = await response.json();
+            setEntry(result.entry);
+            setIsDeleteOpen(false);
+            setSelectedItem(null);
+            setSelectedIndex(null);
+            setToastMessage("Video deleted successfully!");
+            setShowToast(true);
+            setTimeout(() => setShowToast(false), 2000);
+        } catch (error) {
+            console.error("Delete failed:", error);
+            alert("Failed to delete video.");
+        }
     };
 
     /* -----------------------------------------------------------------------------------
@@ -404,7 +458,7 @@ export default function VideoLibrary() {
     return (
         <div className="pl-10 pt-6 min-h-screen flex flex-col">
             <SuccessToast
-                message="Video added!"
+                message={toastMessage}
                 isOpen={showToast}
                 onClose={() => setShowToast(false)}
             />
