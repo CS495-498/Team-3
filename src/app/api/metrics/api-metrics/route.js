@@ -3,7 +3,6 @@ import PERMISSIONS from "@/config/permissions.js";
 import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission.js";
 
 export async function GET(request) {
-
     try {
 
         const { error: authError, supabase } =
@@ -15,10 +14,7 @@ export async function GET(request) {
 
         const { searchParams } = new URL(request.url);
 
-        // const startDate = searchParams.get("start_date");
-        // const endDate = searchParams.get("end_date");
         const dateFilter = searchParams.get("dateFilter");
-
         const groupBy = searchParams.get("groupBy");
 
         let query = supabase
@@ -35,26 +31,8 @@ export async function GET(request) {
                 error_rate
             `);
 
-        // if (startDate) query = query.gte("date", startDate);
-        // if (endDate) query = query.lte("date", endDate);
 
-        const currentTime = new Date();
-
-        if (dateFilter === "Within Last 12 Hours"){
-            query = query.gte("date", currentTime.getHours() - 12);
-        }
-        if (dateFilter === "Within Last Day"){
-            query = query.gte("date", currentTime.getHours() - 24);
-        }
-        if (dateFilter === "Within Last 3 Days"){
-            query = query.gte("date", currentTime.getDay() - 3);
-        }
-        if (dateFilter === "Within Last 5 Days"){
-            query = query.gte("date", currentTime.getDay() - 5);
-        }
-        if (dateFilter === "Within Last Week"){
-            query = query.gte("date", currentTime.getDay() - 7);
-        }
+        query = query.gte("date", dateFilter);
 
         const { data, error } = await query;
 
@@ -65,7 +43,6 @@ export async function GET(request) {
         // =====================================================
 
         if (groupBy === "date") {
-
 
             const grouped = {};
 
@@ -157,6 +134,7 @@ export async function GET(request) {
                 : 0
         }));
 
+        console.log(grouped);
         return NextResponse.json(
             result.sort((a, b) => b.avg_latency - a.avg_latency)
         );

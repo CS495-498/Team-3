@@ -14,6 +14,8 @@ export async function GET(request) {
 
         const startDate = searchParams.get("start_date");
         const endDate = searchParams.get("end_date");
+        const dateFilter = searchParams.get("dateFilter");
+
 
         let query = supabase
             .from("daily_user_metrics")
@@ -28,6 +30,8 @@ export async function GET(request) {
 
         if (startDate) query = query.gte("date", startDate);
         if (endDate) query = query.lte("date", endDate);
+
+        query = query.gte("date", dateFilter);
 
         const { data, error } = await query;
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, {useEffect, useState, useMemo, useCallback} from "react";
 import {
     LineChart,
     Line,
@@ -30,12 +30,14 @@ import {Activity} from "lucide-react";
 import {format} from "date-fns";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.jsx";
 import {Switch} from "@/components/ui/switch.jsx";
+import {useServerInfiniteScroll} from "@/hooks/use-server-infinite-scroll.js";
 
 export default function MetricsPage() {
 
     const [startDate, setStartDate] = useState(undefined);
     const [endDate, setEndDate] = useState(undefined);
-    const [dateFilter, setDateFilter] = useState("");
+    const [dateFilter, setDateFilter] = useState("Within Last 12 Hours");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
 
     const [lineData, setLineData] = useState([]);
     const [crudOps, setCrudOps] = useState([]);
@@ -43,24 +45,36 @@ export default function MetricsPage() {
 
     const [loading, setLoading] = useState(false);
 
+    const TIME_RANGE_MS = {
+        "Within Last 12 Hours": 12 * 60 * 60 * 1000,
+        "Within Last Day": 24 * 60 * 60 * 1000,
+        "Within Last 3 Days": 3 * 24 * 60 * 60 * 1000,
+        "Within Last 5 Days": 5 *24 * 60 * 60 * 1000,
+        "Within Last Week": 7 * 24 * 60 * 60 * 1000,
+    };
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(dateFilter);
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [dateFilter]);
+
     // ---------- FETCH LAYER ----------
 
-    const fetchMetrics = async ({ endpoint, groupBy }) => {
-
+    const fetchMetrics = useCallback(async ({ endpoint, groupBy }) => {
         const params = new URLSearchParams();
-
-        // if (startDate instanceof Date && !isNaN(startDate))
-        //     params.set("start_date", startDate.toISOString());
-        //
-        // if (endDate instanceof Date && !isNaN(endDate))
-        //     params.set("end_date", endDate.toISOString());
-        if (groupBy)
-            params.set("groupBy", groupBy);
-        params.set("dateFilter", dateFilter);
+        if (groupBy) params.set("groupBy", groupBy);
+        const cutoff = new Date(Date.now() - TIME_RANGE_MS[dateFilter]);
+        params.set("dateFilter", cutoff.toISOString());
 
         const res = await fetch(`${endpoint}?${params.toString()}`);
+        if (!res.ok) {
+            throw new Error("Failed to fetch Metric Data");
+        }
         return res.json();
-    };
+        }
+    );
 
     // ---------- DATA LOADER ----------
 
@@ -69,7 +83,6 @@ export default function MetricsPage() {
         let mounted = true;
 
         const loadAll = async () => {
-
 
             setLoading(true);
 
@@ -122,7 +135,7 @@ export default function MetricsPage() {
             mounted = false;
         };
 
-    }, [startDate, endDate]);
+    }, [startDate, endDate, dateFilter]);
 
     // ---------- PIE DATA ----------
 
@@ -153,7 +166,7 @@ export default function MetricsPage() {
 
                             {/* DATE FILTER */}
 
-                            <Select value={dateFilter || "Within Last 12 Hours"} onValueChange={(v) => setDateFilter(v === "Within Last 12 Hours" ? "" : v)}>
+                            <Select value={dateFilter || "Within Last 12 Hours"} onValueChange={(v) => setDateFilter(v)}>
                                 <SelectTrigger className="w-[180px]">
                                     <SelectValue placeholder="Within Last 12 Hours" />
                                 </SelectTrigger>
@@ -217,7 +230,7 @@ export default function MetricsPage() {
                                 dataKey="value"
                                 nameKey="name"
                                 outerRadius={110}
-                                label
+                                label={({ name, value }) => `${name}: ${value}%`}
                             >
                                 {pieData.map((entry, index) => (
                                     <Cell
@@ -227,7 +240,9 @@ export default function MetricsPage() {
                                 ))}
                             </Pie>
 
-                            <Tooltip/>
+                            <Tooltip
+                                formatter={(value) => [`${value}%`, "Healthy Requests"]}
+                            />
                         </PieChart>
                     </ResponsiveContainer>
 
