@@ -134,7 +134,6 @@ export async function GET(request) {
                 : 0
         }));
 
-        console.log(grouped);
         return NextResponse.json(
             result.sort((a, b) => b.avg_latency - a.avg_latency)
         );

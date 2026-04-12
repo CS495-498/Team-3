@@ -26,12 +26,8 @@ import {
 } from "@/components/ui/table";
 
 import { Card, CardContent } from "@/components/ui/card";
-import {Activity} from "lucide-react";
 import {format} from "date-fns";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.jsx";
-import {Switch} from "@/components/ui/switch.jsx";
-import {useServerInfiniteScroll} from "@/hooks/use-server-infinite-scroll.js";
-import {format} from "date-fns";
 
 export default function MetricsPage() {
 
@@ -148,9 +144,9 @@ export default function MetricsPage() {
     const errorPercentage = Number(latest.error_percentage || 0);
 
     const pieData = [
-        { name: "Errors", value: errorPercentage },
+        { name: "Error Rate", value: errorPercentage },
         {
-            name: "Healthy Requests",
+            name: "Healthy Requests Rate",
             value: Math.max(100 - errorPercentage, 0)
         }
     ];
