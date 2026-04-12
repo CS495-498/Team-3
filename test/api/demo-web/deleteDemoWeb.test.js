@@ -76,35 +76,35 @@ describe("deleteDemoWeb()", () => {
     it("should return an error when entryUid is missing", async () => {
         const result = await deleteDemoWeb(null, [], fetchStub);
 
-        expect(result.status).to.equal(500);
+        expect(result.status).to.equal(422);
         expect(result.error).to.equal("Missing entryUid");
     });
 
     it("should return an error when entryUid is empty string", async () => {
         const result = await deleteDemoWeb("", [], fetchStub);
 
-        expect(result.status).to.equal(500);
+        expect(result.status).to.equal(422);
         expect(result.error).to.equal("Missing entryUid");
     });
 
     it("should return an error when demos is missing", async () => {
         const result = await deleteDemoWeb("123", null, fetchStub);
 
-        expect(result.status).to.equal(500);
+        expect(result.status).to.equal(422);
         expect(result.error).to.equal("Missing demos array");
     });
 
     it("should return an error when demos is not an array", async () => {
         const result = await deleteDemoWeb("123", "not-an-array", fetchStub);
 
-        expect(result.status).to.equal(500);
+        expect(result.status).to.equal(422);
         expect(result.error).to.equal("Missing demos array");
     });
 
     it("should return an error when demos is undefined", async () => {
         const result = await deleteDemoWeb("123", undefined, fetchStub);
 
-        expect(result.status).to.equal(500);
+        expect(result.status).to.equal(422);
         expect(result.error).to.equal("Missing demos array");
     });
 

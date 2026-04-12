@@ -2,23 +2,14 @@
 
 import React, { useEffect, useState } from "react";
 import { createClient } from "@/utils/Supabase/client.js";
+import { CURRENT_USER_UPDATED_EVENT } from "@/context/UserContext.jsx";
 import SuccessToast from "@/components/ui/success-toast.jsx";
-import { useCurrentAvatar } from "@/hooks/use-current-avatar.js";
+import {
+    AVATAR_UPDATED_EVENT,
+    useCurrentAvatar,
+} from "@/hooks/use-current-avatar.js";
 import { Button } from "@/components/ui/button.jsx";
-import { Trash2, Menu } from "lucide-react";
-
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu.jsx";
-import {
-    Sheet,
-    SheetContent,
-    SheetHeader,
-    SheetTitle,
-} from "@/components/ui/sheet.jsx";
+import { Camera, PencilLine, ShieldCheck, Trash2 } from "lucide-react";
 
 export default function Page() {
     const supabase = createClient();
@@ -27,20 +18,19 @@ export default function Page() {
     const [user, setUser] = useState(null);
     const [showToast, setShowToast] = useState(false);
     const [toastMessage] = useState("Account Updated Successfully");
+    const [canUsePersonas, setCanUsePersonas] = useState(false);
 
     const [newPersonaName, setNewPersonaName] = useState("");
-    const [newPersonaRole, setNewPersonaRole] = useState("User");
     const [addingPersona, setAddingPersona] = useState(false);
     const [personas, setPersonas] = useState([]);
     const [activePersona, setActivePersona] = useState(null);
-    const [openSheet, setOpenSheet] = useState(null);
+    const [editingField, setEditingField] = useState(null);
 
-    const emptyProfile = {full_name: "", username: "", avatar_url: ""};
+    const emptyProfile = { full_name: "", username: "", avatar_url: "", role: "" };
     const [profile, setProfile] = useState(emptyProfile);
 
-    const {signedAvatarUrl} = useCurrentAvatar(user, activePersona);
+    const { signedAvatarUrl } = useCurrentAvatar(user, activePersona);
 
-    // ---------------- LOAD USER DATA ----------------
     useEffect(() => {
         const loadData = async () => {
             try {
@@ -48,15 +38,17 @@ export default function Page() {
 
                 const res = await fetch("/api/profiles/me");
                 if (!res.ok) throw new Error("Failed to load user");
-
+ 
                 const data = await res.json();
 
-                setUser({id: data.id});
+                setUser({ id: data.id });
                 setProfile({
                     full_name: data.full_name ?? "",
                     username: data.username ?? "",
                     avatar_url: data.avatar_url ?? "",
+                    role: data.role ?? "",
                 });
+                setCanUsePersonas(Boolean(data.canUsePersonas));
                 setPersonas(data.personas ?? []);
                 setActivePersona(data.activePersona ?? null);
             } catch (err) {
@@ -70,7 +62,6 @@ export default function Page() {
         loadData();
     }, []);
 
-    // ---------------- UPDATE PROFILE ----------------
     const updateProfile = async () => {
         try {
             setLoading(true);
@@ -93,7 +84,7 @@ export default function Page() {
                 throw new Error(message);
             }
 
-
+            window.dispatchEvent(new Event(CURRENT_USER_UPDATED_EVENT));
             setShowToast(true);
             setTimeout(() => setShowToast(false), 3000);
         } catch (err) {
@@ -104,8 +95,7 @@ export default function Page() {
         }
     };
 
-    // ---------------- SWITCH PERSONA ----------------
-    const switchPersona = async personaId => {
+    const switchPersona = async (personaId) => {
         try {
             setLoading(true);
             const finalPersonaId =
@@ -115,17 +105,19 @@ export default function Page() {
 
             const res = await fetch("/api/personas/switch", {
                 method: "PATCH",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({personaId: finalPersonaId}),
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ personaId: finalPersonaId }),
             });
 
             if (!res.ok) throw new Error("Failed to switch persona");
 
-            setActivePersona(
+            const nextActivePersona =
                 finalPersonaId
-                    ? personas.find(p => p.id === finalPersonaId) ?? null
-                    : null
-            );
+                    ? personas.find((persona) => persona.id === finalPersonaId) ?? null
+                    : null;
+
+            setActivePersona(nextActivePersona);
+            window.dispatchEvent(new Event(CURRENT_USER_UPDATED_EVENT));
         } catch (err) {
             console.error("switchPersona failed:", err);
             alert(err?.message || "Error switching persona");
@@ -134,7 +126,6 @@ export default function Page() {
         }
     };
 
-    // ---------------- CREATE PERSONA ----------------
     const createPersona = async () => {
         if (!newPersonaName.trim()) return;
 
@@ -143,8 +134,8 @@ export default function Page() {
 
             const res = await fetch("/api/personas", {
                 method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({displayName: newPersonaName}),
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ displayName: newPersonaName }),
             });
 
             if (!res.ok) {
@@ -154,9 +145,10 @@ export default function Page() {
 
             const persona = await res.json();
 
-            setPersonas(prev => [...prev, persona]);
+            setPersonas((prev) => [...prev, persona]);
             setActivePersona(persona);
             setNewPersonaName("");
+            window.dispatchEvent(new Event(CURRENT_USER_UPDATED_EVENT));
         } catch (err) {
             console.error("createPersona failed:", err);
             alert(err?.message || "Failed to create persona");
@@ -165,13 +157,13 @@ export default function Page() {
         }
     };
 
-    // ---------------- DELETE ACCOUNT ----------------
     const handleDeleteAccount = async () => {
-        if (!confirm("Delete your account permanently? This cannot be undone."))
+        if (!confirm("Delete your account permanently? This cannot be undone.")) {
             return;
+        }
 
         try {
-            const res = await fetch("/api/profiles/me", {method: "DELETE"});
+            const res = await fetch("/api/profiles/me", { method: "DELETE" });
             if (!res.ok) throw new Error("Delete failed");
 
             await supabase.auth.signOut();
@@ -182,14 +174,10 @@ export default function Page() {
         }
     };
 
-    // ---------------- DELETE PERSONA ----------------
-    const handleDeletePersona = async persona => {
-        if (
-            !confirm(
-                `Delete your persona, ${persona.full_name}, permanently?`
-            )
-        )
+    const handleDeletePersona = async (persona) => {
+        if (!confirm(`Delete your persona, ${persona.full_name}, permanently?`)) {
             return;
+        }
 
         try {
             const res = await fetch(`/api/personas/${persona.id}`, {
@@ -198,28 +186,26 @@ export default function Page() {
 
             if (!res.ok) throw new Error("Failed to delete persona");
 
-            setPersonas(prev => prev.filter(p => p.id !== persona.id));
-            setActivePersona(null);
-            setOpenSheet(null);
+            setPersonas((prev) => prev.filter((item) => item.id !== persona.id));
+            if (activePersona?.id === persona.id) {
+                setActivePersona(null);
+            }
+            window.dispatchEvent(new Event(CURRENT_USER_UPDATED_EVENT));
         } catch (err) {
             console.error("deletePersona failed:", err);
             alert(err?.message || "Error deleting persona");
         }
     };
 
-    // ---------------- AVATAR UPLOAD (UNCHANGED) ----------------
-    const handleAvatarUpdate = async e => {
-        const file = e.target.files?.[0];
+    const handleAvatarUpdate = async (event) => {
+        const input = event?.target;
+        const file = input?.files?.[0];
         if (!file) return;
 
         try {
-            const {
-                data: {user},
-            } = await supabase.auth.getUser();
-
-            const {
-                data: {session},
-            } = await supabase.auth.getSession();
+            if (!user?.id) {
+                throw new Error("Your session is unavailable. Refresh the page and try again.");
+            }
 
             const formData = new FormData();
             formData.append("file", file);
@@ -228,240 +214,294 @@ export default function Page() {
 
             const res = await fetch(`/api/profiles/${user.id}`, {
                 method: "PUT",
-                headers: {
-                    Authorization: `Bearer ${session.access_token}`,
-                },
                 body: formData,
             });
 
             if (!res.ok) throw new Error("Upload failed");
 
             const data = await res.json();
-            setProfile(data);
+
+            if (activePersona) {
+                setActivePersona(data);
+                setPersonas((prev) =>
+                    prev.map((persona) =>
+                        persona.id === data.id ? { ...persona, ...data } : persona
+                    )
+                );
+            } else {
+                setProfile((prev) => ({
+                    ...prev,
+                    avatar_url: data.avatar_url ?? prev.avatar_url,
+                    full_name: data.full_name ?? prev.full_name,
+                    username: data.username ?? prev.username,
+                }));
+            }
+
+            window.dispatchEvent(new Event(CURRENT_USER_UPDATED_EVENT));
+            window.dispatchEvent(new Event(AVATAR_UPDATED_EVENT));
         } catch (err) {
             console.error("uploadAvatar failed:", err);
             alert(err?.message || "Avatar upload failed");
+        } finally {
+            if (input) {
+                input.value = "";
+            }
         }
     };
 
     const handleChange = (field, value) => {
-        setProfile(prev => ({...prev, [field]: value}));
+        setProfile((prev) => ({ ...prev, [field]: value }));
     };
 
+    const handleInlineSave = async (field) => {
+        await updateProfile();
+        setEditingField((current) => (current === field ? null : current));
+    };
 
-return (
-        <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+    const displayName = activePersona?.full_name || profile.full_name || "Your Account";
+    const displayUsername = activePersona?.username || profile.username || "username";
+    const displayRole = activePersona
+        ? "persona"
+        : (profile.role || "member");
+
+    return (
+        <div className="min-h-screen bg-slate-100 px-4 py-8 dark:bg-slate-950 sm:px-6 lg:px-10">
             <SuccessToast
                 message={toastMessage}
                 isOpen={showToast}
                 onClose={() => setShowToast(false)}
             />
 
-            {/* Menu Button */}
-            <div className="absolute top-4 right-4 z-10">
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="icon">
-                            <Menu className="h-5 w-5" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuItem onClick={() => setOpenSheet('settings')}>
-                            Account Settings
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setOpenSheet('personas')}>
-                            Personas
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setOpenSheet('delete')} className="text-red-600 dark:text-red-400">
-                            Delete Account
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </div>
+            <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+                <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                    <div className="h-32 bg-[radial-gradient(circle_at_top_left,_#7c3aed,_#4f46e5_55%,_#111827)]" />
+                    <div className="px-6 pb-6">
+                        <div className="-mt-14 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+                                <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-full border-4 border-white bg-slate-200 shadow-lg dark:border-slate-900 dark:bg-slate-800">
+                                    <img
+                                        src={signedAvatarUrl || "/DefaultProfile.png"}
+                                        className="h-full w-full object-cover"
+                                        alt="Profile"
+                                    />
+                                    <label className="absolute inset-x-0 bottom-0 flex cursor-pointer items-center justify-center gap-1 bg-black/60 px-2 py-2 text-xs font-medium text-white">
+                                        <Camera className="h-3.5 w-3.5" />
+                                        Change
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleAvatarUpdate}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                </div>
 
-            <div className="w-full h-32 bg-gradient-to-r from-purple-600 to-purple-700 dark:from-purple-700 dark:to-purple-800 relative">
-                <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center">
-                    <div className="relative group w-24 h-24 mb-2">
-                        <div className="w-24 h-24 rounded-full border-4 border-white dark:border-gray-900 shadow-xl overflow-hidden">
-                            <img
-                                src={signedAvatarUrl ? signedAvatarUrl : "/DefaultProfile.png"}
-                                className="w-full h-full object-cover"
-                                alt="Profile"
-                            />
-                        </div>
-                        <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-medium transition-opacity cursor-pointer">
-                            Change Avatar
-                        </div>
-                        <input
-                            type="file"
-                            accept="image/*"
-                            id="Avatar"
-                            onChange={handleAvatarUpdate}
-                            className="absolute inset-0 opacity-0 cursor-pointer"
-                        />
-                    </div>
-                    <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                        {activePersona ? activePersona.full_name : (profile.full_name || "Full Name")}
-                    </h1>
-                    <h2 className="text-med opacity-80 text-gray-700 dark:text-gray-300">
-                        {activePersona ? activePersona.username : "@"+(profile.username || "Username")}
-                    </h2>
-                    <p className="text-sm opacity-80 text-gray-700 dark:text-gray-300">
-                        {/*{activePersona ? (activePersona.role || "User") : "Original Account"}*/}
-                    </p>
-                </div>
-            </div>
+                                <div className="pt-2">
+                                    <p className="text-sm font-medium uppercase tracking-[0.18em] text-indigo-600 dark:text-indigo-300">
+                                        Account Settings
+                                    </p>
+                                    <h1 className="mt-1 text-3xl font-semibold text-slate-900 dark:text-slate-100">
+                                        {displayName}
+                                    </h1>
+                                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                                        @{displayUsername}
+                                    </p>
+                                </div>
+                            </div>
 
-            {/* Account Settings Sheet */}
-            <Sheet open={openSheet === 'settings'} onOpenChange={(open) => !open && setOpenSheet(null)}>
-                <SheetContent side="right" className="w-full sm:max-w-md">
-                    <SheetHeader>
-                        <SheetTitle>Account Settings</SheetTitle>
-                    </SheetHeader>
-                    <div className="mt-6 space-y-4 px-4">
-                        <div>
-                            <label className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                                Full Name
-                            </label>
-                            <input
-                                type="text"
-                                value={profile.full_name ?? ""}
-                                onChange={(e) => handleChange("full_name", e.target.value)}
-                                className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-700
-                                    bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
-                                    px-3 py-2 focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-600 outline-none"
-                            />
-                        </div>
-                        <div>
-                            <label className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                                Username
-                            </label>
-                            <input
-                                type="text"
-                                value={profile.username ?? ""}
-                                onChange={(e) => handleChange("username", e.target.value)}
-                                className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-700
-                                    bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
-                                    px-3 py-2 focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-600 outline-none"
-                            />
-                        </div>
-                        <button
-                            onClick={updateProfile}
-                            disabled={loading}
-                            className="w-full py-2.5 rounded-lg text-white font-medium text-center
-                                bg-gradient-to-r from-purple-600 to-purple-700
-                                hover:from-purple-700 hover:to-purple-800
-                                dark:from-purple-700 dark:to-purple-800 dark:hover:from-purple-800 dark:hover:to-purple-900
-                                transition-all shadow-md disabled:opacity-50"
-                        >
-                            {loading ? "Saving..." : "Update Profile"}
-                        </button>
-                    </div>
-                </SheetContent>
-            </Sheet>
-
-            <Sheet open={openSheet === 'personas'} onOpenChange={(open) => !open && setOpenSheet(null)}>
-                <SheetContent side="right" className="w-full sm:max-w-md">
-                    <SheetHeader>
-                        <SheetTitle>Personas</SheetTitle>
-                    </SheetHeader>
-                    <div className="mt-6 space-y-4 px-4">
-                        <div>
-                            <label className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2 block">
-                                Active Persona
-                            </label>
-                            <select
-                                value={activePersona?.id ?? "original"}
-                                onChange={(e) => switchPersona(e.target.value)}
-                                className="w-full rounded-lg px-3 py-2 bg-white dark:bg-gray-700
-        border border-gray-300 dark:border-gray-600
-        text-sm text-gray-900 dark:text-gray-100"
-                            >
-
-                                <option value="original">
-                                    Original Account
-                                </option>
-
-                                {personas.map(p => (
-                                    <option key={p.id} value={p.id}>
-                                        {p.full_name}
-                                    </option>
-                                ))}
-                            </select>
-                            {activePersona && (
-                                <button
-                                    type="button"
-                                    onClick={() => handleDeletePersona(activePersona)}
-                                    className="p-2 rounded-md text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30"
-                                    title="Delete persona"
-                                >
-                                    <Trash2 className="h-4 w-4 text-red-600" />
-                                </button>
-                            )}
-                        </div>
-                        <div>
-                            <label className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2 block">
-                                Create New Persona
-                            </label>
-                            <div className="space-y-3">
-                                <input
-                                    type="text"
-                                    placeholder="New persona name"
-                                    value={newPersonaName}
-                                    onChange={(e) => setNewPersonaName(e.target.value)}
-                                    className="w-full rounded-lg px-3 py-2
-                                        border border-gray-300 dark:border-gray-600
-                                        bg-white dark:bg-gray-700
-                                        text-sm text-gray-900 dark:text-gray-100"
-                                />
-                                <select
-                                    value={newPersonaRole}
-                                    onChange={(e) => setNewPersonaRole(e.target.value)}
-                                    className="w-full rounded-lg px-3 py-2 bg-white dark:bg-gray-700
-                                        border border-gray-300 dark:border-gray-600
-                                        text-sm text-gray-900 dark:text-gray-100"
-                                >
-                                    <option value="User">User</option>
-                                    <option value="Admin">Admin</option>
-                                    <option value="Viewer">Viewer</option>
-                                </select>
-                                <button
-                                    onClick={createPersona}
-                                    disabled={addingPersona || !newPersonaName.trim()}
-                                    className="w-full py-2 rounded-lg text-sm font-medium
-                                        bg-purple-600 text-white
-                                        hover:bg-purple-700
-                                        disabled:opacity-50"
-                                >
-                                    {addingPersona ? "Creating..." : "Create Persona"}
-                                </button>
+                            <div className="flex flex-wrap gap-2">
+                                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                    <ShieldCheck className="h-4 w-4" />
+                                    {profile.role || "member"}
+                                </span>
+                                {activePersona && (
+                                    <span className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-sm text-indigo-700 dark:border-indigo-500/40 dark:bg-indigo-500/10 dark:text-indigo-200">
+                                        <ShieldCheck className="h-4 w-4" />
+                                        persona
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </div>
-                </SheetContent>
-            </Sheet>
+                </section>
 
-            {/* Delete Account Sheet */}
-            <Sheet open={openSheet === 'delete'} onOpenChange={(open) => !open && setOpenSheet(null)}>
-                <SheetContent side="right" className="w-full sm:max-w-md px-4">
-                    <SheetHeader>
-                        <SheetTitle className="text-red-600 dark:text-red-400">Danger Zone</SheetTitle>
-                    </SheetHeader>
-                    <div className="mt-6">
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                            Deleting your account will permanently remove all your data. This action cannot be undone.
-                        </p>
-                        <button
-                            onClick={handleDeleteAccount}
-                            className="w-full py-2.5 rounded-lg font-medium
-                                bg-red-600 text-white hover:bg-red-700
-                                transition-all shadow-md"
-                        >
-                            Delete My Account
-                        </button>
+                <div className="space-y-6">
+                    <div className="w-full">
+                        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                            <div className="mb-5 flex items-start justify-between gap-4">
+                                <div>
+                                    <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                                        Account Overview
+                                    </h2>
+                                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                                        Review your default account details.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <dl className="space-y-4 text-sm">
+                                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-800/60">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div>
+                                            <dt className="text-slate-500 dark:text-slate-400">Full Name</dt>
+                                            {editingField === "full_name" ? (
+                                                <input
+                                                    type="text"
+                                                    value={profile.full_name ?? ""}
+                                                    onChange={(event) => handleChange("full_name", event.target.value)}
+                                                    className="mt-2 block w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-indigo-500/30"
+                                                    autoFocus
+                                                />
+                                            ) : (
+                                                <dd className="mt-1 font-medium text-slate-900 dark:text-slate-100">
+                                                    {profile.full_name || "Not set"}
+                                                </dd>
+                                            )}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (editingField === "full_name") {
+                                                    handleInlineSave("full_name");
+                                                } else {
+                                                    setEditingField("full_name");
+                                                }
+                                            }}
+                                            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                                        >
+                                            <PencilLine className="h-3.5 w-3.5" />
+                                            {editingField === "full_name" ? "Save" : "Edit"}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-800/60">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div>
+                                            <dt className="text-slate-500 dark:text-slate-400">Username</dt>
+                                            {editingField === "username" ? (
+                                                <input
+                                                    type="text"
+                                                    value={profile.username ?? ""}
+                                                    onChange={(event) => handleChange("username", event.target.value)}
+                                                    className="mt-2 block w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-indigo-500/30"
+                                                    autoFocus
+                                                />
+                                            ) : (
+                                                <dd className="mt-1 font-medium text-slate-900 dark:text-slate-100">
+                                                    @{profile.username || "username"}
+                                                </dd>
+                                            )}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (editingField === "username") {
+                                                    handleInlineSave("username");
+                                                } else {
+                                                    setEditingField("username");
+                                                }
+                                            }}
+                                            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                                        >
+                                            <PencilLine className="h-3.5 w-3.5" />
+                                            {editingField === "username" ? "Save" : "Edit"}
+                                        </button>
+                                    </div>
+                                </div>
+
+                            </dl>
+                            <div className="mt-4 flex items-center justify-between gap-4 border-t border-slate-200 pt-4 dark:border-slate-800">
+                                <div>
+                                    <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                        Delete account
+                                    </p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                        Permanently removes your profile and any associated personas.
+                                    </p>
+                                </div>
+                                <Button
+                                    onClick={handleDeleteAccount}
+                                    className="shrink-0 rounded-xl bg-red-600 text-white hover:bg-red-700"
+                                >
+                                    Delete Account
+                                </Button>
+                            </div>
+                        </section>
+
+                        {canUsePersonas && (
+                            <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                                    <div>
+                                        <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+                                            Personas
+                                        </h2>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                                            Switch into alternate personas for testing or role-based workflows.
+                                        </p>
+                                    </div>
+                                    <span className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-sm text-indigo-700 dark:border-indigo-500/40 dark:bg-indigo-500/10 dark:text-indigo-200">
+                                        {personas.length} persona{personas.length === 1 ? "" : "s"}
+                                    </span>
+                                </div>
+
+                                <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+                                    <div className="rounded-2xl border border-slate-200 p-5 dark:border-slate-700">
+                                        <label className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                                            Active Persona
+                                        </label>
+                                        <select
+                                            value={activePersona?.id ?? "original"}
+                                            onChange={(event) => switchPersona(event.target.value)}
+                                            className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-indigo-500/30"
+                                        >
+                                            <option value="original">Original Account</option>
+                                            {personas.map((persona) => (
+                                                <option key={persona.id} value={persona.id}>
+                                                    {persona.full_name}
+                                                </option>
+                                            ))}
+                                        </select>
+
+                                        {activePersona && (
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={() => handleDeletePersona(activePersona)}
+                                                className="mt-4 rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-500/30 dark:hover:bg-red-500/10"
+                                            >
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                Delete Active Persona
+                                            </Button>
+                                        )}
+                                    </div>
+
+                                    <div className="rounded-2xl border border-slate-200 p-5 dark:border-slate-700">
+                                        <label className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                                            Create New Persona
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="New persona name"
+                                            value={newPersonaName}
+                                            onChange={(event) => setNewPersonaName(event.target.value)}
+                                            className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-indigo-500/30"
+                                        />
+
+                                        <Button
+                                            onClick={createPersona}
+                                            disabled={addingPersona || !newPersonaName.trim()}
+                                            className="mt-4 w-full rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
+                                        >
+                                            {addingPersona ? "Creating..." : "Create Persona"}
+                                        </Button>
+                                    </div>
+                                </div>
+                            </section>
+                        )}
                     </div>
-                </SheetContent>
-            </Sheet>
+                </div>
+            </div>
         </div>
-    )
+    );
 }

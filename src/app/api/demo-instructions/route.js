@@ -1,16 +1,24 @@
 import { NextResponse } from "next/server";
 import { withLogging } from '@/utils/withLogging';
+import { sanitizeHtmlServer } from "@/lib/featureRequests/requests/sanitizeHtmlServer.js";
 const BASE = "https://api.contentstack.io/v3";
 const API_KEY = process.env.CONTENTSTACK_API_KEY;
 const MANAGEMENT_TOKEN = process.env.CONTENTSTACK_MANAGEMENT_TOKEN;
 const LIBRARY_ENTRY_ID = "blt56af12999b14b723";
-const ENVIRONMENT = process.env.CONTENTSTACK_ENVIRONMENT;
+const ENVIRONMENT = process.env.CONTENTSTACK_ENVIRONMENT?.trim();
 import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
 import PERMISSIONS from "@/config/permissions";
 
-async function handlePOST(req) {
-  const { error, profile } = await requireAuthWithPermission(
-  
+export async function handlePOST(
+  req,
+  {
+    requireAuthWithPermissionFn = requireAuthWithPermission,
+    sanitizeHtmlServerFn = sanitizeHtmlServer,
+    fetchFn = fetch,
+  } = {}
+) {
+  const { error, profile } = await requireAuthWithPermissionFn(
+
     PERMISSIONS.PUBLISH_DEMO_INSTRUCTIONS
   );
 
@@ -20,8 +28,9 @@ async function handlePOST(req) {
   const author = profile.full_name || "Unknown";
   try {
     const { title, html } = await req.json();
+    const cleanHtml = sanitizeHtmlServerFn(html);
 
-    if (!title || !html) {
+    if (!title || !cleanHtml) {
       return NextResponse.json({ error: "Missing title or HTML" }, { status: 400 });
     }
 
@@ -40,7 +49,7 @@ async function handlePOST(req) {
     // -----------------------
     // Prevent URL conflicts
     // -----------------------
-    const checkRes = await fetch(
+    const checkRes = await fetchFn(
       `${BASE}/content_types/demo_instruction/entries?query=${encodeURIComponent(JSON.stringify({ url }))}`,
       {
         headers: { api_key: API_KEY, authorization: MANAGEMENT_TOKEN },
@@ -56,7 +65,7 @@ async function handlePOST(req) {
     // -----------------------
     // 1. CREATE ENTRY
     // -----------------------
-    const createRes = await fetch(`${BASE}/content_types/demo_instruction/entries`, {
+    const createRes = await fetchFn(`${BASE}/content_types/demo_instruction/entries`, {
       method: "POST",
       headers: {
         api_key: API_KEY,
@@ -68,7 +77,7 @@ async function handlePOST(req) {
           title,
           url,
           author_name: author || "",
-          blog_content: html,
+          blog_content: cleanHtml,
         },
       }),
     });
@@ -83,7 +92,7 @@ async function handlePOST(req) {
     // -----------------------
     // 2. PUBLISH NEW ENTRY
     // -----------------------
-    const publishRes = await fetch(`${BASE}/content_types/demo_instruction/entries/${newEntryUid}/publish`, {
+    const publishRes = await fetchFn(`${BASE}/content_types/demo_instruction/entries/${newEntryUid}/publish`, {
       method: "POST",
       headers: {
         api_key: API_KEY,
@@ -106,7 +115,7 @@ async function handlePOST(req) {
     // -----------------------
     // 3. FETCH LIBRARY ENTRY
     // -----------------------
-    const libFetch = await fetch(`${BASE}/content_types/demo_instructions/entries/${LIBRARY_ENTRY_ID}`, {
+    const libFetch = await fetchFn(`${BASE}/content_types/demo_instructions/entries/${LIBRARY_ENTRY_ID}`, {
       headers: { api_key: API_KEY, authorization: MANAGEMENT_TOKEN },
     });
 
@@ -128,7 +137,7 @@ async function handlePOST(req) {
       },
     ];
 
-    const updateRes = await fetch(`${BASE}/content_types/demo_instructions/entries/${LIBRARY_ENTRY_ID}`, {
+    const updateRes = await fetchFn(`${BASE}/content_types/demo_instructions/entries/${LIBRARY_ENTRY_ID}`, {
       method: "PUT",
       headers: {
         api_key: API_KEY,
@@ -138,8 +147,8 @@ async function handlePOST(req) {
       body: JSON.stringify({
         entry: {
           demo_instructions: updatedRefs,
-          _version: libData.entry._version,
         },
+        _version: libData.entry._version,
       }),
     });
 
@@ -151,7 +160,7 @@ async function handlePOST(req) {
     // -----------------------
     // 5. PUBLISH LIBRARY ENTRY
     // -----------------------
-    const publishLibRes = await fetch(`${BASE}/content_types/demo_instructions/entries/${LIBRARY_ENTRY_ID}/publish`, {
+    const publishLibRes = await fetchFn(`${BASE}/content_types/demo_instructions/entries/${LIBRARY_ENTRY_ID}/publish`, {
       method: "POST",
       headers: {
         api_key: API_KEY,
@@ -187,3 +196,103 @@ async function handlePOST(req) {
 }
 
 export const POST = withLogging(handlePOST);
+
+export async function handleDELETE(
+  req,
+  {
+    requireAuthWithPermissionFn = requireAuthWithPermission,
+    fetchFn = fetch,
+  } = {}
+) {
+  const { error } = await requireAuthWithPermissionFn(
+    PERMISSIONS.PUBLISH_DEMO_INSTRUCTIONS
+  );
+  if (error) return error;
+
+  try {
+    const { instructionUid } = await req.json();
+
+    if (!instructionUid) {
+      return NextResponse.json({ error: "Missing instructionUid" }, { status: 400 });
+    }
+
+    // 1. Fetch library entry
+    const libFetch = await fetchFn(`${BASE}/content_types/demo_instructions/entries/${LIBRARY_ENTRY_ID}`, {
+      headers: { api_key: API_KEY, authorization: MANAGEMENT_TOKEN },
+    });
+    const libData = await libFetch.json();
+    if (!libFetch.ok) {
+      return NextResponse.json({ error: "Failed fetching library entry", details: libData }, { status: 500 });
+    }
+
+    // 2. Remove the reference from the library
+    const currentRefs = libData.entry.demo_instructions || [];
+    const updatedRefs = currentRefs.filter((ref) => ref.uid !== instructionUid);
+
+    // 3. Update library entry
+    const updateRes = await fetchFn(`${BASE}/content_types/demo_instructions/entries/${LIBRARY_ENTRY_ID}`, {
+      method: "PUT",
+      headers: {
+        api_key: API_KEY,
+        authorization: MANAGEMENT_TOKEN,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        entry: {
+          demo_instructions: updatedRefs,
+        },
+        _version: libData.entry._version,
+      }),
+    });
+    if (!updateRes.ok) {
+      const updateData = await updateRes.json();
+      return NextResponse.json({ error: "Failed updating library entry", details: updateData }, { status: 500 });
+    }
+
+    // 4. Publish library entry
+    const publishLibRes = await fetchFn(`${BASE}/content_types/demo_instructions/entries/${LIBRARY_ENTRY_ID}/publish`, {
+      method: "POST",
+      headers: {
+        api_key: API_KEY,
+        authorization: MANAGEMENT_TOKEN,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        entry: { locales: ["en-us"], environments: [ENVIRONMENT] },
+      }),
+    });
+    if (!publishLibRes.ok) {
+      const pubLibData = await publishLibRes.json();
+      return NextResponse.json({ error: "Failed publishing library entry", details: pubLibData }, { status: 500 });
+    }
+
+    // 5. Unpublish the individual instruction entry
+    await fetchFn(`${BASE}/content_types/demo_instruction/entries/${instructionUid}/unpublish`, {
+      method: "POST",
+      headers: {
+        api_key: API_KEY,
+        authorization: MANAGEMENT_TOKEN,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        entry: { locales: ["en-us"], environments: [ENVIRONMENT] },
+      }),
+    });
+
+    // 6. Delete the individual instruction entry
+    const deleteRes = await fetchFn(`${BASE}/content_types/demo_instruction/entries/${instructionUid}`, {
+      method: "DELETE",
+      headers: { api_key: API_KEY, authorization: MANAGEMENT_TOKEN },
+    });
+    if (!deleteRes.ok) {
+      const deleteData = await deleteRes.json();
+      return NextResponse.json({ error: "Failed deleting instruction entry", details: deleteData }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, message: "Instruction deleted successfully" });
+  } catch (err) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+export const DELETE = withLogging(handleDELETE);

@@ -6,9 +6,14 @@ import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission.js
 import PERMISSIONS from "@/config/permissions";
 import { withLogging } from '@/utils/withLogging';
 
-async function handlePut(req) {
-
-const { error, profile, supabase } = await requireAuthWithPermission(
+export async function handlePut(
+  req,
+  {
+    requireAuthWithPermissionFn = requireAuthWithPermission,
+    updateAndPublishDemoWebFn = updateAndPublishDemoWeb,
+  } = {}
+) {
+  const { error } = await requireAuthWithPermissionFn(
     PERMISSIONS.UPLOAD_DEMO_WEBSITES
   );
   if (error) return error;
@@ -17,7 +22,7 @@ const { error, profile, supabase } = await requireAuthWithPermission(
     const { entryUid, demos } = await req.json();
 
     // CALL HELPER (handles validation and errors)
-    const result = await updateAndPublishDemoWeb(entryUid, demos);
+    const result = await updateAndPublishDemoWebFn(entryUid, demos);
 
     return NextResponse.json(result, { status: result.status });
 
@@ -26,8 +31,14 @@ const { error, profile, supabase } = await requireAuthWithPermission(
   }
 }
 
-async function handleDelete(req) {
-  const { error, profile, supabase } = await requireAuthWithPermission(
+export async function handleDelete(
+  req,
+  {
+    requireAuthWithPermissionFn = requireAuthWithPermission,
+    deleteDemoWebFn = deleteDemoWeb,
+  } = {}
+) {
+  const { error } = await requireAuthWithPermissionFn(
     PERMISSIONS.UPLOAD_DEMO_WEBSITES
   );
   if (error) return error;
@@ -36,7 +47,7 @@ async function handleDelete(req) {
     const { entryUid, demos } = await req.json();
 
     // CALL HELPER (handles validation and errors)
-    const result = await deleteDemoWeb(entryUid, demos);
+    const result = await deleteDemoWebFn(entryUid, demos);
 
     return NextResponse.json(result, { status: result.status });
 

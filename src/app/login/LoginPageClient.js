@@ -4,15 +4,16 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import SuccessToast from "@/components/ui/success-toast.jsx"
 
-export default function LoginPage() {
+export default function LoginPageClient({ initialError }) {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState('')
   const [showRegister, setShowRegister] = useState(false)
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState("")
+  const [systemMessage, setSystemMessage] = useState('');
+  const [formMessage, setFormMessage] = useState('');
 
   useEffect(() => {
     const msg = localStorage.getItem("toastMessage")
@@ -26,10 +27,23 @@ export default function LoginPage() {
     return () => clearTimeout(timer)
   }, [])
 
+  useEffect(() => {
+    if (!initialError) return;
+
+    if (initialError === "disabled") {
+      setSystemMessage("Access for your organization has been disabled. Please contact your administrator.");
+    }
+
+    if (initialError === "unauthorized") {
+      setSystemMessage("You don't have permission to access that page.");
+    }
+    window.history.replaceState({}, "", "/login");
+  }, [initialError]);
+
   const handleLogin = async (e) => {
     e.preventDefault()
     setLoading(true)
-    setMessage('')
+    setFormMessage('')
 
     try {
       const res = await fetch('/api/auth/login', {
@@ -41,7 +55,7 @@ export default function LoginPage() {
       const data = await res.json()
 
       if (!res.ok) {
-        setMessage(data.error || 'Login failed')
+        setFormMessage(data.error || 'Login failed')
       } else {
         localStorage.setItem("loginMessage", "Logged in")
         router.push('/')
@@ -49,7 +63,7 @@ export default function LoginPage() {
       }
     } catch (error) {
       console.error('Client-side error:', error)
-      setMessage('An error occurred')
+      setFormMessage('An error occurred')
     }
 
     setLoading(false)
@@ -58,7 +72,7 @@ export default function LoginPage() {
   const handleSignUp = async (e) => {
     e.preventDefault()
     setLoading(true)
-    setMessage('')
+    setFormMessage('')
 
     try {
       const res = await fetch('/api/auth/signup', {
@@ -70,13 +84,13 @@ export default function LoginPage() {
       const data = await res.json()
 
       if (!res.ok) {
-        setMessage(data.error || 'Signup failed')
+        setFormMessage(data.error || 'Signup failed')
       } else {
-        setMessage('Signup successful! Check your email to confirm your account.')
+        setFormMessage('Signup successful! Check your email to confirm your account.')
         setShowRegister(false)
       }
     } catch (error) {
-      setMessage('An error occurred')
+      setFormMessage('An error occurred')
     }
 
     setLoading(false)
@@ -114,7 +128,7 @@ export default function LoginPage() {
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder="********"
                     className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#88563b]"
                   />
                 </div>
@@ -166,7 +180,7 @@ export default function LoginPage() {
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder="********"
                     className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#88563b]"
                   />
                 </div>
@@ -198,9 +212,17 @@ export default function LoginPage() {
             </>
           )}
 
-          {message && (
+          {systemMessage && (
+            <div className="mt-4 rounded-md border border-red-300 bg-red-50 dark:bg-red-900/20 px-4 py-3">
+              <p className="text-sm text-red-700 dark:text-red-300 text-center">
+                {systemMessage}
+              </p>
+            </div>
+          )}
+
+          {formMessage && (
             <p className="mt-3 text-center text-sm text-red-600 dark:text-red-400">
-              {message}
+              {formMessage}
             </p>
           )}
         </div>

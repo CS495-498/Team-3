@@ -12,7 +12,6 @@ import PERMISSIONS from "@/config/permissions";
 import Stack, { onEntryChange } from "@/lib/cstack";
 import SignOutButton from "./signout-button";
 import AccountPageButton from "@/components/account-page-button.jsx";
-import { createClient } from "@/utils/Supabase/client.js";
 import { useCurrentAvatar } from "@/hooks/use-current-avatar.js";
 
 import {
@@ -59,8 +58,10 @@ const iconMapper = {
 
 const ADMIN_PAGES = [
     { title: "User Management", href: "/admin/usermanagement", permission: PERMISSIONS.MANAGE_USERS },
+    { title: "Partner Management", href: "/admin/partnermanagement", permission: PERMISSIONS.MANAGE_PARTNERS }, 
     { title: "Logs", href: "/admin/logs", permission: PERMISSIONS.VIEW_LOGS },
     { title: "Metrics", href: "/admin/metrics", permission: PERMISSIONS.VIEW_METRICS },
+    
 ];
 
 // ErrorBoundary for graceful fallback
@@ -104,7 +105,10 @@ export function NavProjects() {
     const [isAdminOpen, setIsAdminOpen] = useState(true);
 
     const { user, loading } = useUser();
-    const { signedAvatarUrl } = useCurrentAvatar(user);
+    const activePersona = user?.activePersona ?? null;
+    const sidebarName = activePersona?.full_name || user?.full_name || "Your Account";
+    const sidebarUsername = activePersona?.username || user?.username || "Username";
+    const { signedAvatarUrl } = useCurrentAvatar(user, activePersona);
 
     // Fetch Contentstack header/navigation
     useEffect(() => {
@@ -238,28 +242,26 @@ export function NavProjects() {
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <SidebarMenuButton
-                                    className="
-                                    dark:text-gray-200 
-                                    dark:hover:bg-[#1b1b1f]
-                                "
-                                >
+                                    className="dark:text-gray-200 dark:hover:bg-[#1b1b1f]">
                                     <div className="w-10 h-10 rounded-full border-4 border-white dark:border-gray-900 shadow-xl overflow-hidden">{
                                         <img
                                             src={signedAvatarUrl ? signedAvatarUrl : "/DefaultProfile.png"}
                                             className="w-full h-full object-cover"
                                         />
-                                    }</div>{user?.username ?? "Username"} <ChevronUp className="ml-auto" />
+                                    }</div>
+                                    <div className="flex min-w-0 flex-col items-start text-left">
+                                        <span className="max-w-[11rem] truncate text-sm font-medium">
+                                            {sidebarName}
+                                        </span>
+                                        <span className="max-w-[11rem] truncate text-xs opacity-70">
+                                            @{sidebarUsername}
+                                        </span>
+                                    </div>
+                                    <ChevronUp className="ml-auto" />
                                 </SidebarMenuButton>
                             </DropdownMenuTrigger>
 
-                            <DropdownMenuContent
-                                side="top"
-                                className="
-                                w-[--radix-popper-anchor-width]
-                                dark:bg-[#18181b]
-                                dark:border-gray-800
-                            "
-                            >
+                            <DropdownMenuContent side="top" className="w-[--radix-popper-anchor-width] dark:bg-[#18181b]dark:border-gray-800">
                                 <AccountPageButton />
                                 <SignOutButton />
                             </DropdownMenuContent>

@@ -31,6 +31,7 @@ import {format} from "date-fns";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.jsx";
 import {Switch} from "@/components/ui/switch.jsx";
 import {useServerInfiniteScroll} from "@/hooks/use-server-infinite-scroll.js";
+import {format} from "date-fns";
 
 export default function MetricsPage() {
 
@@ -144,7 +145,7 @@ export default function MetricsPage() {
         [lineData]
     );
 
-    const errorPercentage = Number(latest.error_percentage || 0);
+    const errorPercentage = Number(latest.error_percentage || 0).toFixed(2);
 
     const pieData = [
         { name: "Errors", value: errorPercentage },
@@ -242,6 +243,7 @@ export default function MetricsPage() {
 
                             <Tooltip
                                 formatter={(value) => [`${value}%`, "Healthy Requests"]}
+                                formatter={(value) => [`${value}%`, "Error Rate"]}
                             />
                         </PieChart>
                     </ResponsiveContainer>

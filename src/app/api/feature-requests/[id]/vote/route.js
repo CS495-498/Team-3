@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { redirect } from "next/navigation";
 import { createClient } from "@/utils/Supabase/server";
 import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
 import PERMISSIONS from "@/config/permissions";
@@ -19,9 +18,9 @@ async function handlePost(req, { params }) {
 
     const { vote } = await req.json();
 
-    if (!["up", "down", "remove"].includes(vote)) {
+    if (!["up", "remove"].includes(vote)) {
         return NextResponse.json(
-            { error: "Vote must be 'up', 'down', or 'remove'" },
+            { error: "Vote must be 'up' or 'remove'" },
             { status: 400 }
         );
     }
@@ -32,36 +31,39 @@ async function handlePost(req, { params }) {
                 .from("votes")
                 .delete()
                 .eq("user_id", profile.id)
-                .eq("req_id", id);
+                .eq("req_id", id)
 
             if (delErr) throw delErr;
         } else {
-            // UPSERT vote (up = true, down = false)
+            // UPSERT vote (up = true)
+            const { data: username } = await supabase
+                .from("profiles")
+                .select("username")
+                .eq("id", profile.id)
+                .single()
             const { error: upErr } = await supabase
                 .from("votes")
                 .upsert(
                     {
                         user_id: profile.id,
                         req_id: id,
-                        Upvoted: vote === "up" ? true : false,
+                        Upvoted: vote === "up",
+                        upvoter_username: username?.username
                     },
                     { onConflict: "user_id,req_id" }
                 );
-
             if (upErr) throw upErr;
         }
 
         const { data: votes, error: countErr } = await supabase
             .from("votes")
-            .select("Upvoted")
+            .select("*")
             .eq("req_id", id);
 
         if (countErr) throw countErr;
 
-        const upCount = votes.filter(v => v.Upvoted === true).length;
-        const downCount = votes.filter(v => v.Upvoted === false).length;
+        const total = votes.length;
 
-        const total = upCount - downCount;
 
         return NextResponse.json({ number_of_votes: total }, { status: 200 });
 

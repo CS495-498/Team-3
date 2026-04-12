@@ -1,7 +1,20 @@
 // updateAndPublishVideos.js
 
+import extractFields from "../helper/extractFields.js";
+
 export async function updateAndPublishVideos(entryUid, videos, fetchFunc = fetch) {
   try {
+    const normalizedVideos = Array.isArray(videos)
+      ? extractFields(videos, [
+          "video_url",
+          "video_file",
+          "thumbnail",
+          "title",
+          "description",
+          "se_name",
+        ])
+      : videos;
+
     // Step 1: Update the entry
     const updateResponse = await fetchFunc(
       `https://api.contentstack.io/v3/content_types/video_library/entries/${entryUid}`,
@@ -12,7 +25,7 @@ export async function updateAndPublishVideos(entryUid, videos, fetchFunc = fetch
           authorization: process.env.CONTENTSTACK_MANAGEMENT_TOKEN,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ entry: { videos } }),
+        body: JSON.stringify({ entry: { videos: normalizedVideos } }),
       }
     );
 

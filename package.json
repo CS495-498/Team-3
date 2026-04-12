@@ -8,18 +8,19 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "mocha",
-    "test:unit": "mocha \"test/**/*.test.js\"",
-    "test:coverage": "c8 mocha \"test/**/*.test.js\""
+    "test": "npm run test:unit",
+    "test:unit": "mocha \"test/**/*.test.js\" --ignore \"test/integration/**\"",
+    "test:coverage": "c8 mocha \"test/**/*.test.js\" --ignore \"test/integration/**\"",
+    "test:integration": "start-server-and-test \"next dev -p 3005\" http://localhost:3005 \"cross-env NODE_ENV=test mocha 'test/integration/**/*.int.test.js' --timeout 60000\""
   },
   "mocha": {
-    "spec": "test/**/*.test.js",
     "node-option": [
       "import=./loader.js"
     ]
   },
   "dependencies": {
     "@contentstack/live-preview-utils": "^4.0.1",
+    "@preact/signals-core": "^1.14.0",
     "@floating-ui/react": "^0.27.17",
     "@headlessui/react": "^2.2.9",
     "@lexkit/editor": "^0.0.37",
@@ -52,7 +53,7 @@
     "@tiptap/extension-typography": "^3.10.1",
     "@tiptap/extensions": "^3.10.1",
     "@tiptap/pm": "^3.10.1",
-    "@tiptap/react": "^3.10.1",
+    "@tiptap/react": "^3.20.4",
     "@tiptap/starter-kit": "^3.10.1",
     "cheerio": "^1.1.2",
     "class-variance-authority": "^0.7.1",
@@ -78,21 +79,28 @@
     "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {
+    "@eslint/config-array": "^0.23.3",
     "@eslint/eslintrc": "^3",
+    "@eslint/object-schema": "^3.0.3",
     "@tailwindcss/postcss": "^4",
     "@types/lodash.throttle": "^4.1.9",
     "autoprefixer": "^10.4.21",
     "c8": "^10.1.3",
-    "chai": "^6.2.1",
+    "chai": "^6.2.2",
+    "cross-env": "^10.1.0",
+    "dotenv": "^17.3.1",
     "eslint": "^9",
     "eslint-config-next": "15.5.3",
+    "fetch-cookie": "^3.2.0",
     "mocha": "^11.7.5",
     "mock-require": "^3.0.3",
     "postcss": "^8.5.6",
     "sass": "^1.93.3",
     "sinon": "^21.0.0",
     "source-map-support": "^0.5.21",
+    "start-server-and-test": "^2.1.3",
     "tailwindcss": "^4.1.13",
+    "tough-cookie": "^6.0.0",
     "tw-animate-css": "^1.3.8"
   }
 }

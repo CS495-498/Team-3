@@ -1,4 +1,3 @@
-
 export async function getComments(requestId) {
     const res = await fetch(`/api/feature-requests/${requestId}/comments`);
 

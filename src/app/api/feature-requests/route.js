@@ -2,9 +2,7 @@ import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
 import PERMISSIONS from "@/config/permissions";
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/Supabase/server";
-import { fileTypeFromBuffer } from "file-type";
 import { createServiceRoleClient } from "@/utils/Supabase/server";
-import { sanitizeHtmlServer } from "@/lib/featureRequests/requests/sanitizeHtmlServer.js";
 import { withLogging } from '@/utils/withLogging';
 
 const ALLOWED_MIME_TYPES = [
@@ -23,14 +21,36 @@ const TITLE_MAX_LENGTH = 100;
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
 
+async function getPublicProfilesByIds(supabase, userIds) {
+  const uniqueIds = [...new Set((userIds || []).filter(Boolean))];
+
+  if (uniqueIds.length === 0) {
+    return {};
+  }
+
+  const { data, error } = await supabase
+    .from("public_profiles")
+    .select("id, username, full_name")
+    .in("id", uniqueIds);
+
+  if (error) {
+    console.error("Public profile lookup error:", error);
+    return {};
+  }
+
+  return Object.fromEntries(
+    (data || []).map((profile) => [profile.id, profile])
+  );
+}
+
 async function handleGet(request) {
   const supabase = await createClient();
 
-  const { error2, profile } = await requireAuthWithPermission(
+  const { error: authError, profile } = await requireAuthWithPermission(
     PERMISSIONS.VIEW_CONTENT
   );
 
-  if (error2) return error2;
+  if (authError) return authError;
 
   const { searchParams } = new URL(request.url);
 
@@ -45,13 +65,7 @@ async function handleGet(request) {
     // Build base query
     let query = supabase
       .from("feature_requests")
-      .select(`
-        *,
-        profiles!fk_feature_requests_author (
-          username,
-          full_name
-        )
-      `, { count: "exact" });
+      .select("*", { count: "exact" });
 
     // Apply status filter
     if (statusFilter) {
@@ -63,7 +77,7 @@ async function handleGet(request) {
     // Apply user search via profile ID lookup
     if (userSearch) {
       const { data: matchingProfiles } = await supabase
-        .from("profiles")
+        .from("public_profiles")
         .select("id")
         .or(`username.ilike.%${userSearch}%,full_name.ilike.%${userSearch}%`);
 
@@ -161,6 +175,7 @@ async function handleGet(request) {
 
     // Enrich the page slice with vote counts, comment counts, user vote state, signed URLs
     const pageIds = pageData.map((r) => r.id);
+    const authorIds = pageData.map((r) => r.user_id);
 
     if (pageIds.length === 0) {
       return NextResponse.json({
@@ -173,9 +188,12 @@ async function handleGet(request) {
     }
 
     // Run all enrichment queries in parallel for speed
-    const supabaseServiceRole = await createServiceRoleClient();
+    const needsSignedUrls = pageData.some((req) => req.file_url);
+    const supabaseServiceRole = needsSignedUrls
+      ? await createServiceRoleClient()
+      : null;
 
-    const [voteCountResult, commentResult, userVoteResult, ...signedUrlResults] = await Promise.all([
+    const [voteCountResult, commentResult, userVoteResult, authorProfilesResult, ...signedUrlResults] = await Promise.all([
       // Vote counts (skip if already computed for vote sort)
       isVoteSort
         ? Promise.resolve({ data: null })
@@ -186,6 +204,8 @@ async function handleGet(request) {
       profile?.id
         ? supabase.from("votes").select("req_id, Upvoted").eq("user_id", profile.id).in("req_id", pageIds)
         : Promise.resolve({ data: null }),
+      // Public author profile data
+      getPublicProfilesByIds(supabase, authorIds).then((data) => ({ data })),
       // Signed file URLs (one per page item)
       ...pageData.map((req) =>
         req.file_url
@@ -212,11 +232,14 @@ async function handleGet(request) {
     // Process user vote state
     const userVoteMap = {};
     (userVoteResult.data || []).forEach((v) => {
-      userVoteMap[v.req_id] = v.Upvoted ? "up" : "down";
+      userVoteMap[v.req_id] = "up";
     });
+
+    const authorProfiles = authorProfilesResult.data || {};
 
     // Build enriched response
     const enriched = pageData.map((req, i) => {
+      const authorProfile = authorProfiles[req.user_id] || null;
       const urlResult = signedUrlResults[i];
       const signedFileUrl = urlResult?.data?.signedUrl || null;
       if (req.file_url && urlResult?.error) {
@@ -225,8 +248,8 @@ async function handleGet(request) {
 
       return {
         ...req,
-        username: req.profiles?.username || null,
-        full_name: req.profiles?.full_name || null,
+        username: authorProfile?.username || null,
+        full_name: authorProfile?.full_name || null,
         signed_file_url: signedFileUrl,
         number_of_votes: isVoteSort ? req.number_of_votes : (voteCounts[req.id] || 0),
         commentCount: commentCounts[req.id] || 0,
@@ -253,12 +276,12 @@ async function handleGet(request) {
 async function handlePost(req) {
   const supabase = await createClient();
 
-  const { error2, profile } = await requireAuthWithPermission(
+  const { error: authError, profile } = await requireAuthWithPermission(
 
     PERMISSIONS.PUBLISH_FEATURE_REQUESTS
   );
 
-  if (error2) return error2;
+  if (authError) return authError;
 
   const contentLength = req.headers.get("content-length");
 
@@ -284,6 +307,7 @@ async function handlePost(req) {
     );
   }
 
+  const { sanitizeHtmlServer } = await import("@/lib/featureRequests/requests/sanitizeHtmlServer.js");
   const cleanContent = sanitizeHtmlServer(content)
 
   let filePath = null;
@@ -294,6 +318,7 @@ async function handlePost(req) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
+    const { fileTypeFromBuffer } = await import("file-type");
 
     // Detect actual file type
     const detectedType = await fileTypeFromBuffer(buffer);

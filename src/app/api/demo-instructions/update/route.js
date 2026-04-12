@@ -1,29 +1,39 @@
-import { NextResponse, redirect } from "next/server";
+import { NextResponse } from "next/server";
 import { withLogging } from '@/utils/withLogging';
+import { sanitizeHtmlServer } from "@/lib/featureRequests/requests/sanitizeHtmlServer.js";
 const BASE = "https://api.contentstack.io/v3";
 const API_KEY = process.env.CONTENTSTACK_API_KEY;
 const MANAGEMENT_TOKEN = process.env.CONTENTSTACK_MANAGEMENT_TOKEN;
-const ENVIRONMENT = process.env.CONTENTSTACK_ENVIRONMENT;
+const ENVIRONMENT = process.env.CONTENTSTACK_ENVIRONMENT?.trim();
 import requireAuthWithPermission from "@/utils/auth/requireAuthWithPermission";
 import PERMISSIONS from "@/config/permissions";
 
-async function handlePOST(req) {
-  const { error, profile } = await requireAuthWithPermission(
-  
+export async function handlePOST(
+  req,
+  {
+    requireAuthWithPermissionFn = requireAuthWithPermission,
+    sanitizeHtmlServerFn = sanitizeHtmlServer,
+    fetchFn = fetch,
+  } = {}
+) {
+  const { error, profile } = await requireAuthWithPermissionFn(
+
     PERMISSIONS.PUBLISH_DEMO_INSTRUCTIONS
   );
 
   if (error) return error;
 
   try {
-    const { uid, title, html, author } = await req.json();
+    const { uid, title, html } = await req.json();
+    const cleanHtml = sanitizeHtmlServerFn(html);
+    const author = profile.full_name || "Unknown";
 
-    if (!uid || !title || !html) {
+    if (!uid || !title || !cleanHtml) {
       return NextResponse.json({ error: "Missing UID, title, or HTML" }, { status: 400 });
     }
 
     // 1️⃣ Fetch existing entry to get _version
-    const fetchRes = await fetch(`${BASE}/content_types/demo_instruction/entries/${uid}`, {
+    const fetchRes = await fetchFn(`${BASE}/content_types/demo_instruction/entries/${uid}`, {
       headers: {
         api_key: API_KEY,
         authorization: MANAGEMENT_TOKEN,
@@ -37,7 +47,7 @@ async function handlePOST(req) {
     const entryVersion = fetchData.entry._version;
 
     // 2️⃣ Update the entry
-    const updateRes = await fetch(`${BASE}/content_types/demo_instruction/entries/${uid}`, {
+    const updateRes = await fetchFn(`${BASE}/content_types/demo_instruction/entries/${uid}`, {
       method: "PUT",
       headers: {
         api_key: API_KEY,
@@ -48,7 +58,7 @@ async function handlePOST(req) {
         entry: {
           title,
           author_name: author || "",
-          blog_content: html,
+          blog_content: cleanHtml,
         },
         _version: entryVersion,
       }),
@@ -59,7 +69,7 @@ async function handlePOST(req) {
     }
 
     // 3️⃣ Publish the updated entry
-    const publishRes = await fetch(`${BASE}/content_types/demo_instruction/entries/${uid}/publish`, {
+    const publishRes = await fetchFn(`${BASE}/content_types/demo_instruction/entries/${uid}/publish`, {
       method: "POST",
       headers: {
         api_key: API_KEY,
