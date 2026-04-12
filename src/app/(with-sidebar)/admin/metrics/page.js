@@ -50,10 +50,11 @@ export default function MetricsPage() {
         "Within Last Week": 7 * 24 * 60 * 60 * 1000,
     };
     useEffect(() => {
+        setStartDate(undefined);
+        setEndDate(undefined);
         const timer = setTimeout(() => {
             setDebouncedSearch(dateFilter);
         }, 300);
-
         return () => clearTimeout(timer);
     }, [dateFilter]);
 
@@ -70,8 +71,7 @@ export default function MetricsPage() {
             throw new Error("Failed to fetch Metric Data");
         }
         return res.json();
-        }
-    );
+        }, [dateFilter]);
 
     // ---------- DATA LOADER ----------
 
@@ -132,24 +132,25 @@ export default function MetricsPage() {
             mounted = false;
         };
 
-    }, [startDate, endDate, dateFilter]);
+    }, [debouncedSearch]);
 
     // ---------- PIE DATA ----------
 
-    const latest = useMemo(() =>
-            lineData.length > 0 ? lineData[lineData.length - 1] : {},
-        [lineData]
-    );
+    const pieData = useMemo(() => {
+        if (lineData.length === 0) return [
+            { name: "Error Rate", value: 0 },
+            { name: "Healthy Requests Rate", value: 100 }
+        ];
 
-    const errorPercentage = Number(latest.error_percentage || 0);
+        const avgError =
+            lineData.reduce((sum, row) => sum + Number(row.error_percentage || 0), 0)
+            / lineData.length;
 
-    const pieData = [
-        { name: "Error Rate", value: errorPercentage },
-        {
-            name: "Healthy Requests Rate",
-            value: Math.max(100 - errorPercentage, 0)
-        }
-    ];
+        return [
+            { name: "Error Rate", value: avgError },
+            { name: "Healthy Requests Rate", value: Math.max(100 - avgError, 0) }
+        ];
+    }, [lineData]);
 
     const COLORS = ["#ff4d4f", "#82ca9d"];
 

@@ -130,7 +130,7 @@ export async function GET(request) {
         const result = Object.values(grouped).map(row => ({
             endpoint: row.endpoint,
             avg_latency: row.total_requests > 0
-                ? row.total_latency_weighted / row.total_requests
+                ? Math.round(row.total_latency_weighted / row.total_requests * 100) / 100
                 : 0
         }));
 
