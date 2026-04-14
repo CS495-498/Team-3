@@ -198,7 +198,7 @@ export function NavProjects() {
             <SidebarHeader className="p-0 mb-0 border-b dark:border-gray-800">
                 <Link href="/" aria-label="Go to home">
                     <img
-                        className="h-10 w-10 p-2 cursor-pointer select-none group-data-[collapsible=icon]:p-1"
+                        className="h-12 w-12 p-2 cursor-pointer select-none"
                         src={entry?.logo?.url}
                         alt="Home"
                         draggable={false}
@@ -226,7 +226,10 @@ export function NavProjects() {
                                                     : "text-gray-800 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-[#1b1b1f]"
                                                 }`}
                                         >
-                                            <Link href={item.call_to_action.href}>
+                                            <Link
+                                                href={item.call_to_action.href}
+                                                className="flex w-full items-center gap-2 group-data-[collapsible=icon]:justify-center"
+                                            >
                                                 {iconMapper[item.icon] || <Search />}
                                                 <span className="group-data-[collapsible=icon]:hidden">
                                                     {item.call_to_action.title}
@@ -246,7 +249,7 @@ export function NavProjects() {
              hover:bg-gray-100 dark:hover:bg-[#1b1b1f] text-sm transition-all duration-200"
                                             title="Admin"
                                         >
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2 group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center">
                                                 <ShieldUser className="w-4 h-4" />
                                                 <span className="group-data-[collapsible=icon]:hidden">Admin</span>
                                             </div>
@@ -273,7 +276,10 @@ export function NavProjects() {
                                                                         : "text-gray-800 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-[#1b1b1f]"
                                                                     }`}
                                                             >
-                                                                <Link href={page.href}>
+                                                                <Link
+                                                                    href={page.href}
+                                                                    className="flex w-full items-center gap-2 group-data-[collapsible=icon]:justify-center"
+                                                                >
                                                                     <span className="group-data-[collapsible=icon]:hidden">
                                                                         {page.title}
                                                                     </span>
@@ -295,14 +301,14 @@ export function NavProjects() {
             <SidebarFooter className="border-t dark:border-gray-800">
                 <ModeToggle />
                 <SidebarMenu>
-                    <SidebarMenuItem>
+                    <SidebarMenuItem className="group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <button
                                     type="button"
                                     title={user?.username ?? "Account"}
                                     aria-label={user?.username ?? "Account"}
-                                    className="hidden h-10 w-10 items-center justify-center rounded-full overflow-hidden border-4 border-white shadow-xl transition-colors hover:bg-gray-100 dark:border-gray-900 dark:hover:bg-[#1b1b1f] group-data-[collapsible=icon]:flex"
+                                    className="hidden h-10 w-10 items-center justify-center self-center rounded-full overflow-hidden border-4 border-white shadow-xl transition-colors hover:bg-gray-100 dark:border-gray-900 dark:hover:bg-[#1b1b1f] group-data-[collapsible=icon]:flex"
                                 >
                                     <img
                                         src={avatarSrc}
