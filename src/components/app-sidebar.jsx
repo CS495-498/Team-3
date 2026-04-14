@@ -244,7 +244,7 @@ function DesktopSidebar({
                 <div className="absolute inset-y-0 left-0 flex h-full w-[var(--sidebar-width-icon)] flex-col items-center border-r bg-white py-2 dark:border-gray-800 dark:bg-[#0f0f11]">
                     <Link href="/" aria-label="Go to home" className="mb-4 flex h-12 w-full items-center justify-center">
                         <img
-                            className="h-12 w-14 p-2 select-none"
+                            className="h-12 w-20 p-2 select-none"
                             src={entry?.logo?.url}
                             alt="Home"
                             draggable={false}
