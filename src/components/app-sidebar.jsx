@@ -150,7 +150,7 @@ function PanelAdminSection({ allowedAdminPages, pathname, isAdminOpen, setIsAdmi
                                 key={page.title}
                                 href={page.href}
                                 className={cn(
-                                    "block rounded-md px-2 py-2 text-sm transition-colors",
+                                    "block whitespace-nowrap rounded-md px-2 py-2 text-sm transition-colors",
                                     isActive
                                         ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800"
                                         : "text-gray-800 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-[#1b1b1f]"
