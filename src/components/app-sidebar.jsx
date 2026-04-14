@@ -188,7 +188,9 @@ function DesktopSidebar({
     username,
 }) {
     const [expanded, setExpanded] = useState(false);
+    const [railAvatarOpacity, setRailAvatarOpacity] = useState(1);
     const hoverTimeoutRef = useRef(null);
+    const railAvatarOpacityRef = useRef(1);
 
     const navItems = entry?.navigation_menu ?? [];
     const side = entry?.side_of_screen === "right" ? "right" : "left";
@@ -198,6 +200,35 @@ function DesktopSidebar({
             if (hoverTimeoutRef.current) window.clearTimeout(hoverTimeoutRef.current);
         };
     }, []);
+
+    useEffect(() => {
+        let frameId = 0;
+        let startTime = 0;
+        const duration = 280;
+        const from = railAvatarOpacityRef.current;
+        const to = expanded ? 0 : 1;
+
+        const step = (timestamp) => {
+            if (!startTime) startTime = timestamp;
+            const elapsed = timestamp - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            const nextOpacity = from + (to - from) * eased;
+
+            railAvatarOpacityRef.current = nextOpacity;
+            setRailAvatarOpacity(nextOpacity);
+
+            if (progress < 1) {
+                frameId = window.requestAnimationFrame(step);
+            }
+        };
+
+        frameId = window.requestAnimationFrame(step);
+
+        return () => {
+            window.cancelAnimationFrame(frameId);
+        };
+    }, [expanded]);
 
     const queueOpen = () => {
         if (hoverTimeoutRef.current) window.clearTimeout(hoverTimeoutRef.current);
@@ -275,7 +306,10 @@ function DesktopSidebar({
                                     type="button"
                                     title={username ?? "Account"}
                                     aria-label={username ?? "Account"}
-                                    className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border-4 border-white shadow-xl transition-colors hover:bg-gray-100 dark:border-gray-900 dark:hover:bg-[#1b1b1f]"
+                                    className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border-4 border-white shadow-xl hover:bg-gray-100 dark:border-gray-900 dark:hover:bg-[#1b1b1f]"
+                                    style={{
+                                        opacity: railAvatarOpacity,
+                                    }}
                                 >
                                     <img src={avatarSrc} className="h-full w-full object-cover" />
                                 </button>
