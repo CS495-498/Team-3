@@ -63,6 +63,19 @@ const panelRowClass =
 const labelMotionClass =
     "overflow-hidden whitespace-nowrap transition-[max-width,opacity,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] max-w-48 opacity-100 translate-x-0";
 
+function formatRole(role) {
+    switch ((role || "").toLowerCase()) {
+        case "admin":
+            return "Admin";
+        case "contentstack":
+            return "Contentstack";
+        case "partner":
+            return "Partner";
+        default:
+            return "";
+    }
+}
+
 class ErrorBoundary extends React.Component {
     constructor(props) {
         super(props);
@@ -186,6 +199,7 @@ function DesktopSidebar({
     setIsAdminOpen,
     avatarSrc,
     username,
+    role,
 }) {
     const [expanded, setExpanded] = useState(false);
     const [railAvatarOpacity, setRailAvatarOpacity] = useState(1);
@@ -194,6 +208,7 @@ function DesktopSidebar({
 
     const navItems = entry?.navigation_menu ?? [];
     const side = entry?.side_of_screen === "right" ? "right" : "left";
+    const roleLabel = formatRole(role);
 
     useEffect(() => {
         return () => {
@@ -347,7 +362,13 @@ function DesktopSidebar({
                                 "opacity 160ms cubic-bezier(0.16,1,0.3,1), transform 280ms cubic-bezier(0.16,1,0.3,1)",
                         }}
                     >
-                        <div className="h-16 border-b dark:border-gray-800" />
+                        <div className="flex h-16 items-center border-b px-3 dark:border-gray-800">
+                            {roleLabel ? (
+                                <span className="rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-medium text-foreground/80 dark:border-gray-700 dark:bg-[#18181b] dark:text-gray-200">
+                                    {roleLabel}
+                                </span>
+                            ) : null}
+                        </div>
 
                         <div className="flex-1 overflow-auto px-1 py-3">
                             <div className="space-y-1">
@@ -419,6 +440,7 @@ export function AppSidebar() {
                 setIsAdminOpen={setIsAdminOpen}
                 avatarSrc={avatarSrc}
                 username={user?.username}
+                role={user?.role}
             />
         </ErrorBoundary>
     );
