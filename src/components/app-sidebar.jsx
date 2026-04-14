@@ -28,6 +28,7 @@ import {
     SidebarRail,
     SidebarMenuSkeleton,
     SidebarFooter,
+    useSidebar,
 } from "@/components/ui/sidebar";
 
 import { ModeToggle } from "./mode-toggle";
@@ -104,9 +105,12 @@ export function NavProjects() {
     const [isLoading, setIsLoading] = useState(true);
     const pathname = usePathname();
     const [isAdminOpen, setIsAdminOpen] = useState(true);
+    const { isMobile, setOpen } = useSidebar();
+    const hoverTimeoutRef = React.useRef(null);
 
     const { user, loading } = useUser();
     const { signedAvatarUrl } = useCurrentAvatar(user);
+    const avatarSrc = signedAvatarUrl ? signedAvatarUrl : "/DefaultProfile.png";
 
     // Fetch Contentstack header/navigation
     useEffect(() => {
@@ -117,6 +121,14 @@ export function NavProjects() {
         }
         onEntryChange(getContent);
         getContent();
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            if (hoverTimeoutRef.current) {
+                window.clearTimeout(hoverTimeoutRef.current);
+            }
+        };
     }, []);
 
     if (loading || !user || isLoading) return <SidebarRail />; // fallback while loading
@@ -141,14 +153,52 @@ export function NavProjects() {
     return (
         <Sidebar
             side={entry?.side_of_screen}
-            collapsible="offcanvas"
+            collapsible="icon"
             className="dark:bg-[#0f0f11] bg-white transition-colors"
+            onMouseEnter={() => {
+                if (isMobile) return;
+                if (hoverTimeoutRef.current) {
+                    window.clearTimeout(hoverTimeoutRef.current);
+                }
+                hoverTimeoutRef.current = window.setTimeout(() => {
+                    setOpen(true);
+                    hoverTimeoutRef.current = null;
+                }, 120);
+            }}
+            onMouseLeave={() => {
+                if (isMobile) return;
+                if (hoverTimeoutRef.current) {
+                    window.clearTimeout(hoverTimeoutRef.current);
+                }
+                hoverTimeoutRef.current = window.setTimeout(() => {
+                    setOpen(false);
+                    hoverTimeoutRef.current = null;
+                }, 90);
+            }}
+            onFocusCapture={() => {
+                if (hoverTimeoutRef.current) {
+                    window.clearTimeout(hoverTimeoutRef.current);
+                    hoverTimeoutRef.current = null;
+                }
+                if (!isMobile) setOpen(true);
+            }}
+            onBlurCapture={(event) => {
+                if (hoverTimeoutRef.current) {
+                    window.clearTimeout(hoverTimeoutRef.current);
+                }
+                if (!isMobile && !event.currentTarget.contains(event.relatedTarget)) {
+                    hoverTimeoutRef.current = window.setTimeout(() => {
+                        setOpen(false);
+                        hoverTimeoutRef.current = null;
+                    }, 90);
+                }
+            }}
         >
             {/* Header */}
             <SidebarHeader className="p-0 mb-0 border-b dark:border-gray-800">
                 <Link href="/" aria-label="Go to home">
                     <img
-                        className="w-15 h-13 p-3 cursor-pointer select-none"
+                        className="h-10 w-10 p-2 cursor-pointer select-none group-data-[collapsible=icon]:p-1"
                         src={entry?.logo?.url}
                         alt="Home"
                         draggable={false}
@@ -169,6 +219,7 @@ export function NavProjects() {
                                     <SidebarMenuItem key={idx}>
                                         <SidebarMenuButton
                                             asChild
+                                            tooltip={item.call_to_action.title}
                                             className={`flex items-center gap-2 transition-all duration-200
                   ${isActive
                                                     ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800"
@@ -177,7 +228,9 @@ export function NavProjects() {
                                         >
                                             <Link href={item.call_to_action.href}>
                                                 {iconMapper[item.icon] || <Search />}
-                                                <span>{item.call_to_action.title}</span>
+                                                <span className="group-data-[collapsible=icon]:hidden">
+                                                    {item.call_to_action.title}
+                                                </span>
                                             </Link>
                                         </SidebarMenuButton>
                                     </SidebarMenuItem>
@@ -191,13 +244,14 @@ export function NavProjects() {
                                         <CollapsibleTrigger
                                             className="w-full flex items-center justify-between gap-2 text-gray-800 dark:text-gray-200 
              hover:bg-gray-100 dark:hover:bg-[#1b1b1f] text-sm transition-all duration-200"
+                                            title="Admin"
                                         >
                                             <div className="flex items-center gap-2">
                                                 <ShieldUser className="w-4 h-4" />
-                                                Admin
+                                                <span className="group-data-[collapsible=icon]:hidden">Admin</span>
                                             </div>
                                             <ChevronRight
-                                                className={`ml-auto transition-transform duration-200 ${isAdminOpen ? "rotate-90" : ""}`}
+                                                className={`ml-auto transition-transform duration-200 group-data-[collapsible=icon]:hidden ${isAdminOpen ? "rotate-90" : ""}`}
                                             />
                                         </CollapsibleTrigger>
 
@@ -212,13 +266,18 @@ export function NavProjects() {
                                                         <SidebarMenuItem key={page.title}>
                                                             <SidebarMenuButton
                                                                 asChild
+                                                                tooltip={page.title}
                                                                 className={`flex items-center gap-2 transition-all duration-200
                             ${isActive
                                                                         ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800"
                                                                         : "text-gray-800 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-[#1b1b1f]"
                                                                     }`}
                                                             >
-                                                                <Link href={page.href}>{page.title}</Link>
+                                                                <Link href={page.href}>
+                                                                    <span className="group-data-[collapsible=icon]:hidden">
+                                                                        {page.title}
+                                                                    </span>
+                                                                </Link>
                                                             </SidebarMenuButton>
                                                         </SidebarMenuItem>
                                                     );
@@ -239,18 +298,41 @@ export function NavProjects() {
                     <SidebarMenuItem>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
+                                <button
+                                    type="button"
+                                    title={user?.username ?? "Account"}
+                                    aria-label={user?.username ?? "Account"}
+                                    className="hidden h-10 w-10 items-center justify-center rounded-full overflow-hidden border-4 border-white shadow-xl transition-colors hover:bg-gray-100 dark:border-gray-900 dark:hover:bg-[#1b1b1f] group-data-[collapsible=icon]:flex"
+                                >
+                                    <img
+                                        src={avatarSrc}
+                                        className="h-full w-full object-cover"
+                                    />
+                                </button>
+                            </DropdownMenuTrigger>
+
+                            <DropdownMenuContent side="top" className="dark:bg-[#18181b] dark:border-gray-800">
+                                <AccountPageButton />
+                                <SignOutButton />
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
                                 <SidebarMenuButton
-                                    className="dark:text-gray-200 dark:hover:bg-[#1b1b1f]">
-                                    <div className="w-10 h-10 rounded-full border-4 border-white dark:border-gray-900 shadow-xl overflow-hidden">{
+                                    className="dark:text-gray-200 dark:hover:bg-[#1b1b1f] group-data-[collapsible=icon]:hidden">
+                                    <div className="w-10 h-10 rounded-full border-4 border-white dark:border-gray-900 shadow-xl overflow-hidden">
                                         <img
-                                            src={signedAvatarUrl ? signedAvatarUrl : "/DefaultProfile.png"}
+                                            src={avatarSrc}
                                             className="w-full h-full object-cover"
                                         />
-                                    }</div>{user?.username ?? "Username"} <ChevronUp className="ml-auto" />
+                                    </div>
+                                    {user?.username ?? "Username"}
+                                    <ChevronUp className="ml-auto" />
                                 </SidebarMenuButton>
                             </DropdownMenuTrigger>
 
-                            <DropdownMenuContent side="top" className="w-[--radix-popper-anchor-width] dark:bg-[#18181b]dark:border-gray-800">
+                            <DropdownMenuContent side="top" className="w-[--radix-popper-anchor-width] dark:bg-[#18181b] dark:border-gray-800">
                                 <AccountPageButton />
                                 <SignOutButton />
                             </DropdownMenuContent>
