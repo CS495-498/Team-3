@@ -66,6 +66,9 @@ const ADMIN_PAGES = [
     
 ];
 
+const labelMotionClass =
+    "inline-block overflow-hidden whitespace-nowrap transition-[max-width,opacity,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] max-w-40 opacity-100 translate-x-0 group-data-[collapsible=icon]:max-w-0 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:-translate-x-2";
+
 // ErrorBoundary for graceful fallback
 class ErrorBoundary extends React.Component {
     constructor(props) {
@@ -243,18 +246,17 @@ export function NavProjects() {
                             {/* Admin Dropdown inside same SidebarGroupContent to remove gap */}
                             {hasAnyAdminAccess && (
                                 <Collapsible open={isAdminOpen} onOpenChange={setIsAdminOpen}>
-                                    <SidebarGroupLabel asChild className="mt-0">
+                                    <SidebarGroupLabel asChild className="mt-0 group-data-[collapsible=icon]:mt-0 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:opacity-100">
                                         <CollapsibleTrigger
-                                            className="w-full flex items-center justify-between gap-2 text-gray-800 dark:text-gray-200 
-             hover:bg-gray-100 dark:hover:bg-[#1b1b1f] text-sm transition-all duration-200"
+                                            className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-2 text-sm text-gray-800 transition-all duration-200 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-[#1b1b1f] group-data-[collapsible=icon]:size-9 group-data-[collapsible=icon]:w-9 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
                                             title="Admin"
                                         >
                                             <div className="flex items-center gap-2 group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center">
-                                                <ShieldUser className="w-4 h-4" />
-                                                <span className="group-data-[collapsible=icon]:hidden">Admin</span>
+                                                <ShieldUser className="h-[1.35rem] w-[1.35rem] group-data-[collapsible=icon]:translate-x-[4px]" />
+                                                <span className={labelMotionClass}>Admin</span>
                                             </div>
                                             <ChevronRight
-                                                className={`ml-auto transition-transform duration-200 group-data-[collapsible=icon]:hidden ${isAdminOpen ? "rotate-90" : ""}`}
+                                                className={`ml-auto shrink-0 transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-data-[collapsible=icon]:hidden ${isAdminOpen ? "rotate-90" : ""}`}
                                             />
                                         </CollapsibleTrigger>
 
