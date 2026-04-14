@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import React, {useEffect, useState, useMemo, useCallback} from "react";
 import {
     LineChart,
     Line,
@@ -27,11 +27,14 @@ import {
 
 import { Card, CardContent } from "@/components/ui/card";
 import {format} from "date-fns";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.jsx";
 
 export default function MetricsPage() {
 
     const [startDate, setStartDate] = useState(undefined);
     const [endDate, setEndDate] = useState(undefined);
+    const [dateFilter, setDateFilter] = useState("Within Last 12 Hours");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
 
     const [lineData, setLineData] = useState([]);
     const [crudOps, setCrudOps] = useState([]);
@@ -39,24 +42,36 @@ export default function MetricsPage() {
 
     const [loading, setLoading] = useState(false);
 
+    const TIME_RANGE_MS = {
+        "Within Last 12 Hours": 12 * 60 * 60 * 1000,
+        "Within Last Day": 24 * 60 * 60 * 1000,
+        "Within Last 3 Days": 3 * 24 * 60 * 60 * 1000,
+        "Within Last 5 Days": 5 *24 * 60 * 60 * 1000,
+        "Within Last Week": 7 * 24 * 60 * 60 * 1000,
+    };
+    useEffect(() => {
+        setStartDate(undefined);
+        setEndDate(undefined);
+        const timer = setTimeout(() => {
+            setDebouncedSearch(dateFilter);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [dateFilter]);
+
     // ---------- FETCH LAYER ----------
 
-    const fetchMetrics = async ({ endpoint, groupBy }) => {
-
+    const fetchMetrics = useCallback(async ({ endpoint, groupBy }) => {
         const params = new URLSearchParams();
-
-        if (startDate instanceof Date && !isNaN(startDate))
-            params.set("start_date", startDate.toISOString());
-
-        if (endDate instanceof Date && !isNaN(endDate))
-            params.set("end_date", endDate.toISOString());
-
-        if (groupBy)
-            params.set("groupBy", groupBy);
+        if (groupBy) params.set("groupBy", groupBy);
+        const cutoff = new Date(Date.now() - TIME_RANGE_MS[dateFilter]);
+        params.set("dateFilter", cutoff.toISOString());
 
         const res = await fetch(`${endpoint}?${params.toString()}`);
+        if (!res.ok) {
+            throw new Error("Failed to fetch Metric Data");
+        }
         return res.json();
-    };
+        }, [dateFilter]);
 
     // ---------- DATA LOADER ----------
 
@@ -117,24 +132,25 @@ export default function MetricsPage() {
             mounted = false;
         };
 
-    }, [startDate, endDate]);
+    }, [debouncedSearch]);
 
     // ---------- PIE DATA ----------
 
-    const latest = useMemo(() =>
-            lineData.length > 0 ? lineData[lineData.length - 1] : {},
-        [lineData]
-    );
+    const pieData = useMemo(() => {
+        if (lineData.length === 0) return [
+            { name: "Error Rate", value: 0 },
+            { name: "Healthy Requests Rate", value: 100 }
+        ];
 
-    const errorPercentage = Number(latest.error_percentage || 0).toFixed(2);
+        const avgError =
+            lineData.reduce((sum, row) => sum + Number(row.error_percentage || 0), 0)
+            / lineData.length;
 
-    const pieData = [
-        { name: "Errors", value: errorPercentage },
-        {
-            name: "Healthy Requests",
-            value: Math.max(100 - errorPercentage, 0)
-        }
-    ];
+        return [
+            { name: "Error Rate", value: avgError },
+            { name: "Healthy Requests Rate", value: Math.max(100 - avgError, 0) }
+        ];
+    }, [lineData]);
 
     const COLORS = ["#ff4d4f", "#82ca9d"];
 
@@ -143,6 +159,25 @@ export default function MetricsPage() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <div className="flex items-center gap-4">
                     <h1 className="text-3xl font-bold">System Metrics</h1>
+                    <div className="mb-6 mt-6 bg-secondary/40 p-4 rounded-lg">
+                        <div className="flex flex-wrap items-center gap-6.5">
+
+                            {/* DATE FILTER */}
+
+                            <Select value={dateFilter || "Within Last 12 Hours"} onValueChange={(v) => setDateFilter(v)}>
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="Within Last 12 Hours" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Within Last 12 Hours">Within Last 12 Hours</SelectItem>
+                                    <SelectItem value="Within Last Day">Within Last Day</SelectItem>
+                                    <SelectItem value="Within Last 3 Days">Within Last 3 Days</SelectItem>
+                                    <SelectItem value="Within Last 5 Days">Within Last 5 Days</SelectItem>
+                                    <SelectItem value="Within Last Week">Within Last Week</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -193,7 +228,7 @@ export default function MetricsPage() {
                                 dataKey="value"
                                 nameKey="name"
                                 outerRadius={110}
-                                label={({ name, value }) => `${name}: ${value}%`}
+                                label={({ name, value }) => `${name}: ${value.toFixed(2)}%`}
                             >
                                 {pieData.map((entry, index) => (
                                     <Cell
@@ -202,10 +237,6 @@ export default function MetricsPage() {
                                     />
                                 ))}
                             </Pie>
-
-                            <Tooltip
-                                formatter={(value) => [`${value}%`, "Error Rate"]}
-                            />
                         </PieChart>
                     </ResponsiveContainer>
 
