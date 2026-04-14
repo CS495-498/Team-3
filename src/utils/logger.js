@@ -1,5 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
+const LOGGER_SINGLETON_KEY = '__team3LoggerSingleton'
+const LOGGER_HANDLERS_KEY = '__team3LoggerShutdownHandlers'
+
 class Logger {
     constructor() {
         this.batch = []
@@ -97,16 +100,28 @@ class Logger {
         if (typeof process === 'undefined' || typeof process.on !== 'function') {
             return
         }
-    
+
+        if (globalThis[LOGGER_HANDLERS_KEY]) {
+            return
+        }
+
         const shutdown = async () => {
-            this.isShuttingDown = true
-            this.stopPeriodicFlush()
-            await this.flush()
+            const activeLogger = globalThis[LOGGER_SINGLETON_KEY]
+
+            if (!activeLogger) {
+                process.exit(0)
+                return
+            }
+
+            activeLogger.isShuttingDown = true
+            activeLogger.stopPeriodicFlush()
+            await activeLogger.flush()
             process.exit(0)
         }
-    
-        process.on('SIGINT', shutdown)
-        process.on('SIGTERM', shutdown)
+
+        process.once('SIGINT', shutdown)
+        process.once('SIGTERM', shutdown)
+        globalThis[LOGGER_HANDLERS_KEY] = true
     }
 
 
@@ -123,6 +138,10 @@ class Logger {
     }
 }
 
-const logger = new Logger()
+const logger = globalThis[LOGGER_SINGLETON_KEY] || new Logger()
+
+if (!globalThis[LOGGER_SINGLETON_KEY]) {
+    globalThis[LOGGER_SINGLETON_KEY] = logger
+}
 
 export default logger

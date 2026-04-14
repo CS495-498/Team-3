@@ -95,6 +95,12 @@ export default function Home() {
         return canPublish && request.user_id === user.id;
     };
 
+    const canDeleteRequest = (request) => {
+        if (!user) return false;
+        if (canManageAll) return true;
+        return canPublish && request.user_id === user.id;
+    };
+
     // "open feature request to see whole thing"
     const [isRequestOpen, setIsRequestOpen] = useState(false);
     const [activeRequest, setActiveRequest] = useState(null);
@@ -899,13 +905,15 @@ export default function Home() {
                                 </div>
 
                                 <div className="flex justify-between items-center ml-4 gap-2">
-                                    <div
-                                        className={!sameUser(req.user_id, currentUser?.id) ? "hidden" : ""}
-                                    >
-                                        {canEditRequest(req) && (
+                                    <div>
+                                        {(canEditRequest(req) || canDeleteRequest(req)) && (
                                             <CardDropdown
                                                 onEdit={() => openEditRte(req)}
-                                                onDelete={() => openDeleteModal(req)}
+                                                onDelete={
+                                                    canDeleteRequest(req)
+                                                        ? () => openDeleteModal(req)
+                                                        : undefined
+                                                }
                                             />
                                         )}
                                     </div>
@@ -1343,17 +1351,16 @@ export default function Home() {
                                             </span>
                                         </div>
 
-                                        <div
-                                            className={
-                                                !sameUser(activeRequest.user_id, currentUser?.id)
-                                                    ? "hidden"
-                                                    : ""
-                                            }
-                                        >
-                                            {canEditRequest(activeRequest) && (
+                                        <div>
+                                            {(canEditRequest(activeRequest) ||
+                                                canDeleteRequest(activeRequest)) && (
                                                 <CardDropdown
                                                     onEdit={() => openEditRte(activeRequest)}
-                                                    onDelete={() => openDeleteModal(activeRequest)}
+                                                    onDelete={
+                                                        canDeleteRequest(activeRequest)
+                                                            ? () => openDeleteModal(activeRequest)
+                                                            : undefined
+                                                    }
                                                 />
                                             )}
                                         </div>
