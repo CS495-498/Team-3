@@ -380,7 +380,7 @@ export function SimpleEditor({
     }, [editor, editorRef])
 
     return (
-        <div className="simple-editor-wrapper w-full max-w-full h-full min-h-75 border border-gray-300 rounded-md p-1">
+        <div className="simple-editor-wrapper w-full max-w-full h-full min-h-[300px]">
             <EditorContext.Provider value={{ editor }}>
                 <Toolbar
                     ref={toolbarRef}
@@ -408,7 +408,7 @@ export function SimpleEditor({
                 <EditorContent
                     editor={editor}
                     role="presentation"
-                    className="simple-editor-content w-full h-full min-h-62.5 overflow-auto"
+                    className="simple-editor-content w-full h-full min-h-[250px] overflow-auto"
                 />
             </EditorContext.Provider>
         </div>
