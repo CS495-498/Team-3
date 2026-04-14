@@ -8,6 +8,7 @@ import {
     ChevronRight,
     ChevronUp,
     Construction,
+    Lightbulb,
     Home,
     Inbox,
     Search,
@@ -47,6 +48,7 @@ const iconMapper = {
     Search: Search,
     User2: User2,
     Construction: Construction,
+    Lightbulb: Lightbulb,
 };
 
 const ADMIN_PAGES = [
@@ -97,6 +99,7 @@ class ErrorBoundary extends React.Component {
 }
 
 function RailIconLink({ href, icon: Icon, label, active }) {
+    const isFeatureRequests = label?.toLowerCase?.().includes("feature request");
     return (
         <Link
             href={href}
@@ -109,9 +112,15 @@ function RailIconLink({ href, icon: Icon, label, active }) {
                     : null
             )}
         >
-            <Icon className="h-5 w-5" />
+            <Icon className={isFeatureRequests ? "h-[1.6rem] w-[1.6rem]" : "h-5 w-5"} />
         </Link>
     );
+}
+
+function getNavIcon(item) {
+    const title = item?.call_to_action?.title?.toLowerCase?.() ?? "";
+    if (title.includes("feature request")) return Lightbulb;
+    return iconMapper[item.icon] || Search;
 }
 
 function PanelNavLink({ href, label, active }) {
@@ -288,7 +297,7 @@ function DesktopSidebar({
 
                     <div className="flex flex-1 flex-col items-center gap-1">
                         {navItems.map((item, idx) => {
-                            const Icon = iconMapper[item.icon] || Search;
+                            const Icon = getNavIcon(item);
                             return (
                                 <RailIconLink
                                     key={`${item.call_to_action.href}-${idx}`}
