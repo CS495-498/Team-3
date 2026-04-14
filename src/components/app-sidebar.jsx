@@ -1,43 +1,37 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Calendar, ChevronRight, ChevronUp, Home, Inbox, Search, Settings, TvMinimalPlay, User2, ChevronsLeftRightEllipsis, Construction, ShieldUser } from "lucide-react";
+import {
+    Calendar,
+    ChevronRight,
+    ChevronUp,
+    Construction,
+    Home,
+    Inbox,
+    Search,
+    Settings,
+    ShieldUser,
+    TvMinimalPlay,
+    User2,
+} from "lucide-react";
 
 import { useUser } from "@/context/UserContext";
 import { hasPermission } from "@/utils/hasPermission";
 import PERMISSIONS from "@/config/permissions";
-
 import Stack, { onEntryChange } from "@/lib/cstack";
 import SignOutButton from "./signout-button";
 import AccountPageButton from "@/components/account-page-button.jsx";
-import { createClient } from "@/utils/Supabase/client.js";
 import { useCurrentAvatar } from "@/hooks/use-current-avatar.js";
-
-import {
-    Sidebar,
-    SidebarHeader,
-    SidebarContent,
-    SidebarGroup,
-    SidebarGroupContent,
-    SidebarGroupLabel,
-    SidebarMenu,
-    SidebarMenuItem,
-    SidebarMenuButton,
-    SidebarRail,
-    SidebarMenuSkeleton,
-    SidebarFooter,
-    useSidebar,
-} from "@/components/ui/sidebar";
-
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 import { ModeToggle } from "./mode-toggle";
 import {
     Collapsible,
-    CollapsibleTrigger,
     CollapsibleContent,
+    CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -45,38 +39,37 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const iconMapper = {
-    Home: <Home />,
-    Inbox: <Inbox />,
-    Calendar: <Calendar />,
-    Settings: <Settings />,
-    TvMinimalPlay: <TvMinimalPlay />,
-    Search: <Search />,
-    User2: <User2 />,
-    ChevronUp: <ChevronUp />,
-    ChevronsLeftRightEllipsis: <ChevronsLeftRightEllipsis />,
-    Construction: <Construction />,
+    Home: Home,
+    Inbox: Inbox,
+    Calendar: Calendar,
+    Settings: Settings,
+    TvMinimalPlay: TvMinimalPlay,
+    Search: Search,
+    User2: User2,
+    Construction: Construction,
 };
-
 
 const ADMIN_PAGES = [
     { title: "User Management", href: "/admin/usermanagement", permission: PERMISSIONS.MANAGE_USERS },
-    { title: "Partner Management", href: "/admin/partnermanagement", permission: PERMISSIONS.MANAGE_PARTNERS }, 
+    { title: "Partner Management", href: "/admin/partnermanagement", permission: PERMISSIONS.MANAGE_PARTNERS },
     { title: "Logs", href: "/admin/logs", permission: PERMISSIONS.VIEW_LOGS },
     { title: "Metrics", href: "/admin/metrics", permission: PERMISSIONS.VIEW_METRICS },
-    
 ];
 
+const railButtonClass =
+    "flex h-9 w-9 items-center justify-center rounded-md text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-[#1b1b1f]";
+const panelRowClass =
+    "grid w-full items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors hover:bg-gray-100 dark:hover:bg-[#1b1b1f]";
 const labelMotionClass =
-    "inline-block overflow-hidden whitespace-nowrap transition-[max-width,opacity,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] max-w-40 opacity-100 translate-x-0 group-data-[collapsible=icon]:max-w-0 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:-translate-x-2";
+    "overflow-hidden whitespace-nowrap transition-[max-width,opacity,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] max-w-48 opacity-100 translate-x-0";
 
-// ErrorBoundary for graceful fallback
 class ErrorBoundary extends React.Component {
     constructor(props) {
         super(props);
         this.state = { hasError: false };
     }
 
-    static getDerivedStateFromError(error) {
+    static getDerivedStateFromError() {
         return { hasError: true };
     }
 
@@ -85,37 +78,307 @@ class ErrorBoundary extends React.Component {
     }
 
     render() {
-        if (this.state.hasError) return <NavProjectsSkeleton />;
+        if (this.state.hasError) return null;
         return this.props.children;
     }
 }
 
-// Skeleton for loading sidebar
-function NavProjectsSkeleton() {
+function RailIconLink({ href, icon: Icon, label, active }) {
     return (
-        <SidebarMenu>
-            {Array.from({ length: 5 }).map((_, index) => (
-                <SidebarMenuItem key={index}>
-                    <SidebarMenuSkeleton showIcon />
-                </SidebarMenuItem>
-            ))}
-        </SidebarMenu>
+        <Link
+            href={href}
+            aria-label={label}
+            title={label}
+            className={cn(
+                railButtonClass,
+                active
+                    ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800"
+                    : null
+            )}
+        >
+            <Icon className="h-5 w-5" />
+        </Link>
     );
 }
 
-export function NavProjects() {
+function PanelNavLink({ href, icon: Icon, label, active }) {
+    return (
+        <Link
+            href={href}
+            className={cn(
+                panelRowClass,
+                active
+                    ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800"
+                    : "text-gray-800 dark:text-gray-200 dark:hover:bg-[#1b1b1f]"
+            )}
+            style={{ gridTemplateColumns: "var(--sidebar-width-icon, 2.5rem) minmax(0, 1fr)" }}
+        >
+            <span className="flex justify-center">
+                <Icon className="h-5 w-5" />
+            </span>
+            <span className={labelMotionClass}>{label}</span>
+        </Link>
+    );
+}
+
+function PanelAdminSection({ allowedAdminPages, pathname, isAdminOpen, setIsAdminOpen }) {
+    return (
+        <Collapsible open={isAdminOpen} onOpenChange={setIsAdminOpen}>
+            <CollapsibleTrigger
+                className="grid w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-gray-800 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-[#1b1b1f]"
+                style={{ gridTemplateColumns: "var(--sidebar-width-icon, 2.5rem) minmax(0, 1fr) auto" }}
+                title="Admin"
+            >
+                <span className="flex justify-center">
+                    <ShieldUser className="h-[1.35rem] w-[1.35rem]" />
+                </span>
+                <span className={labelMotionClass}>Admin</span>
+                <ChevronRight className={cn("h-4 w-4 transition-transform", isAdminOpen ? "rotate-90" : null)} />
+            </CollapsibleTrigger>
+
+            <CollapsibleContent>
+                <div className="mt-1 space-y-1">
+                    {allowedAdminPages.map((page) => {
+                        const isActive = pathname === page.href;
+                        return (
+                            <Link
+                                key={page.title}
+                                href={page.href}
+                                className={cn(
+                                    "block rounded-md py-2 pr-2 pl-[calc(var(--sidebar-width-icon,2.5rem)+0.75rem)] text-sm transition-colors",
+                                    isActive
+                                        ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800"
+                                        : "text-gray-800 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-[#1b1b1f]"
+                                )}
+                            >
+                                {page.title}
+                            </Link>
+                        );
+                    })}
+                </div>
+            </CollapsibleContent>
+        </Collapsible>
+    );
+}
+
+function PanelAccount({ avatarSrc, username }) {
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <button
+                    type="button"
+                    className="grid w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-gray-800 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-[#1b1b1f]"
+                    style={{ gridTemplateColumns: "var(--sidebar-width-icon, 2.5rem) minmax(0, 1fr) auto" }}
+                >
+                    <span className="flex justify-center">
+                        <span className="h-10 w-10 overflow-hidden rounded-full border-4 border-white shadow-xl dark:border-gray-900">
+                            <img src={avatarSrc} className="h-full w-full object-cover" />
+                        </span>
+                    </span>
+                    <span className={labelMotionClass}>{username ?? "Username"}</span>
+                    <ChevronUp className="h-4 w-4" />
+                </button>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent side="top" className="w-[--radix-popper-anchor-width] dark:border-gray-800 dark:bg-[#18181b]">
+                <AccountPageButton />
+                <SignOutButton />
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+}
+
+function DesktopSidebar({
+    entry,
+    pathname,
+    allowedAdminPages,
+    hasAnyAdminAccess,
+    isAdminOpen,
+    setIsAdminOpen,
+    avatarSrc,
+    username,
+}) {
+    const [expanded, setExpanded] = useState(false);
+    const hoverTimeoutRef = useRef(null);
+
+    const navItems = entry?.navigation_menu ?? [];
+    const side = entry?.side_of_screen === "right" ? "right" : "left";
+
+    useEffect(() => {
+        return () => {
+            if (hoverTimeoutRef.current) window.clearTimeout(hoverTimeoutRef.current);
+        };
+    }, []);
+
+    const queueOpen = () => {
+        if (hoverTimeoutRef.current) window.clearTimeout(hoverTimeoutRef.current);
+        hoverTimeoutRef.current = window.setTimeout(() => {
+            setExpanded(true);
+            hoverTimeoutRef.current = null;
+        }, 80);
+    };
+
+    const queueClose = () => {
+        if (hoverTimeoutRef.current) window.clearTimeout(hoverTimeoutRef.current);
+        hoverTimeoutRef.current = window.setTimeout(() => {
+            setExpanded(false);
+            hoverTimeoutRef.current = null;
+        }, 90);
+    };
+
+    return (
+        <aside
+            className={cn("fixed inset-y-0 z-40 hidden md:block", side === "right" ? "right-0" : "left-0")}
+            style={{ width: "var(--sidebar-width-icon, 2.5rem)" }}
+            onMouseEnter={queueOpen}
+            onMouseLeave={queueClose}
+            onFocusCapture={() => {
+                if (hoverTimeoutRef.current) window.clearTimeout(hoverTimeoutRef.current);
+                setExpanded(true);
+            }}
+            onBlurCapture={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) queueClose();
+            }}
+        >
+            <div className="relative h-full">
+                <div className="absolute inset-y-0 left-0 flex h-full w-[var(--sidebar-width-icon)] flex-col items-center border-r bg-white py-2 dark:border-gray-800 dark:bg-[#0f0f11]">
+                    <Link href="/" aria-label="Go to home" className="mb-4 flex h-12 w-full items-center justify-center">
+                        <img
+                            className="h-12 w-14 p-2 select-none"
+                            src={entry?.logo?.url}
+                            alt="Home"
+                            draggable={false}
+                        />
+                    </Link>
+
+                    <div className="flex flex-1 flex-col items-center gap-1">
+                        {navItems.map((item, idx) => {
+                            const Icon = iconMapper[item.icon] || Search;
+                            return (
+                                <RailIconLink
+                                    key={`${item.call_to_action.href}-${idx}`}
+                                    href={item.call_to_action.href}
+                                    icon={Icon}
+                                    label={item.call_to_action.title}
+                                    active={pathname === item.call_to_action.href}
+                                />
+                            );
+                        })}
+
+                        {hasAnyAdminAccess && (
+                            <button
+                                type="button"
+                                title="Admin"
+                                aria-label="Admin"
+                                className={railButtonClass}
+                                onClick={() => setExpanded(true)}
+                            >
+                                <ShieldUser className="h-[1.35rem] w-[1.35rem]" />
+                            </button>
+                        )}
+                    </div>
+
+                    <div className="mt-auto flex flex-col items-center gap-2">
+                        <ModeToggle />
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button
+                                    type="button"
+                                    title={username ?? "Account"}
+                                    aria-label={username ?? "Account"}
+                                    className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border-4 border-white shadow-xl transition-colors hover:bg-gray-100 dark:border-gray-900 dark:hover:bg-[#1b1b1f]"
+                                >
+                                    <img src={avatarSrc} className="h-full w-full object-cover" />
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent side="right" className="dark:border-gray-800 dark:bg-[#18181b]">
+                                <AccountPageButton />
+                                <SignOutButton />
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                </div>
+
+                <div
+                    className={cn(
+                        "absolute inset-y-0 left-0 overflow-hidden border-r bg-white shadow-xl transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] dark:border-gray-800 dark:bg-[#0f0f11]",
+                        expanded ? "translate-x-0 opacity-100 pointer-events-auto" : "-translate-x-2 opacity-0 pointer-events-none"
+                    )}
+                    style={{ width: "var(--sidebar-width, 16rem)" }}
+                >
+                    <div className="flex h-full flex-col">
+                        <Link
+                            href="/"
+                            aria-label="Go to home"
+                            className="border-b dark:border-gray-800"
+                        >
+                            <div
+                                className="grid items-center py-2"
+                                style={{ gridTemplateColumns: "var(--sidebar-width-icon, 2.5rem) minmax(0, 1fr)" }}
+                            >
+                                <span className="flex justify-center">
+                                    <img
+                                        className="h-12 w-14 p-2 select-none"
+                                        src={entry?.logo?.url}
+                                        alt="Home"
+                                        draggable={false}
+                                    />
+                                </span>
+                            </div>
+                        </Link>
+
+                        <div className="flex-1 overflow-auto px-1 py-3">
+                            <div className="space-y-1">
+                                {navItems.map((item, idx) => {
+                                    const Icon = iconMapper[item.icon] || Search;
+                                    return (
+                                        <PanelNavLink
+                                            key={`${item.call_to_action.href}-panel-${idx}`}
+                                            href={item.call_to_action.href}
+                                            icon={Icon}
+                                            label={item.call_to_action.title}
+                                            active={pathname === item.call_to_action.href}
+                                        />
+                                    );
+                                })}
+
+                                {hasAnyAdminAccess && (
+                                    <PanelAdminSection
+                                        allowedAdminPages={allowedAdminPages}
+                                        pathname={pathname}
+                                        isAdminOpen={isAdminOpen}
+                                        setIsAdminOpen={setIsAdminOpen}
+                                    />
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="border-t px-1 py-2 dark:border-gray-800">
+                            <div className="mb-2 grid items-center" style={{ gridTemplateColumns: "var(--sidebar-width-icon, 2.5rem) minmax(0, 1fr)" }}>
+                                <span className="flex justify-center">
+                                    <ModeToggle />
+                                </span>
+                            </div>
+                            <PanelAccount avatarSrc={avatarSrc} username={username} />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    );
+}
+
+export function AppSidebar() {
     const [entry, setEntry] = useState({});
     const [isLoading, setIsLoading] = useState(true);
     const pathname = usePathname();
     const [isAdminOpen, setIsAdminOpen] = useState(true);
-    const { isMobile, setOpen } = useSidebar();
-    const hoverTimeoutRef = React.useRef(null);
+    const isMobile = useIsMobile();
 
     const { user, loading } = useUser();
     const { signedAvatarUrl } = useCurrentAvatar(user);
     const avatarSrc = signedAvatarUrl ? signedAvatarUrl : "/DefaultProfile.png";
 
-    // Fetch Contentstack header/navigation
     useEffect(() => {
         async function getContent() {
             const res = await Stack.getElementByTypeWithRefs("header", "en-us", []);
@@ -126,242 +389,24 @@ export function NavProjects() {
         getContent();
     }, []);
 
-    useEffect(() => {
-        return () => {
-            if (hoverTimeoutRef.current) {
-                window.clearTimeout(hoverTimeoutRef.current);
-            }
-        };
-    }, []);
+    if (loading || !user || isLoading || isMobile) return null;
 
-    if (loading || !user || isLoading) return <SidebarRail />; // fallback while loading
-
-    // Filter admin pages based on current user's role
     const allowedAdminPages = ADMIN_PAGES.filter((page) =>
         hasPermission(user.role, page.permission)
     );
-    const hasAnyAdminAccess = allowedAdminPages.length > 0;
-    if (isLoading)
-        return (
-            <SidebarMenu>
-                {Array.from({ length: 5 }).map((_, index) => (
-                    <SidebarMenuItem key={index}>
-                        <SidebarMenuSkeleton showIcon />
-                    </SidebarMenuItem>
-                ))}
-            </SidebarMenu>
-        );
 
-
-    return (
-        <Sidebar
-            side={entry?.side_of_screen}
-            collapsible="icon"
-            className="dark:bg-[#0f0f11] bg-white transition-colors"
-            onMouseEnter={() => {
-                if (isMobile) return;
-                if (hoverTimeoutRef.current) {
-                    window.clearTimeout(hoverTimeoutRef.current);
-                }
-                hoverTimeoutRef.current = window.setTimeout(() => {
-                    setOpen(true);
-                    hoverTimeoutRef.current = null;
-                }, 120);
-            }}
-            onMouseLeave={() => {
-                if (isMobile) return;
-                if (hoverTimeoutRef.current) {
-                    window.clearTimeout(hoverTimeoutRef.current);
-                }
-                hoverTimeoutRef.current = window.setTimeout(() => {
-                    setOpen(false);
-                    hoverTimeoutRef.current = null;
-                }, 90);
-            }}
-            onFocusCapture={() => {
-                if (hoverTimeoutRef.current) {
-                    window.clearTimeout(hoverTimeoutRef.current);
-                    hoverTimeoutRef.current = null;
-                }
-                if (!isMobile) setOpen(true);
-            }}
-            onBlurCapture={(event) => {
-                if (hoverTimeoutRef.current) {
-                    window.clearTimeout(hoverTimeoutRef.current);
-                }
-                if (!isMobile && !event.currentTarget.contains(event.relatedTarget)) {
-                    hoverTimeoutRef.current = window.setTimeout(() => {
-                        setOpen(false);
-                        hoverTimeoutRef.current = null;
-                    }, 90);
-                }
-            }}
-        >
-            {/* Header */}
-            <SidebarHeader className="p-0 mb-0 border-b dark:border-gray-800">
-                <Link href="/" aria-label="Go to home">
-                    <img
-                        className="h-12 w-12 p-2 cursor-pointer select-none"
-                        src={entry?.logo?.url}
-                        alt="Home"
-                        draggable={false}
-                    />
-                </Link>
-            </SidebarHeader>
-
-            {/* Sidebar content */}
-            {/* Sidebar content */}
-            <SidebarContent>
-                {/* Contentstack Navigation */}
-                <SidebarGroup>
-                    <SidebarGroupContent className="mt-4">
-                        <SidebarMenu>
-                            {entry?.navigation_menu?.map((item, idx) => {
-                                const isActive = pathname === item.call_to_action.href;
-                                return (
-                                    <SidebarMenuItem key={idx}>
-                                        <SidebarMenuButton
-                                            asChild
-                                            tooltip={item.call_to_action.title}
-                                            className={`flex items-center gap-2 transition-all duration-200
-                  ${isActive
-                                                    ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800"
-                                                    : "text-gray-800 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-[#1b1b1f]"
-                                                }`}
-                                        >
-                                            <Link
-                                                href={item.call_to_action.href}
-                                                className="flex w-full items-center gap-2 group-data-[collapsible=icon]:justify-center"
-                                            >
-                                                {iconMapper[item.icon] || <Search />}
-                                                <span className="group-data-[collapsible=icon]:hidden">
-                                                    {item.call_to_action.title}
-                                                </span>
-                                            </Link>
-                                        </SidebarMenuButton>
-                                    </SidebarMenuItem>
-                                );
-                            })}
-
-                            {/* Admin Dropdown inside same SidebarGroupContent to remove gap */}
-                            {hasAnyAdminAccess && (
-                                <Collapsible open={isAdminOpen} onOpenChange={setIsAdminOpen}>
-                                    <SidebarGroupLabel asChild className="mt-0 group-data-[collapsible=icon]:mt-0 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:opacity-100">
-                                        <CollapsibleTrigger
-                                            className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-2 text-sm text-gray-800 transition-all duration-200 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-[#1b1b1f] group-data-[collapsible=icon]:size-9 group-data-[collapsible=icon]:w-9 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
-                                            title="Admin"
-                                        >
-                                            <div className="flex items-center gap-2 group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center">
-                                                <ShieldUser className="h-[1.35rem] w-[1.35rem] group-data-[collapsible=icon]:translate-x-[4px]" />
-                                                <span className={labelMotionClass}>Admin</span>
-                                            </div>
-                                            <ChevronRight
-                                                className={`ml-auto shrink-0 transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-data-[collapsible=icon]:hidden ${isAdminOpen ? "rotate-90" : ""}`}
-                                            />
-                                        </CollapsibleTrigger>
-
-                                    </SidebarGroupLabel>
-
-                                    <CollapsibleContent>
-                                        <SidebarGroupContent className="mt-0">
-                                            <SidebarMenu>
-                                                {allowedAdminPages.map((page) => {
-                                                    const isActive = pathname === page.href;
-                                                    return (
-                                                        <SidebarMenuItem key={page.title}>
-                                                            <SidebarMenuButton
-                                                                asChild
-                                                                tooltip={page.title}
-                                                                className={`flex items-center gap-2 transition-all duration-200
-                            ${isActive
-                                                                        ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800"
-                                                                        : "text-gray-800 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-[#1b1b1f]"
-                                                                    }`}
-                                                            >
-                                                                <Link
-                                                                    href={page.href}
-                                                                    className="flex w-full items-center gap-2 group-data-[collapsible=icon]:justify-center"
-                                                                >
-                                                                    <span className="group-data-[collapsible=icon]:hidden">
-                                                                        {page.title}
-                                                                    </span>
-                                                                </Link>
-                                                            </SidebarMenuButton>
-                                                        </SidebarMenuItem>
-                                                    );
-                                                })}
-                                            </SidebarMenu>
-                                        </SidebarGroupContent>
-                                    </CollapsibleContent>
-                                </Collapsible>
-                            )}
-                        </SidebarMenu>
-                    </SidebarGroupContent>
-                </SidebarGroup>
-            </SidebarContent>
-
-            <SidebarFooter className="border-t dark:border-gray-800">
-                <ModeToggle />
-                <SidebarMenu>
-                    <SidebarMenuItem className="group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <button
-                                    type="button"
-                                    title={user?.username ?? "Account"}
-                                    aria-label={user?.username ?? "Account"}
-                                    className="hidden h-10 w-10 items-center justify-center self-center rounded-full overflow-hidden border-4 border-white shadow-xl transition-colors hover:bg-gray-100 dark:border-gray-900 dark:hover:bg-[#1b1b1f] group-data-[collapsible=icon]:flex"
-                                >
-                                    <img
-                                        src={avatarSrc}
-                                        className="h-full w-full object-cover"
-                                    />
-                                </button>
-                            </DropdownMenuTrigger>
-
-                            <DropdownMenuContent side="top" className="dark:bg-[#18181b] dark:border-gray-800">
-                                <AccountPageButton />
-                                <SignOutButton />
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <SidebarMenuButton
-                                    className="dark:text-gray-200 dark:hover:bg-[#1b1b1f] group-data-[collapsible=icon]:hidden">
-                                    <div className="w-10 h-10 rounded-full border-4 border-white dark:border-gray-900 shadow-xl overflow-hidden">
-                                        <img
-                                            src={avatarSrc}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    </div>
-                                    {user?.username ?? "Username"}
-                                    <ChevronUp className="ml-auto" />
-                                </SidebarMenuButton>
-                            </DropdownMenuTrigger>
-
-                            <DropdownMenuContent side="top" className="w-[--radix-popper-anchor-width] dark:bg-[#18181b] dark:border-gray-800">
-                                <AccountPageButton />
-                                <SignOutButton />
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </SidebarMenuItem>
-                </SidebarMenu>
-            </SidebarFooter>
-        </Sidebar>
-    );
-e="w-full h-full object-cover"
-                                        
-
-}
-
-export function AppSidebar({ children }) {
     return (
         <ErrorBoundary>
-            <React.Suspense fallback={<NavProjectsSkeleton />}>
-                <NavProjects />
-                {children}
-            </React.Suspense>
+            <DesktopSidebar
+                entry={entry}
+                pathname={pathname}
+                allowedAdminPages={allowedAdminPages}
+                hasAnyAdminAccess={allowedAdminPages.length > 0}
+                isAdminOpen={isAdminOpen}
+                setIsAdminOpen={setIsAdminOpen}
+                avatarSrc={avatarSrc}
+                username={user?.username}
+            />
         </ErrorBoundary>
     );
 }
