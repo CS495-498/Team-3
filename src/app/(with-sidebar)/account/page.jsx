@@ -2,8 +2,12 @@
 
 import React, { useEffect, useState } from "react";
 import { createClient } from "@/utils/Supabase/client.js";
+import { CURRENT_USER_UPDATED_EVENT } from "@/context/UserContext.jsx";
 import SuccessToast from "@/components/ui/success-toast.jsx";
-import { useCurrentAvatar } from "@/hooks/use-current-avatar.js";
+import {
+    AVATAR_UPDATED_EVENT,
+    useCurrentAvatar,
+} from "@/hooks/use-current-avatar.js";
 import { Button } from "@/components/ui/button.jsx";
 import { Camera, PencilLine, ShieldCheck, Trash2 } from "lucide-react";
 
@@ -80,6 +84,7 @@ export default function Page() {
                 throw new Error(message);
             }
 
+            window.dispatchEvent(new Event(CURRENT_USER_UPDATED_EVENT));
             setShowToast(true);
             setTimeout(() => setShowToast(false), 3000);
         } catch (err) {
@@ -106,11 +111,13 @@ export default function Page() {
 
             if (!res.ok) throw new Error("Failed to switch persona");
 
-            setActivePersona(
+            const nextActivePersona =
                 finalPersonaId
                     ? personas.find((persona) => persona.id === finalPersonaId) ?? null
-                    : null
-            );
+                    : null;
+
+            setActivePersona(nextActivePersona);
+            window.dispatchEvent(new Event(CURRENT_USER_UPDATED_EVENT));
         } catch (err) {
             console.error("switchPersona failed:", err);
             alert(err?.message || "Error switching persona");
@@ -141,6 +148,7 @@ export default function Page() {
             setPersonas((prev) => [...prev, persona]);
             setActivePersona(persona);
             setNewPersonaName("");
+            window.dispatchEvent(new Event(CURRENT_USER_UPDATED_EVENT));
         } catch (err) {
             console.error("createPersona failed:", err);
             alert(err?.message || "Failed to create persona");
@@ -182,6 +190,7 @@ export default function Page() {
             if (activePersona?.id === persona.id) {
                 setActivePersona(null);
             }
+            window.dispatchEvent(new Event(CURRENT_USER_UPDATED_EVENT));
         } catch (err) {
             console.error("deletePersona failed:", err);
             alert(err?.message || "Error deleting persona");
@@ -189,7 +198,8 @@ export default function Page() {
     };
 
     const handleAvatarUpdate = async (event) => {
-        const file = event.target.files?.[0];
+        const input = event?.target;
+        const file = input?.files?.[0];
         if (!file) return;
 
         try {
@@ -210,15 +220,32 @@ export default function Page() {
             if (!res.ok) throw new Error("Upload failed");
 
             const data = await res.json();
-            setProfile((prev) => ({
-                ...prev,
-                avatar_url: data.avatar_url ?? prev.avatar_url,
-                full_name: data.full_name ?? prev.full_name,
-                username: data.username ?? prev.username,
-            }));
+
+            if (activePersona) {
+                setActivePersona(data);
+                setPersonas((prev) =>
+                    prev.map((persona) =>
+                        persona.id === data.id ? { ...persona, ...data } : persona
+                    )
+                );
+            } else {
+                setProfile((prev) => ({
+                    ...prev,
+                    avatar_url: data.avatar_url ?? prev.avatar_url,
+                    full_name: data.full_name ?? prev.full_name,
+                    username: data.username ?? prev.username,
+                }));
+            }
+
+            window.dispatchEvent(new Event(CURRENT_USER_UPDATED_EVENT));
+            window.dispatchEvent(new Event(AVATAR_UPDATED_EVENT));
         } catch (err) {
             console.error("uploadAvatar failed:", err);
             alert(err?.message || "Avatar upload failed");
+        } finally {
+            if (input) {
+                input.value = "";
+            }
         }
     };
 

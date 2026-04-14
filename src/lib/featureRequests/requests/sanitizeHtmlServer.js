@@ -1,7 +1,7 @@
 import DOMPurify from "isomorphic-dompurify";
 
 export function sanitizeHtmlServer(html) {
-    return DOMPurify.sanitize(String(html || ""), {
+    const sanitized = DOMPurify.sanitize(String(html || ""), {
         USE_PROFILES: { html: true },
 
         ALLOWED_TAGS: [
@@ -10,11 +10,14 @@ export function sanitizeHtmlServer(html) {
             "blockquote",
             "code", "pre",
             "a",
+            "img",
             "h1", "h2", "h3", "h4", "h5", "h6"
         ],
 
         ALLOWED_ATTR: [
             "href",
+            "src",
+            "alt",
             "title",
             "target",
             "rel"
@@ -43,7 +46,7 @@ export function sanitizeHtmlServer(html) {
         ],
 
         // Block data: and javascript: URIs
-        ALLOWED_URI_REGEXP: /^(https?|mailto):/i,
+        ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):|\/)/i,
 
         // Prevent DOM clobbering
         SANITIZE_DOM: true,
@@ -57,4 +60,6 @@ export function sanitizeHtmlServer(html) {
         // Return plain HTML
         RETURN_DOM: false
     });
+
+    return sanitized.replace(/<img\b(?![^>]*\bsrc=)[^>]*>/gi, "");
 }

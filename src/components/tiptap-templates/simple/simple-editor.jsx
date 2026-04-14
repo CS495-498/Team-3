@@ -154,27 +154,37 @@ const ImageWithUpload = Image.extend({
   },
 })
 
-function ImageInsertButton({ editor, parentUid }) {
+function ImageInsertButton({ editor, uploadImage }) {
   const inputRef = useRef(null)
+  const [isUploading, setIsUploading] = useState(false)
 
   return (
       <>
           <Button
               type="button"
               data-style="ghost"
-              title="Insert image"
-              aria-label="Insert image"
+              title={isUploading ? "Uploading image" : "Insert image"}
+              aria-label={isUploading ? "Uploading image" : "Insert image"}
+              disabled={isUploading}
               onMouseDown={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
               }}
               onClick={(e) => {
+                  if (isUploading) return
                   e.preventDefault()
                   e.stopPropagation()
                   inputRef.current?.click()
               }}
           >
-              <ImagePlusIcon className="tiptap-button-icon" />
+              {isUploading ? (
+                  <span className="inline-flex items-center gap-2">
+                      <span className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                      <span className="text-xs">Uploading...</span>
+                  </span>
+              ) : (
+                  <ImagePlusIcon className="tiptap-button-icon" />
+              )}
           </Button>
 
         <input
@@ -184,14 +194,21 @@ function ImageInsertButton({ editor, parentUid }) {
             hidden
             onChange={async (e) => {
               const file = e.target.files?.[0]
-              if (!file || !editor) return
+              if (!file || !editor || !uploadImage) return
 
-              const url = await uploadImageToContentstack(file, parentUid)
+              try {
+                setIsUploading(true)
+                const url = await uploadImage(file)
 
-              editor.chain().focus().setImage({ src: url, alt: file.name }).run()
-              editor.chain().focus().insertContent(" ").run()
-
-              e.target.value = ""
+                editor.chain().focus().setImage({ src: url, alt: file.name }).run()
+                editor.chain().focus().insertContent(" ").run()
+              } catch (error) {
+                console.error("Image upload failed:", error)
+                alert(error?.message || "Image upload failed")
+              } finally {
+                setIsUploading(false)
+                e.target.value = ""
+              }
             }}
         />
       </>
@@ -202,8 +219,8 @@ const MainToolbarContent = ({
     onLinkClick,
     isMobile,
     editor,
-    assetParentUid,
-    enableImages
+    enableImages,
+    uploadImage,
 }) => {
   return (
     <>
@@ -247,7 +264,7 @@ const MainToolbarContent = ({
 
         {enableImages && (
             <ToolbarGroup>
-                <ImageInsertButton editor={editor} parentUid={assetParentUid} />
+                <ImageInsertButton editor={editor} uploadImage={uploadImage} />
             </ToolbarGroup>
         )}
     </>
@@ -280,11 +297,24 @@ const MobileToolbarContent = ({
   </>
 )
 
-export function SimpleEditor({html = "<p></p>", editorRef, assetParentUid, enableImages = true,}) {
+export function SimpleEditor({
+    html = "<p></p>",
+    editorRef,
+    assetParentUid,
+    enableImages = true,
+    uploadImage,
+}) {
     const isMobile = useIsMobile()
     const { height } = useWindowSize()
     const [mobileView, setMobileView] = useState("main")
     const toolbarRef = useRef(null)
+    const resolvedUploadImage = useMemo(() => {
+        if (!enableImages) return null
+        if (uploadImage) return uploadImage
+        if (!assetParentUid) return null
+
+        return (file) => uploadImageToContentstack(file, assetParentUid)
+    }, [enableImages, uploadImage, assetParentUid])
 
     const extensions = useMemo(() => {
         const base = [
@@ -306,19 +336,19 @@ export function SimpleEditor({html = "<p></p>", editorRef, assetParentUid, enabl
             Selection,
         ]
 
-        if (enableImages) {
+        if (enableImages && resolvedUploadImage) {
             base.splice(
                 1,
                 0,
                 ImageWithUpload.configure({
                     inline: true,
-                    uploadImage: (file) => uploadImageToContentstack(file, assetParentUid),
+                    uploadImage: resolvedUploadImage,
                 })
             )
         }
 
         return base
-    }, [enableImages, assetParentUid])
+    }, [enableImages, resolvedUploadImage])
 
     const editor = useEditor({
         immediatelyRender: false,
@@ -350,7 +380,7 @@ export function SimpleEditor({html = "<p></p>", editorRef, assetParentUid, enabl
     }, [editor, editorRef])
 
     return (
-        <div className="simple-editor-wrapper w-full max-w-full h-full min-h-75 border border-gray-300 rounded-md p-1">
+        <div className="simple-editor-wrapper w-full max-w-full h-full min-h-[300px]">
             <EditorContext.Provider value={{ editor }}>
                 <Toolbar
                     ref={toolbarRef}
@@ -364,8 +394,8 @@ export function SimpleEditor({html = "<p></p>", editorRef, assetParentUid, enabl
                             onLinkClick={() => setMobileView("link")}
                             isMobile={isMobile}
                             editor={editor}
-                            assetParentUid={assetParentUid}
-                            enableImages={enableImages}
+                            enableImages={Boolean(resolvedUploadImage)}
+                            uploadImage={resolvedUploadImage}
                         />
                     ) : (
                         <MobileToolbarContent
@@ -378,7 +408,7 @@ export function SimpleEditor({html = "<p></p>", editorRef, assetParentUid, enabl
                 <EditorContent
                     editor={editor}
                     role="presentation"
-                    className="simple-editor-content w-full h-full min-h-62.5 overflow-auto"
+                    className="simple-editor-content w-full h-full min-h-[250px] overflow-auto"
                 />
             </EditorContext.Provider>
         </div>

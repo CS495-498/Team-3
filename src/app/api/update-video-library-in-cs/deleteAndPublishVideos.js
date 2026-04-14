@@ -1,21 +1,24 @@
-// updateAndPublishVideos.js
-
 import extractFields from "../helper/extractFields.js";
 
-export async function updateAndPublishVideos(entryUid, videos, fetchFunc = fetch) {
+export async function deleteAndPublishVideos(entryUid, videos, fetchFunc = fetch) {
   try {
-    const normalizedVideos = Array.isArray(videos)
-      ? extractFields(videos, [
-          "video_url",
-          "video_file",
-          "thumbnail",
-          "title",
-          "description",
-          "se_name",
-        ])
-      : videos;
+    if (!entryUid) {
+      return { status: 500, error: "Missing entryUid" };
+    }
 
-    // Step 1: Update the entry
+    if (!Array.isArray(videos)) {
+      return { status: 500, error: "Missing videos array" };
+    }
+
+    const normalizedVideos = extractFields(videos, [
+      "video_url",
+      "video_file",
+      "thumbnail",
+      "title",
+      "description",
+      "se_name",
+    ]);
+
     const updateResponse = await fetchFunc(
       `https://api.contentstack.io/v3/content_types/video_library/entries/${entryUid}`,
       {
@@ -36,7 +39,6 @@ export async function updateAndPublishVideos(entryUid, videos, fetchFunc = fetch
 
     const updatedEntry = JSON.parse(updateText);
 
-    // Step 2: Publish
     const publishResponse = await fetchFunc(
       `https://api.contentstack.io/v3/content_types/video_library/entries/${entryUid}/publish`,
       {
@@ -67,7 +69,7 @@ export async function updateAndPublishVideos(entryUid, videos, fetchFunc = fetch
     return {
       status: 200,
       entry: updatedEntry.entry,
-      message: "Videos updated and published successfully.",
+      message: "Video deleted and entry published successfully.",
     };
   } catch (err) {
     return { status: 500, error: err.message };
