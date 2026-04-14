@@ -101,7 +101,7 @@ function RailIconLink({ href, icon: Icon, label, active }) {
     );
 }
 
-function PanelNavLink({ href, icon: Icon, label, active }) {
+function PanelNavLink({ href, label, active }) {
     return (
         <Link
             href={href}
@@ -111,11 +111,7 @@ function PanelNavLink({ href, icon: Icon, label, active }) {
                     ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800"
                     : "text-gray-800 dark:text-gray-200 dark:hover:bg-[#1b1b1f]"
             )}
-            style={{ gridTemplateColumns: "var(--sidebar-width-icon, 2.5rem) minmax(0, 1fr)" }}
         >
-            <span className="flex justify-center">
-                <Icon className="h-5 w-5" />
-            </span>
             <span className={labelMotionClass}>{label}</span>
         </Link>
     );
@@ -125,13 +121,9 @@ function PanelAdminSection({ allowedAdminPages, pathname, isAdminOpen, setIsAdmi
     return (
         <Collapsible open={isAdminOpen} onOpenChange={setIsAdminOpen}>
             <CollapsibleTrigger
-                className="grid w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-gray-800 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-[#1b1b1f]"
-                style={{ gridTemplateColumns: "var(--sidebar-width-icon, 2.5rem) minmax(0, 1fr) auto" }}
+                className="flex w-full items-center justify-between rounded-md px-2 py-2 text-sm text-gray-800 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-[#1b1b1f]"
                 title="Admin"
             >
-                <span className="flex justify-center">
-                    <ShieldUser className="h-[1.35rem] w-[1.35rem]" />
-                </span>
                 <span className={labelMotionClass}>Admin</span>
                 <ChevronRight className={cn("h-4 w-4 transition-transform", isAdminOpen ? "rotate-90" : null)} />
             </CollapsibleTrigger>
@@ -145,7 +137,7 @@ function PanelAdminSection({ allowedAdminPages, pathname, isAdminOpen, setIsAdmi
                                 key={page.title}
                                 href={page.href}
                                 className={cn(
-                                    "block rounded-md py-2 pr-2 pl-[calc(var(--sidebar-width-icon,2.5rem)+0.75rem)] text-sm transition-colors",
+                                    "block rounded-md px-2 py-2 text-sm transition-colors",
                                     isActive
                                         ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800"
                                         : "text-gray-800 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-[#1b1b1f]"
@@ -167,16 +159,13 @@ function PanelAccount({ avatarSrc, username }) {
             <DropdownMenuTrigger asChild>
                 <button
                     type="button"
-                    className="grid w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-gray-800 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-[#1b1b1f]"
-                    style={{ gridTemplateColumns: "var(--sidebar-width-icon, 2.5rem) minmax(0, 1fr) auto" }}
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-gray-800 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-[#1b1b1f]"
                 >
-                    <span className="flex justify-center">
-                        <span className="h-10 w-10 overflow-hidden rounded-full border-4 border-white shadow-xl dark:border-gray-900">
-                            <img src={avatarSrc} className="h-full w-full object-cover" />
-                        </span>
+                    <span className="h-10 w-10 overflow-hidden rounded-full border-4 border-white shadow-xl dark:border-gray-900">
+                        <img src={avatarSrc} className="h-full w-full object-cover" />
                     </span>
                     <span className={labelMotionClass}>{username ?? "Username"}</span>
-                    <ChevronUp className="h-4 w-4" />
+                    <ChevronUp className="ml-auto h-4 w-4" />
                 </button>
             </DropdownMenuTrigger>
 
@@ -241,7 +230,7 @@ function DesktopSidebar({
             }}
         >
             <div className="relative h-full">
-                <div className="absolute inset-y-0 left-0 flex h-full w-[var(--sidebar-width-icon)] flex-col items-center border-r bg-white py-2 dark:border-gray-800 dark:bg-[#0f0f11]">
+                <div className="absolute inset-y-0 left-0 z-10 flex h-full w-[var(--sidebar-width-icon)] flex-col items-center border-r bg-white py-2 dark:border-gray-800 dark:bg-[#0f0f11]">
                     <Link href="/" aria-label="Go to home" className="mb-4 flex h-12 w-full items-center justify-center">
                         <img
                             className="h-12 w-20 p-2 select-none"
@@ -301,46 +290,41 @@ function DesktopSidebar({
 
                 <div
                     className={cn(
-                        "absolute inset-y-0 left-0 overflow-hidden border-r bg-white shadow-xl transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] dark:border-gray-800 dark:bg-[#0f0f11]",
-                        expanded ? "translate-x-0 opacity-100 pointer-events-auto" : "-translate-x-2 opacity-0 pointer-events-none"
+                        "absolute inset-y-0 z-0 overflow-hidden border-r bg-white shadow-xl dark:border-gray-800 dark:bg-[#0f0f11]",
+                        expanded ? "pointer-events-auto" : "pointer-events-none"
                     )}
-                    style={{ width: "var(--sidebar-width, 16rem)" }}
+                    style={{
+                        left: "var(--sidebar-width-icon, 2.75rem)",
+                        width: "calc(var(--sidebar-width, 16rem) - var(--sidebar-width-icon, 2.75rem))",
+                        maxWidth: expanded
+                            ? "calc(var(--sidebar-width, 16rem) - var(--sidebar-width-icon, 2.75rem))"
+                            : "0px",
+                        opacity: expanded ? 1 : 0.98,
+                        transition:
+                            "max-width 280ms cubic-bezier(0.16,1,0.3,1), opacity 180ms cubic-bezier(0.16,1,0.3,1)",
+                    }}
                 >
-                    <div className="flex h-full flex-col">
-                        <Link
-                            href="/"
-                            aria-label="Go to home"
-                            className="border-b dark:border-gray-800"
-                        >
-                            <div
-                                className="grid items-center py-2"
-                                style={{ gridTemplateColumns: "var(--sidebar-width-icon, 2.5rem) minmax(0, 1fr)" }}
-                            >
-                                <span className="flex justify-center">
-                                    <img
-                                        className="h-12 w-14 p-2 select-none"
-                                        src={entry?.logo?.url}
-                                        alt="Home"
-                                        draggable={false}
-                                    />
-                                </span>
-                            </div>
-                        </Link>
+                    <div
+                        className="flex h-full flex-col"
+                        style={{
+                            opacity: expanded ? 1 : 0,
+                            transform: expanded ? "translateX(0)" : "translateX(-8px)",
+                            transition:
+                                "opacity 160ms cubic-bezier(0.16,1,0.3,1), transform 280ms cubic-bezier(0.16,1,0.3,1)",
+                        }}
+                    >
+                        <div className="h-16 border-b dark:border-gray-800" />
 
                         <div className="flex-1 overflow-auto px-1 py-3">
                             <div className="space-y-1">
-                                {navItems.map((item, idx) => {
-                                    const Icon = iconMapper[item.icon] || Search;
-                                    return (
-                                        <PanelNavLink
-                                            key={`${item.call_to_action.href}-panel-${idx}`}
-                                            href={item.call_to_action.href}
-                                            icon={Icon}
-                                            label={item.call_to_action.title}
-                                            active={pathname === item.call_to_action.href}
-                                        />
-                                    );
-                                })}
+                                {navItems.map((item, idx) => (
+                                    <PanelNavLink
+                                        key={`${item.call_to_action.href}-panel-${idx}`}
+                                        href={item.call_to_action.href}
+                                        label={item.call_to_action.title}
+                                        active={pathname === item.call_to_action.href}
+                                    />
+                                ))}
 
                                 {hasAnyAdminAccess && (
                                     <PanelAdminSection
@@ -354,11 +338,6 @@ function DesktopSidebar({
                         </div>
 
                         <div className="border-t px-1 py-2 dark:border-gray-800">
-                            <div className="mb-2 grid items-center" style={{ gridTemplateColumns: "var(--sidebar-width-icon, 2.5rem) minmax(0, 1fr)" }}>
-                                <span className="flex justify-center">
-                                    <ModeToggle />
-                                </span>
-                            </div>
                             <PanelAccount avatarSrc={avatarSrc} username={username} />
                         </div>
                     </div>
