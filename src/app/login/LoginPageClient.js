@@ -12,33 +12,40 @@ export default function LoginPageClient({ initialError }) {
   const [showRegister, setShowRegister] = useState(false)
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState("")
-  const [systemMessage, setSystemMessage] = useState('');
-  const [formMessage, setFormMessage] = useState('');
+  const [toastType, setToastType] = useState("success")
+  const [systemMessage, setSystemMessage] = useState('')
+  const [formMessage, setFormMessage] = useState('')
+  const [formMessageType, setFormMessageType] = useState('error')
 
   useEffect(() => {
     const msg = localStorage.getItem("toastMessage")
+    const type = localStorage.getItem("toastType") || "success"
     if (!msg) return
 
     setToastMessage(msg)
+    setToastType(type)
     setShowToast(true)
+
     localStorage.removeItem("toastMessage")
+    localStorage.removeItem("toastType")
 
     const timer = setTimeout(() => setShowToast(false), 3000)
     return () => clearTimeout(timer)
   }, [])
 
   useEffect(() => {
-    if (!initialError) return;
+    if (!initialError) return
 
     if (initialError === "disabled") {
-      setSystemMessage("Access for your organization has been disabled. Please contact your administrator.");
+      setSystemMessage("Access for your organization has been disabled. Please contact your administrator.")
     }
 
     if (initialError === "unauthorized") {
-      setSystemMessage("You don't have permission to access that page.");
+      setSystemMessage("You don't have permission to access that page.")
     }
-    window.history.replaceState({}, "", "/login");
-  }, [initialError]);
+
+    window.history.replaceState({}, "", "/login")
+  }, [initialError])
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -55,14 +62,17 @@ export default function LoginPageClient({ initialError }) {
       const data = await res.json()
 
       if (!res.ok) {
+        setFormMessageType('error')
         setFormMessage(data.error || 'Login failed')
       } else {
-        localStorage.setItem("loginMessage", "Logged in")
+        localStorage.setItem("toastMessage", "Logged in")
+        localStorage.setItem("toastType", "success")
         router.push('/')
         router.refresh()
       }
     } catch (error) {
       console.error('Client-side error:', error)
+      setFormMessageType('error')
       setFormMessage('An error occurred')
     }
 
@@ -84,12 +94,15 @@ export default function LoginPageClient({ initialError }) {
       const data = await res.json()
 
       if (!res.ok) {
+        setFormMessageType('error')
         setFormMessage(data.error || 'Signup failed')
       } else {
+        setFormMessageType('success')
         setFormMessage('Signup successful! Check your email to confirm your account.')
         setShowRegister(false)
       }
     } catch (error) {
+      setFormMessageType('error')
       setFormMessage('An error occurred')
     }
 
@@ -97,14 +110,22 @@ export default function LoginPageClient({ initialError }) {
   }
 
   return (
-    <div className="flex h-screen w-screen bg-white dark:bg-gray-900">
-      <div className="relative w-1/2 flex items-center justify-center px-10 bg-white dark:bg-gray-900">
-        <div className="w-full max-w-sm">
-          {showRegister ? (
-            <>
-              <h1 className="text-3xl font-bold text-center mb-4 text-gray-900 dark:text-gray-100">
-                Create Account
-              </h1>
+      <div className="flex h-screen w-screen bg-white dark:bg-gray-900">
+        <div className="relative w-1/2 flex items-center justify-center px-10 bg-white dark:bg-gray-900">
+          <div className="w-full max-w-sm">
+            {showToast && (
+                <SuccessToast
+                    message={toastMessage}
+                    type={toastType}
+                    onClose={() => setShowToast(false)}
+                />
+            )}
+
+            {showRegister ? (
+                <>
+                  <h1 className="text-3xl font-bold text-center mb-4 text-gray-900 dark:text-gray-100">
+                    Create Account
+                  </h1>
 
               <form className="space-y-5" onSubmit={handleSignUp}>
                 <div>
@@ -221,10 +242,16 @@ export default function LoginPageClient({ initialError }) {
           )}
 
           {formMessage && (
-            <p className="mt-3 text-center text-sm text-red-600 dark:text-red-400">
-              {formMessage}
-            </p>
-          )}
+              <p
+                  className={`mt-3 text-center text-sm ${
+                      formMessageType === 'success'
+                          ? 'text-green-600 dark:text-green-400'
+                          : 'text-red-600 dark:text-red-400'
+                  }`}
+                >
+                  {formMessage}
+                </p>
+            )}
         </div>
       </div>
 
