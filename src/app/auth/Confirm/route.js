@@ -1,16 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/Supabase/server.js'
 
-// Creating a handler to a GET request to route /auth/confirm
 export async function GET(request) {
     const { searchParams } = new URL(request.url)
     const token_hash = searchParams.get('token_hash')
     const type = searchParams.get('type')
-    const next = '/account'
 
-    // Create redirect link without the secret token
     const redirectTo = request.nextUrl.clone()
-    redirectTo.pathname = next
+    redirectTo.pathname = '/login'
     redirectTo.searchParams.delete('token_hash')
     redirectTo.searchParams.delete('type')
 
@@ -21,13 +18,14 @@ export async function GET(request) {
             type,
             token_hash,
         })
+
         if (!error) {
-            redirectTo.searchParams.delete('next')
+            redirectTo.searchParams.set('confirmed', '1')
             return NextResponse.redirect(redirectTo)
         }
     }
 
-    // return the user to an error page with some instructions
-    redirectTo.pathname = '/error'
+    redirectTo.pathname = '/login'
+    redirectTo.searchParams.set('error', 'confirmation_failed')
     return NextResponse.redirect(redirectTo)
 }
