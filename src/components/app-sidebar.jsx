@@ -175,11 +175,24 @@ function PanelAdminSection({ allowedAdminPages, pathname, isAdminOpen, setIsAdmi
     );
 }
 
-function PanelAccount({ avatarSrc, username }) {
+function PanelAccount({ avatarSrc, username, open, onOpenChange }) {
+    const triggerRef = useRef(null);
+
+    const handleOpenChange = (nextOpen) => {
+        onOpenChange(nextOpen);
+
+        if (!nextOpen) {
+            window.requestAnimationFrame(() => {
+                triggerRef.current?.blur();
+            });
+        }
+    };
+
     return (
-        <DropdownMenu>
+        <DropdownMenu open={open} onOpenChange={handleOpenChange}>
             <DropdownMenuTrigger asChild>
                 <button
+                    ref={triggerRef}
                     type="button"
                     className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-gray-800 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-[#1b1b1f]"
                 >
@@ -191,7 +204,11 @@ function PanelAccount({ avatarSrc, username }) {
                 </button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent side="top" className="w-[--radix-popper-anchor-width] dark:border-gray-800 dark:bg-[#18181b]">
+            <DropdownMenuContent
+                side="top"
+                onCloseAutoFocus={(event) => event.preventDefault()}
+                className="w-[--radix-popper-anchor-width] dark:border-gray-800 dark:bg-[#18181b]"
+            >
                 <AccountPageButton />
                 <SignOutButton />
             </DropdownMenuContent>
@@ -211,9 +228,14 @@ function DesktopSidebar({
     role,
 }) {
     const [expanded, setExpanded] = useState(false);
+    const [isRailAccountOpen, setIsRailAccountOpen] = useState(false);
+    const [isPanelAccountOpen, setIsPanelAccountOpen] = useState(false);
     const [railAvatarOpacity, setRailAvatarOpacity] = useState(1);
+    const asideRef = useRef(null);
+    const panelRef = useRef(null);
     const hoverTimeoutRef = useRef(null);
     const railAvatarOpacityRef = useRef(1);
+    const railAccountTriggerRef = useRef(null);
 
     const navItems = entry?.navigation_menu ?? [];
     const side = entry?.side_of_screen === "right" ? "right" : "left";
@@ -254,6 +276,24 @@ function DesktopSidebar({
         };
     }, [expanded]);
 
+    useEffect(() => {
+        if (!expanded) {
+            setIsRailAccountOpen(false);
+            setIsPanelAccountOpen(false);
+
+            window.requestAnimationFrame(() => {
+                const activeElement = document.activeElement;
+                if (
+                    activeElement instanceof HTMLElement &&
+                    panelRef.current?.contains(activeElement) &&
+                    asideRef.current?.contains(activeElement)
+                ) {
+                    activeElement.blur();
+                }
+            });
+        }
+    }, [expanded]);
+
     const queueOpen = () => {
         if (hoverTimeoutRef.current) window.clearTimeout(hoverTimeoutRef.current);
         hoverTimeoutRef.current = window.setTimeout(() => {
@@ -270,8 +310,19 @@ function DesktopSidebar({
         }, 90);
     };
 
+    const handleRailAccountOpenChange = (nextOpen) => {
+        setIsRailAccountOpen(nextOpen);
+
+        if (!nextOpen) {
+            window.requestAnimationFrame(() => {
+                railAccountTriggerRef.current?.blur();
+            });
+        }
+    };
+
     return (
         <aside
+            ref={asideRef}
             className={cn("fixed inset-y-0 z-40 hidden md:block", side === "right" ? "right-0" : "left-0")}
             style={{ width: "var(--sidebar-width-icon, 2.5rem)" }}
             onMouseEnter={queueOpen}
@@ -324,9 +375,10 @@ function DesktopSidebar({
 
                     <div className="mt-auto flex flex-col items-center gap-2">
                         <ModeToggle />
-                        <DropdownMenu>
+                        <DropdownMenu open={isRailAccountOpen} onOpenChange={handleRailAccountOpenChange}>
                             <DropdownMenuTrigger asChild>
                                 <button
+                                    ref={railAccountTriggerRef}
                                     type="button"
                                     title={username ?? "Account"}
                                     aria-label={username ?? "Account"}
@@ -338,7 +390,11 @@ function DesktopSidebar({
                                     <img src={avatarSrc} className="h-full w-full object-cover" />
                                 </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent side="right" className="dark:border-gray-800 dark:bg-[#18181b]">
+                            <DropdownMenuContent
+                                side="right"
+                                onCloseAutoFocus={(event) => event.preventDefault()}
+                                className="dark:border-gray-800 dark:bg-[#18181b]"
+                            >
                                 <AccountPageButton />
                                 <SignOutButton />
                             </DropdownMenuContent>
@@ -347,6 +403,7 @@ function DesktopSidebar({
                 </div>
 
                 <div
+                    ref={panelRef}
                     className={cn(
                         "absolute inset-y-0 z-0 overflow-hidden border-r bg-white shadow-xl dark:border-gray-800 dark:bg-[#0f0f11]",
                         expanded ? "pointer-events-auto" : "pointer-events-none"
@@ -402,7 +459,12 @@ function DesktopSidebar({
                         </div>
 
                         <div className="border-t px-1 py-2 dark:border-gray-800">
-                            <PanelAccount avatarSrc={avatarSrc} username={username} />
+                            <PanelAccount
+                                avatarSrc={avatarSrc}
+                                username={username}
+                                open={isPanelAccountOpen}
+                                onOpenChange={setIsPanelAccountOpen}
+                            />
                         </div>
                     </div>
                 </div>
