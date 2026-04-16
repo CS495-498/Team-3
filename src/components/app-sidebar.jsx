@@ -9,6 +9,7 @@ import {
     ChevronUp,
     Construction,
     Lightbulb,
+    Menu,
     Home,
     Inbox,
     Pin,
@@ -39,6 +40,8 @@ import {
     DropdownMenuContent,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useSidebar } from "@/components/ui/sidebar";
 
 const iconMapper = {
     Home: Home,
@@ -142,6 +145,23 @@ function PanelNavLink({ href, label, active }) {
     );
 }
 
+function MobileNavLink({ href, label, active, onNavigate }) {
+    return (
+        <Link
+            href={href}
+            onClick={onNavigate}
+            className={cn(
+                panelRowClass,
+                active
+                    ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800"
+                    : "text-gray-800 dark:text-gray-200 dark:hover:bg-[#1b1b1f]"
+            )}
+        >
+            <span>{label}</span>
+        </Link>
+    );
+}
+
 function PanelAdminSection({ allowedAdminPages, pathname, isAdminOpen, setIsAdminOpen }) {
     return (
         <Collapsible open={isAdminOpen} onOpenChange={setIsAdminOpen}>
@@ -161,6 +181,43 @@ function PanelAdminSection({ allowedAdminPages, pathname, isAdminOpen, setIsAdmi
                             <Link
                                 key={page.title}
                                 href={page.href}
+                                className={cn(
+                                    "block whitespace-nowrap rounded-md px-2 py-2 text-sm transition-colors",
+                                    isActive
+                                        ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800"
+                                        : "text-gray-800 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-[#1b1b1f]"
+                                )}
+                            >
+                                {page.title}
+                            </Link>
+                        );
+                    })}
+                </div>
+            </CollapsibleContent>
+        </Collapsible>
+    );
+}
+
+function MobileAdminSection({ allowedAdminPages, pathname, isAdminOpen, setIsAdminOpen, onNavigate }) {
+    return (
+        <Collapsible open={isAdminOpen} onOpenChange={setIsAdminOpen}>
+            <CollapsibleTrigger
+                className="flex w-full items-center justify-between rounded-md px-2 py-2 text-sm text-gray-800 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-[#1b1b1f]"
+                title="Admin"
+            >
+                <span>Admin</span>
+                <ChevronRight className={cn("h-4 w-4 transition-transform", isAdminOpen ? "rotate-90" : null)} />
+            </CollapsibleTrigger>
+
+            <CollapsibleContent>
+                <div className="mt-1 space-y-1">
+                    {allowedAdminPages.map((page) => {
+                        const isActive = pathname === page.href;
+                        return (
+                            <Link
+                                key={page.title}
+                                href={page.href}
+                                onClick={onNavigate}
                                 className={cn(
                                     "block whitespace-nowrap rounded-md px-2 py-2 text-sm transition-colors",
                                     isActive
@@ -507,6 +564,117 @@ function DesktopSidebar({
     );
 }
 
+function MobileSidebar({
+    entry,
+    pathname,
+    allowedAdminPages,
+    hasAnyAdminAccess,
+    isAdminOpen,
+    setIsAdminOpen,
+    avatarSrc,
+    username,
+    role,
+}) {
+    const { openMobile, setOpenMobile } = useSidebar();
+    const [isAccountOpen, setIsAccountOpen] = useState(false);
+
+    const navItems = entry?.navigation_menu ?? [];
+    const side = entry?.side_of_screen === "right" ? "right" : "left";
+    const roleLabel = formatRole(role);
+
+    useEffect(() => {
+        setOpenMobile(false);
+        setIsAccountOpen(false);
+    }, [pathname, setOpenMobile]);
+
+    return (
+        <>
+            <button
+                type="button"
+                aria-label="Open navigation"
+                title="Open navigation"
+                className={cn(
+                    "fixed z-50 flex h-10 w-10 items-center justify-center rounded-md border bg-white text-gray-800 shadow-md md:hidden",
+                    side === "right" ? "right-3 top-3" : "left-3 top-3",
+                    "dark:border-gray-800 dark:bg-[#0f0f11] dark:text-gray-200"
+                )}
+                onClick={() => setOpenMobile(true)}
+            >
+                <Menu className="h-5 w-5" />
+            </button>
+
+            <Sheet open={openMobile} onOpenChange={setOpenMobile}>
+                <SheetContent
+                    side={side}
+                    className="w-[18rem] border-gray-200 bg-white p-0 text-gray-900 dark:border-gray-800 dark:bg-[#0f0f11] dark:text-gray-200"
+                >
+                    <SheetHeader className="sr-only">
+                        <SheetTitle>Navigation</SheetTitle>
+                        <SheetDescription>Mobile navigation sidebar.</SheetDescription>
+                    </SheetHeader>
+
+                    <div className="flex h-full flex-col">
+                        <div className="flex h-16 items-center border-b px-4 dark:border-gray-800">
+                            <div className="flex w-full items-center justify-between gap-3">
+                                <Link href="/" aria-label="Go to home" onClick={() => setOpenMobile(false)}>
+                                    <img
+                                        className="h-10 w-16 select-none object-contain"
+                                        src={entry?.logo?.url}
+                                        alt="Home"
+                                        draggable={false}
+                                    />
+                                </Link>
+
+                                {roleLabel ? (
+                                    <span className="rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-medium text-foreground/80 dark:border-gray-700 dark:bg-[#18181b] dark:text-gray-200">
+                                        {roleLabel}
+                                    </span>
+                                ) : null}
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-auto px-2 py-3">
+                            <div className="space-y-1">
+                                {navItems.map((item, idx) => (
+                                    <MobileNavLink
+                                        key={`${item.call_to_action.href}-mobile-${idx}`}
+                                        href={item.call_to_action.href}
+                                        label={item.call_to_action.title}
+                                        active={pathname === item.call_to_action.href}
+                                        onNavigate={() => setOpenMobile(false)}
+                                    />
+                                ))}
+
+                                {hasAnyAdminAccess && (
+                                    <MobileAdminSection
+                                        allowedAdminPages={allowedAdminPages}
+                                        pathname={pathname}
+                                        isAdminOpen={isAdminOpen}
+                                        setIsAdminOpen={setIsAdminOpen}
+                                        onNavigate={() => setOpenMobile(false)}
+                                    />
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="border-t px-2 py-3 dark:border-gray-800">
+                            <div className="mb-2 flex justify-end">
+                                <ModeToggle />
+                            </div>
+                            <PanelAccount
+                                avatarSrc={avatarSrc}
+                                username={username}
+                                open={isAccountOpen}
+                                onOpenChange={setIsAccountOpen}
+                            />
+                        </div>
+                    </div>
+                </SheetContent>
+            </Sheet>
+        </>
+    );
+}
+
 export function AppSidebar() {
     const [entry, setEntry] = useState({});
     const [isLoading, setIsLoading] = useState(true);
@@ -528,7 +696,7 @@ export function AppSidebar() {
         getContent();
     }, []);
 
-    if (loading || !user || isLoading || isMobile) return null;
+    if (loading || !user || isLoading) return null;
 
     const allowedAdminPages = ADMIN_PAGES.filter((page) =>
         hasPermission(user.role, page.permission)
@@ -536,17 +704,31 @@ export function AppSidebar() {
 
     return (
         <ErrorBoundary>
-            <DesktopSidebar
-                entry={entry}
-                pathname={pathname}
-                allowedAdminPages={allowedAdminPages}
-                hasAnyAdminAccess={allowedAdminPages.length > 0}
-                isAdminOpen={isAdminOpen}
-                setIsAdminOpen={setIsAdminOpen}
-                avatarSrc={avatarSrc}
-                username={user?.username}
-                role={user?.role}
-            />
+            {isMobile ? (
+                <MobileSidebar
+                    entry={entry}
+                    pathname={pathname}
+                    allowedAdminPages={allowedAdminPages}
+                    hasAnyAdminAccess={allowedAdminPages.length > 0}
+                    isAdminOpen={isAdminOpen}
+                    setIsAdminOpen={setIsAdminOpen}
+                    avatarSrc={avatarSrc}
+                    username={user?.username}
+                    role={user?.role}
+                />
+            ) : (
+                <DesktopSidebar
+                    entry={entry}
+                    pathname={pathname}
+                    allowedAdminPages={allowedAdminPages}
+                    hasAnyAdminAccess={allowedAdminPages.length > 0}
+                    isAdminOpen={isAdminOpen}
+                    setIsAdminOpen={setIsAdminOpen}
+                    avatarSrc={avatarSrc}
+                    username={user?.username}
+                    role={user?.role}
+                />
+            )}
         </ErrorBoundary>
     );
 }
