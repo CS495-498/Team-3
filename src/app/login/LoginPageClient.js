@@ -8,6 +8,7 @@ export default function LoginPageClient({ initialError }) {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [showRegister, setShowRegister] = useState(false)
   const [showToast, setShowToast] = useState(false)
@@ -71,8 +72,19 @@ export default function LoginPageClient({ initialError }) {
 
   const handleSignUp = async (e) => {
     e.preventDefault()
-    setLoading(true)
     setFormMessage('')
+
+    if (password.length < 8) {
+      setFormMessage('Password must be at least 8 characters.')
+      return
+    }
+
+    if (password !== confirmPassword) {
+      setFormMessage('Passwords do not match.')
+      return
+    }
+
+    setLoading(true)
 
     try {
       const res = await fetch('/api/auth/signup', {
@@ -87,6 +99,8 @@ export default function LoginPageClient({ initialError }) {
         setFormMessage(data.error || 'Signup failed')
       } else {
         setFormMessage('Signup successful! Check your email to confirm your account.')
+        setPassword('')
+        setConfirmPassword('')
         setShowRegister(false)
       }
     } catch (error) {
@@ -106,6 +120,10 @@ export default function LoginPageClient({ initialError }) {
                 Create Account
               </h1>
 
+              <p className="text-center text-sm text-gray-600 dark:text-gray-300 mb-5">
+                Sign up with your work email to request access.
+              </p>
+
               <form className="space-y-5" onSubmit={handleSignUp}>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -121,13 +139,31 @@ export default function LoginPageClient({ initialError }) {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Password
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Password
+                    </label>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      Min. 8 characters
+                    </span>
+                  </div>
                   <input
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    placeholder="********"
+                    className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#88563b]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Confirm Password
+                  </label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="********"
                     className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#88563b]"
                   />
