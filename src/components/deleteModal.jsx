@@ -1,9 +1,21 @@
 "use client";
 import { Dialog } from "@headlessui/react";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertTriangle, X } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
+import { useState } from "react";
 
 export default function DeleteModal({ isOpen, closeModal, onDeleteConfirm }) {
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    async function handleDelete() {
+        setIsDeleting(true);
+        try {
+            await onDeleteConfirm();
+        } finally {
+            setIsDeleting(false);
+        }
+    }
+
     return (
         <AnimatePresence>
             {isOpen && (
@@ -39,15 +51,18 @@ export default function DeleteModal({ isOpen, closeModal, onDeleteConfirm }) {
                                 <div className="flex justify-center gap-3">
                                     <button
                                         onClick={closeModal}
-                                        className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                                        disabled={isDeleting}
+                                        className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         Cancel
                                     </button>
                                     <button
-                                        onClick={onDeleteConfirm}
-                                        className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition"
+                                        onClick={handleDelete}
+                                        disabled={isDeleting}
+                                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition disabled:opacity-75 disabled:cursor-not-allowed"
                                     >
-                                        Delete
+                                        {isDeleting && <Loader2 className="h-4 w-4 animate-spin" />}
+                                        {isDeleting ? "Deleting..." : "Delete"}
                                     </button>
                                 </div>
                             </Dialog.Panel>
