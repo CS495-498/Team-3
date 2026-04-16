@@ -11,6 +11,7 @@ import {
     Lightbulb,
     Home,
     Inbox,
+    Pin,
     Search,
     Settings,
     ShieldUser,
@@ -64,6 +65,8 @@ const panelRowClass =
     "grid w-full items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors hover:bg-gray-100 dark:hover:bg-[#1b1b1f]";
 const labelMotionClass =
     "overflow-hidden whitespace-nowrap transition-[max-width,opacity,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] max-w-48 opacity-100 translate-x-0";
+const SIDEBAR_PIN_STORAGE_KEY = "app-sidebar-pinned";
+const SIDEBAR_PIN_EVENT = "app-sidebar-pin-change";
 
 function formatRole(role) {
     switch ((role || "").toLowerCase()) {
@@ -228,6 +231,7 @@ function DesktopSidebar({
     role,
 }) {
     const [expanded, setExpanded] = useState(false);
+    const [isPinned, setIsPinned] = useState(false);
     const [isRailAccountOpen, setIsRailAccountOpen] = useState(false);
     const [isPanelAccountOpen, setIsPanelAccountOpen] = useState(false);
     const [railAvatarOpacity, setRailAvatarOpacity] = useState(1);
@@ -240,6 +244,12 @@ function DesktopSidebar({
     const navItems = entry?.navigation_menu ?? [];
     const side = entry?.side_of_screen === "right" ? "right" : "left";
     const roleLabel = formatRole(role);
+
+    useEffect(() => {
+        const savedPinned = window.localStorage.getItem(SIDEBAR_PIN_STORAGE_KEY) === "true";
+        setIsPinned(savedPinned);
+        setExpanded(savedPinned);
+    }, []);
 
     useEffect(() => {
         return () => {
@@ -303,6 +313,7 @@ function DesktopSidebar({
     };
 
     const queueClose = () => {
+        if (isPinned) return;
         if (hoverTimeoutRef.current) window.clearTimeout(hoverTimeoutRef.current);
         hoverTimeoutRef.current = window.setTimeout(() => {
             setExpanded(false);
@@ -318,6 +329,14 @@ function DesktopSidebar({
                 railAccountTriggerRef.current?.blur();
             });
         }
+    };
+
+    const togglePinned = () => {
+        const nextPinned = !isPinned;
+        setIsPinned(nextPinned);
+        setExpanded(nextPinned);
+        window.localStorage.setItem(SIDEBAR_PIN_STORAGE_KEY, String(nextPinned));
+        window.dispatchEvent(new Event(SIDEBAR_PIN_EVENT));
     };
 
     return (
@@ -347,6 +366,19 @@ function DesktopSidebar({
                     </Link>
 
                     <div className="flex flex-1 flex-col items-center gap-1">
+                        <button
+                            type="button"
+                            title={isPinned ? "Use hover sidebar" : "Keep sidebar open"}
+                            aria-label={isPinned ? "Use hover sidebar" : "Keep sidebar open"}
+                            className={cn(
+                                railButtonClass,
+                                isPinned ? "bg-gray-100 text-gray-900 dark:bg-[#1b1b1f] dark:text-white" : null
+                            )}
+                            onClick={togglePinned}
+                        >
+                            <Pin className={cn("h-5 w-5", isPinned ? "fill-current" : null)} />
+                        </button>
+
                         {navItems.map((item, idx) => {
                             const Icon = getNavIcon(item);
                             return (
@@ -429,11 +461,26 @@ function DesktopSidebar({
                         }}
                     >
                         <div className="flex h-16 items-center border-b px-3 dark:border-gray-800">
-                            {roleLabel ? (
-                                <span className="rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-medium text-foreground/80 dark:border-gray-700 dark:bg-[#18181b] dark:text-gray-200">
-                                    {roleLabel}
-                                </span>
-                            ) : null}
+                            <div className="flex w-full items-center justify-between gap-2">
+                                {roleLabel ? (
+                                    <span className="rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-medium text-foreground/80 dark:border-gray-700 dark:bg-[#18181b] dark:text-gray-200">
+                                        {roleLabel}
+                                    </span>
+                                ) : <span />}
+
+                                <button
+                                    type="button"
+                                    title={isPinned ? "Use hover sidebar" : "Keep sidebar open"}
+                                    aria-label={isPinned ? "Use hover sidebar" : "Keep sidebar open"}
+                                    className={cn(
+                                        "flex h-8 w-8 items-center justify-center rounded-md text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-[#1b1b1f]",
+                                        isPinned ? "bg-gray-100 text-gray-900 dark:bg-[#1b1b1f] dark:text-white" : null
+                                    )}
+                                    onClick={togglePinned}
+                                >
+                                    <Pin className={cn("h-4 w-4", isPinned ? "fill-current" : null)} />
+                                </button>
+                            </div>
                         </div>
 
                         <div className="flex-1 overflow-auto px-1 py-3">
