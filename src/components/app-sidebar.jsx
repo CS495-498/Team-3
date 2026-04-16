@@ -527,7 +527,7 @@ function DesktopSidebar({
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-auto px-1 py-3">
+                        <div className="flex-1 overflow-auto px-1 pb-3 pt-2">
                             <div className="space-y-1">
                                 {navItems.map((item, idx) => (
                                     <PanelNavLink
