@@ -366,19 +366,6 @@ function DesktopSidebar({
                     </Link>
 
                     <div className="flex flex-1 flex-col items-center gap-1">
-                        <button
-                            type="button"
-                            title={isPinned ? "Use hover sidebar" : "Keep sidebar open"}
-                            aria-label={isPinned ? "Use hover sidebar" : "Keep sidebar open"}
-                            className={cn(
-                                railButtonClass,
-                                isPinned ? "bg-gray-100 text-gray-900 dark:bg-[#1b1b1f] dark:text-white" : null
-                            )}
-                            onClick={togglePinned}
-                        >
-                            <Pin className={cn("h-5 w-5", isPinned ? "fill-current" : null)} />
-                        </button>
-
                         {navItems.map((item, idx) => {
                             const Icon = getNavIcon(item);
                             return (
