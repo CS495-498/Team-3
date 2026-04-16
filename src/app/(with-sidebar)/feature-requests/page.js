@@ -113,6 +113,11 @@ export default function Home() {
     const [open, setOpen] = useState(false);
 
 
+    // Loading states for async buttons
+    const [isRteSaving, setIsRteSaving] = useState(false);
+    const [isPostingComment, setIsPostingComment] = useState(false);
+    const [isSavingComment, setIsSavingComment] = useState(false);
+
     // Add/Edit RTE modal
     const [rteModalOpen, setRteModalOpen] = useState(false);
     const [rteMode, setRteMode] = useState("add"); // "add" | "edit"
@@ -383,6 +388,7 @@ export default function Home() {
         if (!text) return;
 
         try {
+            setIsSavingComment(true);
             const res = await fetch(`/api/feature-requests/comments/${commentId}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
@@ -403,6 +409,8 @@ export default function Home() {
             setEditingCommentText("");
         } catch (err) {
             console.error("Failed to edit comment:", err);
+        } finally {
+            setIsSavingComment(false);
         }
     };
 
@@ -562,6 +570,7 @@ export default function Home() {
         }
 
         try {
+            setIsRteSaving(true);
             const formData = new FormData();
             formData.append("title", title);
             formData.append("content", html);
@@ -636,6 +645,8 @@ export default function Home() {
         } catch (e) {
             console.error(e);
             setRteError(e?.message || "Failed to save. Check console for details.");
+        } finally {
+            setIsRteSaving(false);
         }
     };
 
@@ -651,6 +662,7 @@ export default function Home() {
         }
 
         try {
+            setIsPostingComment(true);
             const newComment = await addComment(activeRequest.id, text);
 
             setComments((prev) => [...prev, newComment]);
@@ -668,6 +680,8 @@ export default function Home() {
         } catch (e) {
             console.error("Failed to post comment:", e);
             setCommentPostError("Failed to post comment. Please try again.");
+        } finally {
+            setIsPostingComment(false);
         }
     };
 
@@ -999,9 +1013,18 @@ export default function Home() {
                                             <button
                                                 type="button"
                                                 onClick={handleRteSave}
-                                                className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
+                                                disabled={isRteSaving}
+                                                className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
-                                                Save
+                                                {isRteSaving ? (
+                                                    <>
+                                                        <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                        </svg>
+                                                        <span>Saving...</span>
+                                                    </>
+                                                ) : "Save"}
                                             </button>
                                         </div>
                                     </div>
@@ -1249,9 +1272,18 @@ export default function Home() {
                                                     <button
                                                         type="button"
                                                         onClick={handleAddCommentInline}
-                                                        className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
+                                                        disabled={isPostingComment}
+                                                        className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                                     >
-                                                        Post Comment
+                                                        {isPostingComment ? (
+                                                            <>
+                                                                <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                                </svg>
+                                                                <span>Posting...</span>
+                                                            </>
+                                                        ) : "Post Comment"}
                                                     </button>
                                                 </div>
                                             </div>
@@ -1309,9 +1341,18 @@ export default function Home() {
                                                                         <div className="flex gap-2">
                                                                             <button
                                                                                 onClick={() => saveEditComment(c.id)}
-                                                                                className="text-xs px-3 py-1 rounded bg-purple-600 text-white hover:bg-purple-700"
+                                                                                disabled={isSavingComment}
+                                                                                className="text-xs px-3 py-1 rounded bg-purple-600 text-white hover:bg-purple-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                                                                             >
-                                                                                Save
+                                                                                {isSavingComment ? (
+                                                                                    <>
+                                                                                        <svg className="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                                                        </svg>
+                                                                                        <span>Saving...</span>
+                                                                                    </>
+                                                                                ) : "Save"}
                                                                             </button>
 
                                                                             <button

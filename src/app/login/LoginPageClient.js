@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import SuccessToast from "@/components/ui/success-toast.jsx"
 
-export default function LoginPageClient({ initialError }) {
+export default function LoginPageClient({ initialError, confirmed }) {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -34,7 +34,14 @@ export default function LoginPageClient({ initialError }) {
   }, [])
 
   useEffect(() => {
-    if (!initialError) return
+    if (confirmed) {
+      setFormMessageType('success')
+      setFormMessage('Email confirmed. You can log in now.')
+    }
+  }, [confirmed])
+
+  useEffect(() => {
+    if (!initialError) return;
 
     if (initialError === "disabled") {
       setSystemMessage("Access for your organization has been disabled. Please contact your administrator.")
@@ -248,10 +255,10 @@ export default function LoginPageClient({ initialError }) {
                           ? 'text-green-600 dark:text-green-400'
                           : 'text-red-600 dark:text-red-400'
                   }`}
-                >
-                  {formMessage}
-                </p>
-            )}
+              >
+                {formMessage}
+              </p>
+          )}
         </div>
       </div>
 

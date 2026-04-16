@@ -34,6 +34,8 @@ export default function DemoInstructions() {
     const [dialogEditorContent, setDialogEditorContent] = useState("");
     const editorRef = useRef(null);
     const [showToast, setShowToast] = useState(false);
+    const [toastMessage, setToastMessage] = useState("Demo instruction uploaded successfully!");
+    const [isUploading, setIsUploading] = useState(false);
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
@@ -117,9 +119,33 @@ export default function DemoInstructions() {
         setIsEditOpen(false);
     };
 
-    const handleConfirmDelete = () => {
-        console.log("Delete confirmed for:", selectedItem);
-        setIsDeleteOpen(false);
+    const handleConfirmDelete = async () => {
+        try {
+            if (!selectedItem?.uid) {
+                alert("Could not locate this instruction.");
+                return;
+            }
+
+            const response = await fetch("/api/demo-instructions", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ instructionUid: selectedItem.uid }),
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(text);
+            }
+
+            setIsDeleteOpen(false);
+            setToastMessage("Demo instruction deleted successfully!");
+            setShowToast(true);
+            setTimeout(() => setShowToast(false), 2000);
+            getContent();
+        } catch (error) {
+            console.error("Delete failed:", error);
+            alert("Failed to delete instruction.");
+        }
     };
 
     const handleBookmarkToggle = async (demo) => {
@@ -144,7 +170,7 @@ export default function DemoInstructions() {
     return (
         <div className="pl-10 pt-6 min-h-screen flex flex-col w-full">
             <SuccessToast
-                message="Demo instruction uploaded successfully!"
+                message={toastMessage}
                 isOpen={showToast}
                 onClose={() => setShowToast(false)}
             />
@@ -206,40 +232,55 @@ export default function DemoInstructions() {
 
                                                 <button
                                                     type="button"
+                                                    disabled={isUploading}
                                                     onClick={async () => {
                                                         setUploadError(""); // reset error
 
                                                         const html = editorRef.current?.getHTML();
                                                         const title = document.querySelector("input[name='title']").value;
 
-                                                        const res = await fetch("/api/demo-instructions", {
-                                                            method: "POST",
-                                                            headers: { "Content-Type": "application/json" },
-                                                            body: JSON.stringify({ title, html }),
-                                                        });
+                                                        try {
+                                                            setIsUploading(true);
+                                                            const res = await fetch("/api/demo-instructions", {
+                                                                method: "POST",
+                                                                headers: { "Content-Type": "application/json" },
+                                                                body: JSON.stringify({ title, html }),
+                                                            });
 
-                                                        const data = await res.json();
+                                                            const data = await res.json();
 
-                                                        if (data.success) {
-                                                            console.log("Uploaded successfully:", data);
-                                                            setIsOpen(false);
-                                                            setShowToast(true);
-                                                            setTimeout(() => {
-                                                                setShowToast(false);
-                                                            }, 2000);
-                                                            getContent();
-                                                        } else {
-                                                            console.error("Upload failed:", data.error, data.details);
-                                                            if (data.details?.error_code === 119) {
-                                                                setUploadError("Title must be unique. Please choose a different title.");
+                                                            if (data.success) {
+                                                                console.log("Uploaded successfully:", data);
+                                                                setIsOpen(false);
+                                                                setToastMessage("Demo instruction uploaded successfully!");
+                                                                setShowToast(true);
+                                                                setTimeout(() => {
+                                                                    setShowToast(false);
+                                                                }, 2000);
+                                                                getContent();
                                                             } else {
-                                                                setUploadError("Failed to upload demo instruction. Please try again.");
+                                                                console.error("Upload failed:", data.error, data.details);
+                                                                if (data.details?.error_code === 119) {
+                                                                    setUploadError("Title must be unique. Please choose a different title.");
+                                                                } else {
+                                                                    setUploadError("Failed to upload demo instruction. Please try again.");
+                                                                }
                                                             }
+                                                        } finally {
+                                                            setIsUploading(false);
                                                         }
                                                     }}
-                                                    className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap"
+                                                    className="text-white bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 focus:ring-4 focus:outline-none focus:ring-purple-300 font-medium rounded-md text-sm px-4 py-2 transition whitespace-nowrap flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                                 >
-                                                    Upload
+                                                    {isUploading ? (
+                                                        <>
+                                                            <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                            </svg>
+                                                            <span>Uploading...</span>
+                                                        </>
+                                                    ) : "Upload"}
                                                 </button>
                                             </div>
                                         </div>

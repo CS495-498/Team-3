@@ -297,7 +297,7 @@ export default function Page() {
                                 </div>
 
                                 <div className="pt-2">
-                                    <p className="text-sm font-medium uppercase tracking-[0.18em] text-indigo-600 dark:text-indigo-300">
+                                    <p className="text-sm font-medium uppercase tracking-[0.18em] text-white dark:text-indigo-300">
                                         Account Settings
                                     </p>
                                     <h1 className="mt-1 text-3xl font-semibold text-slate-900 dark:text-slate-100">
