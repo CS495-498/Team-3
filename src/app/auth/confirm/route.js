@@ -5,50 +5,42 @@ import logger from '@/utils/logger.js'
 // Creating a handler to a GET request to route /auth/confirm
 export async function GET(request) {
     const { searchParams } = new URL(request.url)
-    const token_hash = searchParams.get('token_hash')
-    const type = searchParams.get('type')
+    const code = searchParams.get('code')
     const endpoint = request.nextUrl?.pathname || '/auth/confirm'
     const appUrl = process.env.NEXT_PUBLIC_APP_URL
     const successRedirectTo = new URL('/email-confirmed', appUrl)
     const errorRedirectTo = new URL('/error', appUrl)
 
-    successRedirectTo.searchParams.delete('token_hash')
-    successRedirectTo.searchParams.delete('type')
-    errorRedirectTo.searchParams.delete('token_hash')
-    errorRedirectTo.searchParams.delete('type')
+    successRedirectTo.searchParams.delete('code')
+    errorRedirectTo.searchParams.delete('code')
 
     logger.info({
         endpoint,
         status_code: 200,
         message: 'Auth confirm route hit',
         metadata: {
-            has_token_hash: Boolean(token_hash),
-            type,
+            has_code: Boolean(code),
             success_redirect_pathname: successRedirectTo.pathname,
         },
     })
 
-    if (token_hash && type) {
+    if (code) {
         try {
             const supabase = await createClient()
 
             logger.info({
                 endpoint,
                 status_code: 200,
-                message: 'Auth confirm verifyOtp start',
-                metadata: { type },
+                message: 'Auth confirm exchangeCodeForSession start',
             })
 
-            const { error } = await supabase.auth.verifyOtp({
-                type,
-                token_hash,
-            })
+            const { error } = await supabase.auth.exchangeCodeForSession(code)
 
             if (!error) {
                 logger.info({
                     endpoint,
                     status_code: 307,
-                    message: 'Auth confirm verifyOtp success',
+                    message: 'Auth confirm exchangeCodeForSession success',
                     metadata: {
                         redirect_pathname: successRedirectTo.pathname,
                     },
@@ -60,8 +52,7 @@ export async function GET(request) {
             logger.warning({
                 endpoint,
                 status_code: 400,
-                message: `Auth confirm verifyOtp failed: ${error.message}`,
-                metadata: { type },
+                message: `Auth confirm exchangeCodeForSession failed: ${error.message}`,
             })
         } catch (error) {
             logger.error({
@@ -69,7 +60,6 @@ export async function GET(request) {
                 status_code: 500,
                 message: `Auth confirm threw: ${error.message}`,
                 metadata: {
-                    type,
                     error_stack: error.stack,
                 },
             })
@@ -82,8 +72,7 @@ export async function GET(request) {
         status_code: 307,
         message: 'Auth confirm redirecting to error',
         metadata: {
-            has_token_hash: Boolean(token_hash),
-            type,
+            has_code: Boolean(code),
         },
     })
     return NextResponse.redirect(errorRedirectTo)
