@@ -7,14 +7,15 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url)
     const token_hash = searchParams.get('token_hash')
     const type = searchParams.get('type')
-    const next = '/login'
     const endpoint = request.nextUrl?.pathname || '/auth/confirm'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL
+    const successRedirectTo = new URL('/email-confirmed', appUrl)
+    const errorRedirectTo = new URL('/error', appUrl)
 
-    // Create redirect link without the secret token
-    const redirectTo = request.nextUrl.clone()
-    redirectTo.pathname = next
-    redirectTo.searchParams.delete('token_hash')
-    redirectTo.searchParams.delete('type')
+    successRedirectTo.searchParams.delete('token_hash')
+    successRedirectTo.searchParams.delete('type')
+    errorRedirectTo.searchParams.delete('token_hash')
+    errorRedirectTo.searchParams.delete('type')
 
     logger.info({
         endpoint,
@@ -23,7 +24,7 @@ export async function GET(request) {
         metadata: {
             has_token_hash: Boolean(token_hash),
             type,
-            redirect_pathname: redirectTo.pathname,
+            success_redirect_pathname: successRedirectTo.pathname,
         },
     })
 
@@ -49,11 +50,11 @@ export async function GET(request) {
                     status_code: 307,
                     message: 'Auth confirm verifyOtp success',
                     metadata: {
-                        redirect_pathname: redirectTo.pathname,
+                        redirect_pathname: successRedirectTo.pathname,
                     },
                 })
-                redirectTo.searchParams.delete('next')
-                return NextResponse.redirect(redirectTo)
+                successRedirectTo.searchParams.delete('next')
+                return NextResponse.redirect(successRedirectTo)
             }
 
             logger.warning({
@@ -76,7 +77,6 @@ export async function GET(request) {
     }
 
     // return the user to an error page with some instructions
-    redirectTo.pathname = '/error'
     logger.warning({
         endpoint,
         status_code: 307,
@@ -86,5 +86,5 @@ export async function GET(request) {
             type,
         },
     })
-    return NextResponse.redirect(redirectTo)
+    return NextResponse.redirect(errorRedirectTo)
 }
