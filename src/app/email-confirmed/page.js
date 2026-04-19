@@ -14,12 +14,6 @@ export default function EmailConfirmedPage() {
                         password you used during signup.
                     </p>
 
-                    <div className="rounded-md border border-[#d8c3b3] bg-[#fcf8f5] px-4 py-4 text-sm text-[#714830]">
-                        You can head straight to login now. If this page opened
-                        after a long delay, your confirmation still went through
-                        successfully.
-                    </div>
-
                     <a
                         href="/login"
                         className="mt-6 block w-full rounded-md bg-[#88563b] py-2 text-center font-semibold text-white transition hover:bg-[#714830]"
