@@ -5,9 +5,10 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url)
     const token_hash = searchParams.get('token_hash')
     const type = searchParams.get('type')
+    const next = '/login'
 
     const redirectTo = request.nextUrl.clone()
-    redirectTo.pathname = '/login'
+    redirectTo.pathname = next
     redirectTo.searchParams.delete('token_hash')
     redirectTo.searchParams.delete('type')
 
@@ -25,7 +26,7 @@ export async function GET(request) {
         }
     }
 
-    redirectTo.pathname = '/login'
+    redirectTo.pathname = next
     redirectTo.searchParams.set('error', 'confirmation_failed')
     return NextResponse.redirect(redirectTo)
 }

@@ -8,16 +8,16 @@ async function handlePost(request) {
         const { email, password } = await request.json()
 
         const supabase = await createClient()
-        const origin =
-            process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin
+        const emailRedirectTo = new URL(
+            '/auth/Confirm',
+            process.env.NEXT_PUBLIC_APP_URL
+        ).toString()
 
         const handler = signupHandler({
             signUp: (args) =>
                 supabase.auth.signUp({
                     ...args,
-                    options: {
-                        emailRedirectTo: origin,
-                    },
+                    options: { emailRedirectTo },
                 }),
         })
 
