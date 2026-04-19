@@ -1,24 +1,41 @@
 export default function EmailConfirmedPage() {
     return (
-        <main className="min-h-screen bg-[#f7f1ea] px-6 py-16 text-[#2f241d]">
-            <div className="mx-auto flex max-w-xl flex-col items-center rounded-2xl border border-[#d9c6b6] bg-white px-8 py-12 text-center shadow-sm">
-                <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-[#88563b]">
-                    Account Verified
-                </p>
-                <h1 className="mb-4 text-3xl font-bold">
-                    Your email has been confirmed
-                </h1>
-                <p className="mb-8 text-base leading-7 text-[#5b4639]">
-                    Your account is ready. Head to the login page and sign in
-                    with the password you created during signup.
-                </p>
-                <a
-                    href="/login"
-                    className="rounded-md bg-[#88563b] px-6 py-3 font-semibold text-white transition hover:bg-[#714830]"
-                >
-                    Go to Login
-                </a>
-            </div>
+        <main className="flex min-h-screen w-screen bg-white dark:bg-gray-900">
+            <section className="relative flex w-full items-center justify-center px-10 py-16 bg-white dark:bg-gray-900 md:w-1/2">
+                <div className="w-full max-w-sm">
+                    <p className="mb-3 text-center text-sm font-semibold uppercase tracking-[0.2em] text-[#88563b]">
+                        Account Verified
+                    </p>
+                    <h1 className="mb-4 text-center text-3xl font-bold text-gray-900 dark:text-gray-100">
+                        Your email has been confirmed
+                    </h1>
+                    <p className="mb-8 text-center text-sm text-gray-600 dark:text-gray-300">
+                        Your account is ready. Sign in with the email and
+                        password you used during signup.
+                    </p>
+
+                    <div className="rounded-md border border-[#d8c3b3] bg-[#fcf8f5] px-4 py-4 text-sm text-[#714830]">
+                        You can head straight to login now. If this page opened
+                        after a long delay, your confirmation still went through
+                        successfully.
+                    </div>
+
+                    <a
+                        href="/login"
+                        className="mt-6 block w-full rounded-md bg-[#88563b] py-2 text-center font-semibold text-white transition hover:bg-[#714830]"
+                    >
+                        Go to Login
+                    </a>
+                </div>
+            </section>
+
+            <section className="hidden h-screen w-1/2 md:block">
+                <img
+                    src="/red_panda_face.jpg"
+                    alt="Red Panda"
+                    className="h-full w-full object-cover"
+                />
+            </section>
         </main>
     )
 }
