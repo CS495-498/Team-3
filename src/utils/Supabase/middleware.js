@@ -11,7 +11,7 @@ export async function updateSession(request) {
         pathname.startsWith('/api/auth/login') ||
         pathname.startsWith('/api/auth/signup') ||
         pathname.startsWith('/api/auth/session') ||
-        pathname.startsWith('/auth/Confirm') ||
+        pathname.startsWith('/auth/confirm') ||
         pathname.startsWith('/auth/Signout') ||
         pathname.startsWith('/login') ||
         pathname.startsWith('/_next/')
