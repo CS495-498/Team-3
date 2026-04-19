@@ -9,7 +9,7 @@ async function handlePost(request) {
 
         const supabase = await createClient()
         const emailRedirectTo = new URL(
-            '/auth/Confirm',
+            '/auth/confirm',
             process.env.NEXT_PUBLIC_APP_URL
         ).toString()
 
