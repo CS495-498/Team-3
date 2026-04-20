@@ -8,6 +8,7 @@ const NextResponse = {
 
 /**
  * Supabase stub for .rpc('get_feature_request_comment_counts', { ids }) → { data, error }
+ */
 function makeSupabaseStub({ rpcResult = { data: [], error: null } } = {}) {
     const rpc = sinon.stub().resolves(rpcResult);
     return { client: { rpc } };
