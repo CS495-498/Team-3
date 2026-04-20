@@ -9,12 +9,20 @@ import { withLogging } from '@/utils/withLogging';
 
 const TITLE_MAX_LENGTH = 100;
 
-async function handlePut(req, { params }) {
+async function handlePut(
+    req,
+    { params },
+    {
+        createClientFn = createClient,
+        requireAuthWithPermissionFn = requireAuthWithPermission,
+        sanitizeHtmlServerFn = sanitizeHtmlServer,
+    } = {}
+) {
     const { id } = params;
-    const supabase = await createClient();
+    const supabase = await createClientFn();
 
     const { error: authError, profile } =
-        await requireAuthWithPermission(PERMISSIONS.PUBLISH_FEATURE_REQUESTS);
+        await requireAuthWithPermissionFn(PERMISSIONS.PUBLISH_FEATURE_REQUESTS);
     if (authError) return authError;
 
     const body = await req.json();
@@ -42,7 +50,7 @@ async function handlePut(req, { params }) {
         .from("feature_requests")
         .update({
             title: normalizedTitle,
-            content: sanitizeHtmlServer(content),
+            content: sanitizeHtmlServerFn(content),
             status,
             updated_at: new Date().toISOString(),
         })
@@ -75,12 +83,19 @@ async function handlePut(req, { params }) {
 }
 
 
-async function handleDelete(req, { params }) {
+async function handleDelete(
+  req,
+  { params },
+  {
+    createClientFn = createClient,
+    requireAuthWithPermissionFn = requireAuthWithPermission,
+  } = {}
+) {
   const { id } = await params;
-  const supabase = await createClient();
+  const supabase = await createClientFn();
 
   const { error: authError, profile } =
-    await requireAuthWithPermission(
+    await requireAuthWithPermissionFn(
       PERMISSIONS.PUBLISH_FEATURE_REQUESTS
     );
 
@@ -90,7 +105,6 @@ async function handleDelete(req, { params }) {
     profile.role,
     PERMISSIONS.MANAGE_ALL_FEATURE_REQUESTS
   );
-
   let query = supabase
     .from("feature_requests")
     .delete()
@@ -111,6 +125,6 @@ async function handleDelete(req, { params }) {
 
   return NextResponse.json({ success: true }, { status: 200 });
 }
+export { handlePut, handleDelete };
 export const PUT = withLogging(handlePut);
 export const DELETE = withLogging(handleDelete);
-

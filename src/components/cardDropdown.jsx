@@ -49,20 +49,22 @@ export default function CardDropdown({ onEdit, onDelete, editLabel = "Edit" }) {
                     )}
                 </MenuItem>
 
-                <MenuItem>
-                    {({ active }) => (
-                        <button
-                            type="button"
-                            onClick={onDelete}
-                            className={`${
-                                active ? "bg-red-50 dark:bg-red-900/20" : ""
-                            } flex w-full items-center gap-2 px-3 py-2 rounded-md text-red-600`}
-                        >
-                            <Trash2 className="h-4 w-4 text-red-600" />
-                            Delete
-                        </button>
-                    )}
-                </MenuItem>
+                {onDelete ? (
+                    <MenuItem>
+                        {({ active }) => (
+                            <button
+                                type="button"
+                                onClick={onDelete}
+                                className={`${
+                                    active ? "bg-red-50 dark:bg-red-900/20" : ""
+                                } flex w-full items-center gap-2 px-3 py-2 rounded-md text-red-600`}
+                            >
+                                <Trash2 className="h-4 w-4 text-red-600" />
+                                Delete
+                            </button>
+                        )}
+                    </MenuItem>
+                ) : null}
             </MenuItems>
         </Menu>
     );
