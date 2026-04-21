@@ -20,7 +20,7 @@ export function signupHandler({ signUp }) {
 
             return {
                 status: 200,
-                body: { success: true, userId: data.user?.id },
+                body: { success: true, userId: data?.user?.id },
             }
         } catch {
             return {
