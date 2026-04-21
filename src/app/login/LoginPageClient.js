@@ -7,6 +7,8 @@ import SuccessToast from "@/components/ui/success-toast.jsx"
 export default function LoginPageClient({ initialError, confirmed }) {
   const router = useRouter()
   const [email, setEmail] = useState('')
+  const [fullName, setFullName] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -82,6 +84,16 @@ export default function LoginPageClient({ initialError, confirmed }) {
     e.preventDefault()
     setFormMessage('')
 
+    if (!fullName.trim()) {
+      setFormMessage('Full name is required.')
+      return
+    }
+
+    if (!username.trim() || username.trim().length < 3) {
+      setFormMessage('Username must be at least 3 characters.')
+      return
+    }
+
     if (password.length < 8) {
       setFormMessage('Password must be at least 8 characters.')
       return
@@ -98,7 +110,7 @@ export default function LoginPageClient({ initialError, confirmed }) {
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password, full_name: fullName.trim(), username: username.trim() })
       })
 
       const data = await res.json()
@@ -107,6 +119,8 @@ export default function LoginPageClient({ initialError, confirmed }) {
         setFormMessage(data.error || 'Signup failed')
       } else {
         setFormMessage('Signup successful! Check your email to confirm your account.')
+        setFullName('')
+        setUsername('')
         setPassword('')
         setConfirmPassword('')
         setShowRegister(false)
@@ -142,6 +156,32 @@ export default function LoginPageClient({ initialError, confirmed }) {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
+                    className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#88563b]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Jane Doe"
+                    className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#88563b]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Username
+                  </label>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="janedoe"
                     className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#88563b]"
                   />
                 </div>

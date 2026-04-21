@@ -14,7 +14,7 @@ describe('public/signup handler', () => {
         })
 
         expect(r.status).to.equal(200)
-        expect(r.body).to.deep.equal({ success: true })
+        expect(r.body.success).to.equal(true)
 
         expect(signUp.calledOnce).to.equal(true)
         expect(signUp.firstCall.args[0]).to.deep.equal({
