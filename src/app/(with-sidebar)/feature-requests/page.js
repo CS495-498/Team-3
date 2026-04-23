@@ -58,6 +58,7 @@ export default function Home() {
     const [sortOption, setSortOption] = useState("votes_desc");
     const [userFilter, setUserFilter] = useState("");
     const [debouncedUserFilter, setDebouncedUserFilter] = useState("");
+    const [upvoteListSearch, setUpvoteListSearch] = useState("");
 
     // Show completed toggle (persisted in sessionStorage)
     const [showCompleted, setShowCompleted] = useState(() => {
@@ -186,6 +187,7 @@ export default function Home() {
     useEffect(() => {
         setVoteOverrides({});
     }, [statusFilter, showCompleted, sortOption, debouncedUserFilter]);
+
 
     // Server-side paginated fetch
     const fetchFeatureRequests = useCallback(
@@ -825,26 +827,40 @@ export default function Home() {
                                     >
                                         <ChevronsUp className="w-5 h-5 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md"/>
                                     </button>
+                                    {/*{ UPVOTE LIST }*/}
                                     <TooltipProvider>
-                                        <Tooltip onOpenChange={(open) => {
-                                            if(open) getUpvoteData(req.id)
-                                        }} >
+                                        <Tooltip onOpenChange={(open) => {if(open) getUpvoteData(req.id); setUpvoteListSearch("")}} >
                                             <TooltipTrigger className="w-7 h-7 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md">
                                                 {getEffectiveVoteCount(req)}
                                             </TooltipTrigger>
-                                            <TooltipContent className="flex flex-col gap-1 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-md text-gray-900 dark:text-gray-100" side="bottom">                                                {upvoteList === null ? (
-                                                    <span className="px-2 py-1 text-sm">Loading...</span>
-                                                ) : (upvoteList.length === 0 ? (
-                                                    <span className="px-2 py-1 text-sm"> No Upvotes</span>
-                                                ) : (
-                                                    (upvoteList.map((vote, i) => (
-                                                            <span key={`${req.id}-${vote.id || i}`}>
-                                                                {vote.upvoter_username}
-                                                            </span>
-                                                        ))
-                                                    )
-                                                ))
-                                                }
+                                            <TooltipContent className="w-40 z-10 flex flex-col gap-1 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-md text-gray-900 dark:text-gray-100" side="bottom">
+                                                <input
+                                                    type="text"
+                                                    placeholder="Search Upvotes"
+                                                    value={upvoteListSearch}
+                                                    onChange={(e) => setUpvoteListSearch(e.target.value)}
+                                                    className="w-full mb-2 px-2 py-1 text-sm rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 outline-none focus:ring-1 focus:ring-purple-300"
+                                                />
+                                                <div className="flex flex-col gap-1 max-h-40 overflow-y-auto">
+                                                    {upvoteList === null ? (
+                                                        <span className="px-2 py-1 text-sm">Loading...</span>
+                                                    ) : upvoteList.length === 0 ? (
+                                                        <span className="px-2 py-1 text-sm">No Upvotes</span>
+                                                    ) : (() => {
+                                                        const filtered = upvoteList.filter((vote) =>
+                                                            vote.upvoter_username.toLowerCase().includes(upvoteListSearch.toLowerCase())
+                                                        );
+                                                        return filtered.length === 0 ? (
+                                                            <span className="px-2 py-1 text-sm">No Matches</span>
+                                                        ) : (
+                                                            filtered.map((vote, i) => (
+                                                                <span key={`${req.id}-${vote.id || i}`}>
+                                                                    {vote.upvoter_username}
+                                                                </span>
+                                                            ))
+                                                        );
+                                                    })()}
+                                                </div>
                                             </TooltipContent>
                                         </Tooltip>
                                     </TooltipProvider>
