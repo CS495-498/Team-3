@@ -5,9 +5,11 @@ import { useState, useEffect, useRef } from "react";
 import SuccessToast from "@/components/ui/success-toast.jsx";
 import LoadingIndicator from "@/components/ui/loading-indicator.jsx";
 import { Button } from "@/components/ui/button";
+import { ArrowLeftIcon } from "@/components/tiptap-icons/arrow-left-icon";
 import { Dialog, DialogPanel, DialogTitle, Description } from "@headlessui/react";
 import DOMPurify from "isomorphic-dompurify";
 import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor";
+import { useRouter } from "next/navigation";
 
 import { useUser } from "@/context/UserContext";
 import { hasPermission } from "@/utils/hasPermission";
@@ -22,6 +24,7 @@ export default function ArticleWithEditor({ params }) {
   const [isSaving, setIsSaving] = useState(false);
   const [dialogEditorContent, setDialogEditorContent] = useState("");
   const editorRef = useRef(null);
+  const router = useRouter();
 
   const { user, loading } = useUser();
 
@@ -95,6 +98,15 @@ export default function ArticleWithEditor({ params }) {
     }
   };
 
+  const handleBackClick = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+      return;
+    }
+
+    router.push("/demo-instructions");
+  };
+
   if (isLoading) {
     return <LoadingIndicator label="Loading instruction..." />;
   }
@@ -108,8 +120,18 @@ export default function ArticleWithEditor({ params }) {
       />
 
       {/* Header */}
-      {entry?.title && (
-        <header className="max-w-4xl mx-auto mb-6 text-center">
+      <header className="max-w-4xl mx-auto mb-6 w-full">
+        <Button
+          type="button"
+          variant="outline"
+          className="mb-4 w-full justify-center sm:w-auto sm:justify-start"
+          onClick={handleBackClick}
+        >
+          <ArrowLeftIcon className="size-4" />
+          Back
+        </Button>
+        {entry?.title && (
+          <div className="text-center">
           <h1 className="text-3xl font-bold mb-2">{entry.title}</h1>
           {entry?.author_name && entry?.updated_at && (
             <p className="text-sm text-gray-500">
@@ -117,8 +139,9 @@ export default function ArticleWithEditor({ params }) {
               {new Date(entry.updated_at).toLocaleDateString()}
             </p>
           )}
-        </header>
-      )}
+          </div>
+        )}
+      </header>
 
       {/* Article content */}
       <article className="prose prose-stone dark:prose-invert mx-auto my-0 max-w-4xl">
