@@ -7,23 +7,30 @@ import SuccessToast from "@/components/ui/success-toast.jsx"
 export default function LoginPageClient({ initialError, confirmed }) {
   const router = useRouter()
   const [email, setEmail] = useState('')
+  const [fullName, setFullName] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [showRegister, setShowRegister] = useState(false)
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState("")
+  const [toastType, setToastType] = useState("success")
+  const [systemMessage, setSystemMessage] = useState('')
+  const [formMessage, setFormMessage] = useState('')
   const [formMessageType, setFormMessageType] = useState('error')
-  const [systemMessage, setSystemMessage] = useState('');
-  const [formMessage, setFormMessage] = useState('');
 
   useEffect(() => {
     const msg = localStorage.getItem("toastMessage")
+    const type = localStorage.getItem("toastType") || "success"
     if (!msg) return
 
     setToastMessage(msg)
+    setToastType(type)
     setShowToast(true)
+
     localStorage.removeItem("toastMessage")
+    localStorage.removeItem("toastType")
 
     const timer = setTimeout(() => setShowToast(false), 3000)
     return () => clearTimeout(timer)
@@ -40,14 +47,15 @@ export default function LoginPageClient({ initialError, confirmed }) {
     if (!initialError) return;
 
     if (initialError === "disabled") {
-      setSystemMessage("Access for your organization has been disabled. Please contact your administrator.");
+      setSystemMessage("Access for your organization has been disabled. Please contact your administrator.")
     }
 
     if (initialError === "unauthorized") {
-      setSystemMessage("You don't have permission to access that page.");
+      setSystemMessage("You don't have permission to access that page.")
     }
-    window.history.replaceState({}, "", "/login");
-  }, [initialError]);
+
+    window.history.replaceState({}, "", "/login")
+  }, [initialError])
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -64,14 +72,17 @@ export default function LoginPageClient({ initialError, confirmed }) {
       const data = await res.json()
 
       if (!res.ok) {
+        setFormMessageType('error')
         setFormMessage(data.error || 'Login failed')
       } else {
-        localStorage.setItem("loginMessage", "Logged in")
+        localStorage.setItem("toastMessage", "Logged in")
+        localStorage.setItem("toastType", "success")
         router.push('/')
         router.refresh()
       }
     } catch (error) {
       console.error('Client-side error:', error)
+      setFormMessageType('error')
       setFormMessage('An error occurred')
     }
 
@@ -81,6 +92,16 @@ export default function LoginPageClient({ initialError, confirmed }) {
   const handleSignUp = async (e) => {
     e.preventDefault()
     setFormMessage('')
+
+    if (!fullName.trim()) {
+      setFormMessage('Full name is required.')
+      return
+    }
+
+    if (!username.trim() || username.trim().length < 3) {
+      setFormMessage('Username must be at least 3 characters.')
+      return
+    }
 
     if (password.length < 8) {
       setFormMessage('Password must be at least 8 characters.')
@@ -98,20 +119,25 @@ export default function LoginPageClient({ initialError, confirmed }) {
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password, full_name: fullName.trim(), username: username.trim() })
       })
 
       const data = await res.json()
 
       if (!res.ok) {
+        setFormMessageType('error')
         setFormMessage(data.error || 'Signup failed')
       } else {
+        setFormMessageType('success')
         setFormMessage('Signup successful! Check your email to confirm your account.')
+        setFullName('')
+        setUsername('')
         setPassword('')
         setConfirmPassword('')
         setShowRegister(false)
       }
     } catch (error) {
+      setFormMessageType('error')
       setFormMessage('An error occurred')
     }
 
@@ -119,14 +145,22 @@ export default function LoginPageClient({ initialError, confirmed }) {
   }
 
   return (
-    <div className="flex h-screen w-screen bg-white dark:bg-gray-900">
-      <div className="relative w-1/2 flex items-center justify-center px-10 bg-white dark:bg-gray-900">
-        <div className="w-full max-w-sm">
-          {showRegister ? (
-            <>
-              <h1 className="text-3xl font-bold text-center mb-4 text-gray-900 dark:text-gray-100">
-                Create Account
-              </h1>
+      <div className="flex h-screen w-screen bg-white dark:bg-gray-900">
+        <div className="relative w-1/2 flex items-center justify-center px-10 bg-white dark:bg-gray-900">
+          <div className="w-full max-w-sm">
+            {showToast && (
+                <SuccessToast
+                    message={toastMessage}
+                    type={toastType}
+                    onClose={() => setShowToast(false)}
+                />
+            )}
+
+            {showRegister ? (
+                <>
+                  <h1 className="text-3xl font-bold text-center mb-4 text-gray-900 dark:text-gray-100">
+                    Create Account
+                  </h1>
 
               <p className="text-center text-sm text-gray-600 dark:text-gray-300 mb-5">
                 Sign up with your work email to request access.
@@ -142,6 +176,32 @@ export default function LoginPageClient({ initialError, confirmed }) {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
+                    className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#88563b]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Jane Doe"
+                    className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#88563b]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Username
+                  </label>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="janedoe"
                     className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#88563b]"
                   />
                 </div>

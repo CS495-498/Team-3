@@ -9,7 +9,7 @@ export function signupHandler({ signUp }) {
                 }
             }
 
-            const { error } = await signUp({ email, password })
+            const { data, error } = await signUp({ email, password })
 
             if (error) {
                 return {
@@ -20,7 +20,7 @@ export function signupHandler({ signUp }) {
 
             return {
                 status: 200,
-                body: { success: true },
+                body: { success: true, userId: data?.user?.id },
             }
         } catch {
             return {

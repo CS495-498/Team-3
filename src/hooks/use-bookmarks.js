@@ -102,13 +102,12 @@ export function useBookmarks(resourceType) {
 
       try {
         if (currentlyBookmarked) {
-          const response = await fetch("/api/bookmarks", {
+          const params = new URLSearchParams({
+            resourceType,
+            resourceId,
+          });
+          const response = await fetch(`/api/bookmarks?${params.toString()}`, {
             method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              resourceType,
-              resourceId,
-            }),
           });
 
           if (response.status === 401) {

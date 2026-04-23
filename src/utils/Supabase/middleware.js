@@ -75,9 +75,8 @@ export async function updateSession(request) {
         return NextResponse.redirect(new URL("/login?error=disabled", request.url));
     }
 
-    // Optional: add user id header
-    const response = NextResponse.next();
-    response.headers.set("x-user-id", user.id);
+    // Preserve any cookies that Supabase refreshed while adding app-specific headers.
+    supabaseResponse.headers.set("x-user-id", user.id);
 
     // -------------------------
     // Dynamic Authorization
@@ -107,5 +106,5 @@ export async function updateSession(request) {
         }
     }
 
-    return response;
+    return supabaseResponse;
 }
