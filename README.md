@@ -1,4 +1,4 @@
-# Contentstack Portal
+# Contentstack Portal!
 
 [![CI](https://github.com/CS495-Fall2025/Team-3/actions/workflows/ci.yml/badge.svg)](https://github.com/CS495-Fall2025/Team-3/actions/workflows/ci.yml)
 
