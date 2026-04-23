@@ -15,17 +15,22 @@ export default function LoginPageClient({ initialError, confirmed }) {
   const [showRegister, setShowRegister] = useState(false)
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState("")
+  const [toastType, setToastType] = useState("success")
+  const [systemMessage, setSystemMessage] = useState('')
+  const [formMessage, setFormMessage] = useState('')
   const [formMessageType, setFormMessageType] = useState('error')
-  const [systemMessage, setSystemMessage] = useState('');
-  const [formMessage, setFormMessage] = useState('');
 
   useEffect(() => {
     const msg = localStorage.getItem("toastMessage")
+    const type = localStorage.getItem("toastType") || "success"
     if (!msg) return
 
     setToastMessage(msg)
+    setToastType(type)
     setShowToast(true)
+
     localStorage.removeItem("toastMessage")
+    localStorage.removeItem("toastType")
 
     const timer = setTimeout(() => setShowToast(false), 3000)
     return () => clearTimeout(timer)
@@ -42,14 +47,15 @@ export default function LoginPageClient({ initialError, confirmed }) {
     if (!initialError) return;
 
     if (initialError === "disabled") {
-      setSystemMessage("Access for your organization has been disabled. Please contact your administrator.");
+      setSystemMessage("Access for your organization has been disabled. Please contact your administrator.")
     }
 
     if (initialError === "unauthorized") {
-      setSystemMessage("You don't have permission to access that page.");
+      setSystemMessage("You don't have permission to access that page.")
     }
-    window.history.replaceState({}, "", "/login");
-  }, [initialError]);
+
+    window.history.replaceState({}, "", "/login")
+  }, [initialError])
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -66,14 +72,17 @@ export default function LoginPageClient({ initialError, confirmed }) {
       const data = await res.json()
 
       if (!res.ok) {
+        setFormMessageType('error')
         setFormMessage(data.error || 'Login failed')
       } else {
-        localStorage.setItem("loginMessage", "Logged in")
+        localStorage.setItem("toastMessage", "Logged in")
+        localStorage.setItem("toastType", "success")
         router.push('/')
         router.refresh()
       }
     } catch (error) {
       console.error('Client-side error:', error)
+      setFormMessageType('error')
       setFormMessage('An error occurred')
     }
 
@@ -116,8 +125,10 @@ export default function LoginPageClient({ initialError, confirmed }) {
       const data = await res.json()
 
       if (!res.ok) {
+        setFormMessageType('error')
         setFormMessage(data.error || 'Signup failed')
       } else {
+        setFormMessageType('success')
         setFormMessage('Signup successful! Check your email to confirm your account.')
         setFullName('')
         setUsername('')
@@ -126,6 +137,7 @@ export default function LoginPageClient({ initialError, confirmed }) {
         setShowRegister(false)
       }
     } catch (error) {
+      setFormMessageType('error')
       setFormMessage('An error occurred')
     }
 
@@ -133,14 +145,22 @@ export default function LoginPageClient({ initialError, confirmed }) {
   }
 
   return (
-    <div className="flex h-screen w-screen bg-white dark:bg-gray-900">
-      <div className="relative w-1/2 flex items-center justify-center px-10 bg-white dark:bg-gray-900">
-        <div className="w-full max-w-sm">
-          {showRegister ? (
-            <>
-              <h1 className="text-3xl font-bold text-center mb-4 text-gray-900 dark:text-gray-100">
-                Create Account
-              </h1>
+      <div className="flex h-screen w-screen bg-white dark:bg-gray-900">
+        <div className="relative w-1/2 flex items-center justify-center px-10 bg-white dark:bg-gray-900">
+          <div className="w-full max-w-sm">
+            {showToast && (
+                <SuccessToast
+                    message={toastMessage}
+                    type={toastType}
+                    onClose={() => setShowToast(false)}
+                />
+            )}
+
+            {showRegister ? (
+                <>
+                  <h1 className="text-3xl font-bold text-center mb-4 text-gray-900 dark:text-gray-100">
+                    Create Account
+                  </h1>
 
               <p className="text-center text-sm text-gray-600 dark:text-gray-300 mb-5">
                 Sign up with your work email to request access.
