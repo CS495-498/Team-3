@@ -153,4 +153,24 @@ describe("/api/bookmarks route handlers", () => {
       resource_id: "abc",
     });
   });
+
+  it("DELETE accepts resource identifiers from query params", async () => {
+    const supabase = createSupabaseMock();
+    const response = await handleDeleteBookmark(
+      {
+        url: "http://localhost/api/bookmarks?resourceType=video&resourceId=from-query",
+        json: async () => {
+          throw new Error("body should not be required");
+        },
+      },
+      supabase,
+    );
+
+    expect(response.status).to.equal(204);
+    expect(supabase.__state.matchedPayload).to.deep.equal({
+      user_id: "user-123",
+      resource_type: "video",
+      resource_id: "from-query",
+    });
+  });
 });

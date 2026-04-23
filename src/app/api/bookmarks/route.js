@@ -14,6 +14,34 @@ function parseResourceType(request) {
   return searchParams.get("resourceType")?.trim() || "";
 }
 
+async function parseBookmarkMutation(request) {
+  const searchParams = request?.url
+    ? new URL(request.url).searchParams
+    : new URLSearchParams();
+  const resourceTypeFromQuery = searchParams.get("resourceType")?.trim() || "";
+  const resourceIdFromQuery = searchParams.get("resourceId")?.trim() || "";
+
+  if (resourceTypeFromQuery && resourceIdFromQuery) {
+    return {
+      resourceType: resourceTypeFromQuery,
+      resourceId: resourceIdFromQuery,
+    };
+  }
+
+  try {
+    const body = await request.json();
+    return {
+      resourceType: body?.resourceType?.trim() || "",
+      resourceId: body?.resourceId?.trim() || "",
+    };
+  } catch {
+    return {
+      resourceType: resourceTypeFromQuery,
+      resourceId: resourceIdFromQuery,
+    };
+  }
+}
+
 export async function GET(request) {
   const supabase = await createServerClient();
   return handleGetBookmarks(request, supabase);
@@ -69,9 +97,7 @@ export async function handleGetBookmarks(request, supabase) {
 
 export async function handleCreateBookmark(request, supabase) {
   try {
-    const body = await request.json();
-    const resourceType = body?.resourceType?.trim();
-    const resourceId = body?.resourceId?.trim();
+    const { resourceType, resourceId } = await parseBookmarkMutation(request);
 
     if (!resourceType || !resourceId) {
       return NextResponse.json(
@@ -115,9 +141,7 @@ export async function handleCreateBookmark(request, supabase) {
 
 export async function handleDeleteBookmark(request, supabase) {
   try {
-    const body = await request.json();
-    const resourceType = body?.resourceType?.trim();
-    const resourceId = body?.resourceId?.trim();
+    const { resourceType, resourceId } = await parseBookmarkMutation(request);
 
     if (!resourceType || !resourceId) {
       return NextResponse.json(
